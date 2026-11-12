@@ -267,7 +267,12 @@
 .ts { position: relative; }
 /* Laid over the whole page (not the screen), so it scrolls with the content. */
 .ts-ascii-grain { position: absolute; inset: 0; z-index: 55; pointer-events: none; mix-blend-mode: difference; overflow: clip; }
-.ts-grain-tile { position: absolute; inset: 0; opacity: 0.013; background-repeat: repeat; }
+/* Three versions of the tile, one shown at a time (160 ms each): the twinkle, done on the compositor. */
+.ts-grain-tile { position: absolute; inset: 0; opacity: 0; background-repeat: repeat; will-change: opacity; animation: ts-grain 0.48s steps(1, end) infinite; }
+.ts-grain-tile[data-k="1"] { animation-delay: -0.16s; }
+.ts-grain-tile[data-k="2"] { animation-delay: -0.32s; }
+@keyframes ts-grain { 0% { opacity: 0.013; } 33.333% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ts-grain-tile { animation: none; } .ts-grain-tile[data-k="0"] { opacity: 0.013; } }
 /* Around a moving pointer the grain comes up to the GENESIS field background's strength, then fades back. */
 .ts-grain-glow { position: absolute; left: 0; top: 0; width: 560px; height: 560px; opacity: 0; background-repeat: repeat; will-change: transform, opacity;
   -webkit-mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);

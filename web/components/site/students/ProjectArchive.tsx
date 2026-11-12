@@ -6,6 +6,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { glitch } from "@/components/site/npo/FaqAscii";
 import type { ArchiveProject, ArchiveYear } from "@/lib/site/projects";
+import { canvasDpr } from "@/lib/site/perf";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
@@ -27,7 +28,7 @@ function Cover({ mark, client }: { mark: string; client: string }) {
     const draw = () => {
       const w = canvas.clientWidth, h = canvas.clientHeight;
       if (!w || !h) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = canvasDpr();
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       const cols = Math.floor(w / CW), rows = Math.floor(h / CH);
       const off = document.createElement("canvas");

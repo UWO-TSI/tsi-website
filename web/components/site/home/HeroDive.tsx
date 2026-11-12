@@ -8,6 +8,7 @@ import GlobeVisualizer from "@/components/ui/GlobeVisualizer";
 import AsciiGrain from "@/components/site/AsciiGrain";
 import type { DiveRef } from "@/components/ui/GlobeVisualizerWebGPU";
 import { NUMBERS } from "@/lib/site/config";
+import { canvasDpr } from "@/lib/site/perf";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
@@ -60,7 +61,7 @@ export default function HeroDive() {
     let f = 0, dpr = 1, flicker = 0, snapTimer = 0;
 
     const size = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = canvasDpr();
       canvas.width = Math.round(el.clientWidth * dpr);
       canvas.height = Math.round(el.clientHeight * dpr);
       draw();

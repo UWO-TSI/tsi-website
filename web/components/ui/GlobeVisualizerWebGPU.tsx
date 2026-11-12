@@ -3,7 +3,8 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Html } from "@react-three/drei";
 import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Color, DirectionalLight, DoubleSide, Group, Material, Mesh, Points, Vector3, QuadraticBezierCurve3, BufferGeometry, LineDashedMaterial, Line } from "three";
+import { BufferAttribute, Color, DirectionalLight, DoubleSide, Group, Material, Mesh, Points, Vector3, QuadraticBezierCurve3, BufferGeometry, LineDashedMaterial, Line } from "three";
+import { lowPower } from "@/lib/site/perf";
 import {
     ACESFilmicToneMapping,
     SRGBColorSpace,
@@ -404,8 +405,36 @@ function GlobeNode({ node, position }: { node: GlobeNodeData; position: Vector3 
 // Globe
 // ═══════════════════════════════════════════
 
+/**
+ * The globe file keeps its point attributes as normalized integers so it downloads small; WebGPU can't read single 8 or
+ * 16-bit values, so they are widened back to floats here. On a low-power machine only every other point is kept (the
+ * points run in a spiral from pole to pole, so every other one is an even half of the globe).
+ */
+function widen(src: BufferGeometry, stride: number): BufferGeometry {
+    const out = new BufferGeometry();
+    for (const [name, attr] of Object.entries(src.attributes)) {
+        const a = attr as BufferAttribute;
+        const k = a.itemSize, n = Math.floor(a.count / stride);
+        const f = new Float32Array(n * k);
+        const arr = a.array as ArrayLike<number>;
+        const plain = !(a as unknown as { isInterleavedBufferAttribute?: boolean }).isInterleavedBufferAttribute;
+        const scale = !a.normalized ? 1 : arr instanceof Int16Array ? 1 / 32767 : arr instanceof Uint16Array ? 1 / 65535 : arr instanceof Uint8Array ? 1 / 255 : arr instanceof Int8Array ? 1 / 127 : 1;
+        for (let i = 0; i < n; i++) {
+            const j = i * stride;
+            for (let c = 0; c < k; c++) f[i * k + c] = plain ? Math.max(-1, arr[j * k + c] * scale) : a.getComponent(j, c);
+        }
+        out.setAttribute(name, new BufferAttribute(f, k));
+    }
+    out.boundingSphere = src.boundingSphere?.clone() ?? null;
+    out.boundingBox = src.boundingBox?.clone() ?? null;
+    return out;
+}
+
 function Globe() {
     const { nodes } = useGLTF("/globe.glb");
+    const { gl } = useThree();
+    // Frames drawn with the points in; after a few the shaders are compiled and the loading screen may lift.
+    const drawn = useRef(0);
 
     const pointsRef = useRef<Points | null>(null);
     const uniformsRef = useRef<MaterialUniforms | null>(null);
@@ -421,7 +450,7 @@ function Globe() {
     }, []);
 
     useEffect(() => {
-        const geometry = (nodes.GlobePoints as Points).geometry;
+        const geometry = widen((nodes.GlobePoints as Points).geometry, lowPower() ? 2 : 1);
         const { material, uniforms } = pointMaterial(1.0);
 
         uniformsRef.current = uniforms;
@@ -435,6 +464,9 @@ function Globe() {
     }, [nodes]);
 
     useFrame((state, delta) => {
+        if (drawn.current < 3 && pointsRef.current?.material && ++drawn.current === 3) {
+            (gl.domElement as HTMLElement).closest<HTMLElement>("[data-ready-wait]")?.setAttribute("data-ready", "1");
+        }
         const cameraPosition = state.camera.position;
 
         if (previousCameraPosition.current.lengthSq() > 0) {
@@ -645,7 +677,7 @@ export default function GlobeVisualizerWebGPU({ className = "", dive = NO_DIVE, 
         <div className={className} style={{ position: "relative", width: "100%", height: "100%", minHeight: 500 }}>
           <DiveContext.Provider value={{ dive, base }}>
             <Canvas
-                dpr={[1, 1.5]}
+                dpr={lowPower() ? 1 : [1, 1.5]}
                 camera={{ position: [0, 1, 5.1], fov: 30 }}
                 gl={async (props: any) => {
                     const renderer = new WebGPURenderer({

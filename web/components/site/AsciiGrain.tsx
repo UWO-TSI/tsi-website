@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { GRAIN_WORDS } from "@/lib/site/config";
+import { canvasDpr } from "@/lib/site/perf";
 
 // Light symbols; the page's own letters are added to them.
 const SYMBOLS = ".:-=+*01";
@@ -16,7 +17,6 @@ const HIDDEN_WORDS = 8;
 const DENSITY = 0.42;
 const VARIANTS = 3;
 const SWAP_FRACTION = 0.06;
-const TICK_MS = 160;
 // Now and then one of the page's words assembles out of the noise somewhere on screen, holds, and breaks up.
 const WORD_GAP_MS = [2500, 6000] as const;
 const WORD_HOLD_MS = [1700, 2800] as const;
@@ -48,10 +48,10 @@ export default function AsciiGrain({ className }: { className?: string }) {
 
   useEffect(() => {
     const el = ref.current!;
-    const tile = el.querySelector<HTMLElement>(".ts-grain-tile")!;
+    const tiles = Array.from(el.querySelectorAll<HTMLElement>(".ts-grain-tile"));
     const glow = el.querySelector<HTMLElement>(".ts-grain-glow")!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = canvasDpr();
     const words = GRAIN_WORDS[path] ?? GRAIN_WORDS["/"];
     const chars = Array.from(new Set(words.join("").replace(/[^A-Z0-9]/g, ""))).join("") + SYMBOLS;
     const pick = () => chars[Math.floor(Math.random() * chars.length)];
@@ -97,10 +97,14 @@ export default function AsciiGrain({ className }: { className?: string }) {
         }
         variants.push(render());
       }
-      for (const layer of [tile, glow]) {
-        layer.style.backgroundImage = variants[0];
+      // One layer per version of the tile; a CSS animation shows one at a time (the twinkle), on the compositor, so
+      // it never repaints the page. The glow keeps the first version.
+      tiles.forEach((layer, k) => {
+        layer.style.backgroundImage = variants[k % variants.length];
         layer.style.backgroundSize = `${TILE_W}px ${TILE_H}px`;
-      }
+      });
+      glow.style.backgroundImage = variants[0];
+      glow.style.backgroundSize = `${TILE_W}px ${TILE_H}px`;
     };
 
     /**
@@ -157,12 +161,6 @@ export default function AsciiGrain({ className }: { className?: string }) {
       }
     };
 
-    let timer = 0, i = 0;
-    const onVisible = () => {
-      clearInterval(timer);
-      if (reduce || document.visibilityState !== "visible") return;
-      timer = window.setInterval(() => { i = (i + 1) % variants.length; tile.style.backgroundImage = glow.style.backgroundImage = variants[i]; }, TICK_MS);
-    };
 
     // The glow sits under the pointer in the grain's own coordinates, its tile lined up with the field's.
     const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -188,24 +186,20 @@ export default function AsciiGrain({ className }: { className?: string }) {
     }
     build();
     document.fonts?.ready.then(build);
-    onVisible();
     if (!reduce) wordTimer = window.setTimeout(spawn, between(WORD_GAP_MS));
-    document.addEventListener("visibilitychange", onVisible);
     return () => {
-      clearInterval(timer);
       clearTimeout(wordTimer);
       clearTimeout(idle);
       cancelAnimationFrame(glowFrame);
       window.removeEventListener("pointermove", onPointer);
       window.removeEventListener("scroll", onScroll);
       live.forEach((w) => { clearInterval(w.timer); w.box.remove(); });
-      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [path]);
 
   return (
     <div ref={ref} className={className ? `ts-ascii-grain ${className}` : "ts-ascii-grain"} aria-hidden="true">
-      <div className="ts-grain-tile" />
+      {Array.from({ length: VARIANTS }, (_, k) => <div key={k} className="ts-grain-tile" data-k={k} />)}
       <div className="ts-grain-glow" />
     </div>
   );

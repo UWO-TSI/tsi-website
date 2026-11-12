@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { PERSON_PATH } from "../marks";
+import { canvasDpr, lowPower } from "@/lib/site/perf";
 
 // A fine character cell (8 px type), so each small figure has enough cells to read as the person.
 const CW = 5;
@@ -45,6 +46,9 @@ export default function StudentCrowd({ className = "" }: { className?: string })
     let sprite = new Float32Array(SPRITE_W * SPRITE_H);
     let dpr = 1, raf = 0, visible = false;
     let atlas: HTMLCanvasElement | null = null, blue: HTMLCanvasElement | null = null;
+    // Each person pre-drawn once per phrase offset (white) and once for you (blue), so a frame stamps whole people.
+    let people: HTMLCanvasElement[] = [], you: HTMLCanvasElement | null = null;
+    let covered: number[] = [];
     const mouse = { x: -1e4, y: -1e4, active: false };
     const waves: { x: number; y: number; t: number }[] = [];
 
@@ -84,7 +88,7 @@ export default function StudentCrowd({ className = "" }: { className?: string })
     };
 
     const layout = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = canvasDpr();
       const w = canvas.clientWidth, h = canvas.clientHeight;
       if (!w || !h) return;
       canvas.width = Math.round(w * dpr);
@@ -92,6 +96,22 @@ export default function StudentCrowd({ className = "" }: { className?: string })
       sample();
       atlas = makeAtlas(WHITE);
       blue = makeAtlas(BLUE);
+      const sw = Math.ceil(CW * dpr), sh = Math.ceil(CH * dpr);
+      covered = [];
+      for (let i = 0; i < SPRITE_W * SPRITE_H; i++) if (sprite[i] >= 0.12) covered.push(i);
+      const person = (src: HTMLCanvasElement, offset: number) => {
+        const cv = document.createElement("canvas");
+        cv.width = SPRITE_W * sw; cv.height = SPRITE_H * sh;
+        const g = cv.getContext("2d")!;
+        for (const i of covered) {
+          const r = Math.floor(i / SPRITE_W), c = i % SPRITE_W;
+          const gi = glyphs.indexOf(PHRASE[(offset + r * SPRITE_W + c) % PHRASE.length]);
+          g.globalAlpha = Math.min(1, Math.pow(sprite[i], 0.6));
+          g.drawImage(src, gi * sw, 0, sw, sh, c * sw, r * sh, sw, sh);
+        }
+        return cv;
+      };
+      people = Array.from({ length: PHRASE.length }, (_, k) => person(atlas!, k));
       // People in rows, a cell apart, every other row half a person over; the last rows leave room for you.
       const stepX = SPRITE_W + GAP_X, stepY = SPRITE_H + 1;
       const cols = Math.max(1, Math.floor((w / CW - SPRITE_W / 2) / stepX));
@@ -103,6 +123,7 @@ export default function StudentCrowd({ className = "" }: { className?: string })
         bodies.push({ x: x0 + (c * stepX + (r % 2 ? SPRITE_W / 2 : 0)) * CW, y: y0 + r * stepY * CH, lift: 0, v: 0, you: false, seed: Math.random() * 6.28 });
       }
       bodies.push({ x: x0 + Math.round((blockW / CW - SPRITE_W) / 2) * CW, y: y0 + rows * stepY * CH + CH, lift: 0, v: 0, you: true, seed: 0 });
+      you = person(blue, ((bodies.length - 1) * 7) % PHRASE.length);
     };
 
     const draw = (now: number) => {
@@ -128,16 +149,20 @@ export default function StudentCrowd({ className = "" }: { className?: string })
         b.lift += b.v;
         if (Math.abs(b.v) + Math.abs(target - b.lift) > 0.02) moving = true;
         const strength = b.you ? 1 : 0.42 + 0.58 * Math.max(near, wave) + Math.min(0.25, (b.lift / HOP) * 0.25);
-        const src = b.you ? blue! : atlas!;
-        for (let r = 0; r < SPRITE_H; r++) for (let c = 0; c < SPRITE_W; c++) {
-          const cover = sprite[r * SPRITE_W + c];
-          if (cover < 0.12) continue;
-          // Each person spells the phrase on from where the last left off; now and then a letter flickers.
-          let gi = glyphs.indexOf(PHRASE[(n * 7 + r * SPRITE_W + c) % PHRASE.length]);
-          const flick = (Math.sin(t * 1.1 + b.seed * 3 + r * 1.7 + c * 2.3) + 1) / 2;
-          if (!reduce && flick > 0.985) gi = (gi + 1 + flipFrame) % glyphs.length;
-          ctx.globalAlpha = Math.min(1, Math.pow(cover, 0.6) * strength);
-          ctx.drawImage(src, gi * sw, 0, sw, sh, Math.round((b.x + c * CW) * dpr), Math.round((b.y + r * CH - b.lift) * dpr), sw, sh);
+        const px = Math.round(b.x * dpr), py = Math.round((b.y - b.lift) * dpr);
+        ctx.globalAlpha = Math.min(1, strength);
+        ctx.drawImage(b.you ? you! : people[(n * 7) % PHRASE.length], px, py);
+        // Now and then one letter of a person flickers to another.
+        if (!reduce && !b.you) {
+          const h = Math.sin(n * 12.9898 + flipFrame * 78.233) * 43758.5453;
+          const f = h - Math.floor(h);
+          if (f < 0.12) {
+            const i = covered[Math.floor((f / 0.12) * covered.length)], r = Math.floor(i / SPRITE_W), c = i % SPRITE_W;
+            const gi = (glyphs.indexOf(PHRASE[(n * 7 + i) % PHRASE.length]) + 1 + flipFrame) % glyphs.length;
+            ctx.clearRect(px + c * sw, py + r * sh, sw, sh);
+            ctx.globalAlpha = Math.min(1, Math.pow(sprite[i], 0.6) * strength);
+            ctx.drawImage(atlas!, gi * sw, 0, sw, sh, px + c * sw, py + r * sh, sw, sh);
+          }
         }
         if (b.you) {
           ctx.globalAlpha = 1;
@@ -159,7 +184,7 @@ export default function StudentCrowd({ className = "" }: { className?: string })
       const next = () => { raf = requestAnimationFrame(loop); };
       // Full speed while the crowd moves; otherwise only the blue one bobs and a few letters flicker, more gently.
       if (busy) next();
-      else if (!reduce) setTimeout(() => { if (visible && !raf) next(); }, 1000 / 20);
+      else if (!reduce) setTimeout(() => { if (visible && !raf) next(); }, 1000 / (lowPower() ? 10 : 20));
     };
     const start = () => { if (!raf && visible) raf = requestAnimationFrame(loop); };
 

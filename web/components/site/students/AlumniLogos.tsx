@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Reveal from "@/components/site/Reveal";
 import type { WallLogo } from "@/lib/site/projects";
+import { canvasDpr } from "@/lib/site/perf";
 
 // The page's fine cell; a wide wordmark that would come out only a few rows tall gets a finer one.
 const CELL = { cw: 5, ch: 9 };
@@ -36,7 +37,7 @@ function LogoGlyph({ name, src, dense = false }: { name: string; src: string; de
       if (!img) return;
       const w = canvas.clientWidth, h = canvas.clientHeight;
       if (!w || !h) return;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = canvasDpr();
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       const S = 480 / Math.max(img.naturalWidth || 240, img.naturalHeight || 240);
       const iw = Math.round((img.naturalWidth || 240) * S), ih = Math.round((img.naturalHeight || 240) * S);

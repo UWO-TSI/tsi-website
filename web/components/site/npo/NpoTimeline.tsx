@@ -5,6 +5,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import AsciiGrain from "../AsciiGrain";
 import { Person } from "../marks";
+import { canvasDpr } from "@/lib/site/perf";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
@@ -38,7 +39,7 @@ function MonthGlyph({ month, months }: { month: number; months: TimelineMonths }
     const canvas = ref.current!;
     const ctx = canvas.getContext("2d")!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = canvasDpr();
     const w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
     canvas.width = Math.round(w * dpr);
@@ -70,11 +71,19 @@ function MonthGlyph({ month, months }: { month: number; months: TimelineMonths }
       return mask;
     };
 
-    const font = `500 ${CELL_H - 2}px "Sohne Mono", ui-monospace, monospace`;
+    // Every character the month can show, drawn once into a strip, so a frame copies cells instead of setting text.
+    const chars = Array.from(new Set((months.long.join("") + " " + NOISE).split(""))).join("");
+    const sw = Math.ceil(CELL_W * dpr), sh = Math.ceil(CELL_H * dpr);
+    const strip = document.createElement("canvas");
+    strip.width = sw * chars.length; strip.height = sh;
+    const sg = strip.getContext("2d")!;
+    sg.font = `500 ${Math.round((CELL_H - 2) * dpr)}px "Sohne Mono", ui-monospace, monospace`;
+    sg.textAlign = "center"; sg.textBaseline = "middle"; sg.fillStyle = "#f1ffff";
+    for (let i = 0; i < chars.length; i++) sg.fillText(chars[i], i * sw + sw / 2, sh / 2);
+    const slot = new Map(Array.from(chars, (ch, i) => [ch, i]));
     const paint = (from: { mask: Float32Array; month: number } | null, to: { mask: Float32Array; month: number }, t: number, switchAt: Float32Array) => {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
-      ctx.font = font; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#f1ffff";
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
         const i = r * cols + c;
         const at = switchAt[i];
@@ -85,7 +94,7 @@ function MonthGlyph({ month, months }: { month: number; months: TimelineMonths }
         const name = months.long[src.month] + " ";
         const ch = glitching ? NOISE[Math.floor(Math.random() * NOISE.length)] : name[(c + r * 3) % name.length];
         ctx.globalAlpha = glitching ? 0.42 : GLYPH_ALPHA * Math.min(1, cover * 1.4);
-        ctx.fillText(ch, c * CELL_W + CELL_W / 2, r * CELL_H + CELL_H / 2);
+        ctx.drawImage(strip, (slot.get(ch) ?? 0) * sw, 0, sw, sh, Math.round(c * CELL_W * dpr), Math.round(r * CELL_H * dpr), sw, sh);
       }
       ctx.globalAlpha = 1;
     };
@@ -113,7 +122,7 @@ function MonthGlyph({ month, months }: { month: number; months: TimelineMonths }
 /** Confetti out of the walker when they reach the end: paper and characters, thrown up, falling and fading. */
 function burst(canvas: HTMLCanvasElement, x: number, y: number) {
   const ctx = canvas.getContext("2d")!;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = canvasDpr();
   canvas.width = Math.round(canvas.clientWidth * dpr);
   canvas.height = Math.round(canvas.clientHeight * dpr);
   const bits = Array.from({ length: 110 }, () => {
@@ -168,6 +177,7 @@ export default function NpoTimeline({ title, stops, months = PROGRAM, id = "time
   useEffect(() => {
     const el = section.current!, vp = viewport.current!, tr = track.current!;
     const walker = tr.querySelector<HTMLElement>(".np-tl__walker")!;
+    const fill = tr.querySelector<HTMLElement>(".np-tl__fill");
     const demos = Array.from(tr.querySelectorAll<HTMLElement>(".np-tl__demo"));
     const wide = window.matchMedia(WIDE);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -186,13 +196,16 @@ export default function NpoTimeline({ title, stops, months = PROGRAM, id = "time
       const room = tr.scrollWidth - vp.clientWidth;
       const cam = Math.min(Math.max(0, x - vp.clientWidth * ANCHOR), Math.max(0, room));
       tr.style.transform = `translate3d(${(-cam).toFixed(1)}px, 0, 0)`;
-      tr.style.setProperty("--x", `${x.toFixed(1)}px`);
+      // The walker and the filled road move on their own (setting a variable on the track would restyle all of it).
+      walker.style.translate = `${x.toFixed(1)}px 0`;
+      if (fill) fill.style.scale = `${Math.max(0, (x - lead) / (span * unit)).toFixed(4)} 1`;
       const m = (x - lead) / unit;
       let reached = -1;
       stops.forEach((s, i) => { if (m >= s.at - 0.02) reached = i; });
       setActive(reached);
       setMonth(Math.min(span, Math.max(0, Math.round(m))));
-      demos.forEach((d) => { d.dataset.on = Number(d.dataset.at) <= m ? "true" : "false"; });
+      // Attributes are only written when they change, so a scroll frame restyles nothing it doesn't have to.
+      demos.forEach((d) => { const on = Number(d.dataset.at) <= m ? "true" : "false"; if (d.dataset.on !== on) d.dataset.on = on; });
       // At the finish: confetti once, again only after walking back away from it.
       const atEnd = m >= span - 0.02;
       setEnd(atEnd);
@@ -202,8 +215,9 @@ export default function NpoTimeline({ title, stops, months = PROGRAM, id = "time
       }
       reachedEnd.current = atEnd;
       if (Math.abs(x - prevX) > 0.5) {
-        walker.dataset.dir = x < prevX ? "back" : "on";
-        el.dataset.walking = "true";
+        const dir = x < prevX ? "back" : "on";
+        if (walker.dataset.dir !== dir) walker.dataset.dir = dir;
+        if (el.dataset.walking !== "true") el.dataset.walking = "true";
         clearTimeout(still);
         still = window.setTimeout(() => { el.dataset.walking = "false"; }, 170);
       }

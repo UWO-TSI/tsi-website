@@ -4,7 +4,7 @@ import Reveal from "@/components/site/Reveal";
 /** Hovering a photo shows what it is. */
 const PHOTOS = [
   { src: "/images/site/tsi-team-2026.webp", size: "lead", title: "TSI team, 2026–27", line: "This year's members, together outside.", alt: "The 2026–27 TSI team in navy TSI hoodies, gathered outside behind a TSI banner" },
-  { src: "/images/site/tsi-common-grounds.webp", size: "side", title: "TSI × Common Grounds", line: "We made sandwiches to donate to Arc Aid. Our team made 344.", alt: "TSI members in a kitchen behind three bins of sandwiches made for Arc Aid" },
+  { src: "/images/site/tsi-common-grounds.webp", size: "side", title: "TSI × Common Grounds", line: "We made sandwiches to donate to Ark Aid. Our team made 344.", alt: "TSI members in a kitchen behind three bins of sandwiches made for Ark Aid" },
   { src: "/images/site/genesis-banner.webp", size: "quarter", title: "GENESIS 2026", line: "Behind the Western 2025–2026 TSI banner.", alt: "The TSI team at GENESIS 2026 behind the Western 2025–2026 TSI banner" },
   { src: "/images/site/genesis-spacewalk.webp", size: "quarter", title: "GENESIS 2026", line: "A project team at their exhibit.", alt: "A project team in TSI hoodies around their exhibit at GENESIS 2026" },
   { src: "/images/site/genesis-redcross.webp", size: "quarter", title: "GENESIS 2026", line: "The Canadian Red Cross project table.", alt: "A project team at their Canadian Red Cross table at GENESIS 2026" },

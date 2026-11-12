@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Inter_Tight } from "next/font/google";
 import SiteNav from "@/components/site/SiteNav";
 import SiteFooter from "@/components/site/SiteFooter";
+import WarmOnNavigate from "@/components/site/WarmOnNavigate";
 import SiteScroll from "@/components/site/SiteScroll";
 import PersonCursor from "@/components/site/PersonCursor";
 import AsciiGrain from "@/components/site/AsciiGrain";
@@ -38,6 +39,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
       <SiteNav cta={cta} />
       <main>{children}</main>
       <SiteFooter site={site} />
+      <WarmOnNavigate />
     </div>
   );
 }

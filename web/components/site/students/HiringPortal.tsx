@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { nextHiringOpen } from "@/lib/site/season";
+import { canvasDpr, lowPower } from "@/lib/site/perf";
 
 // The swirl's characters, faint to dense, and what a changing digit flickers through.
 const RAMP = ".:-=+*#%@";
@@ -10,7 +11,9 @@ const NOISE = "#%&*+=01<>/";
 const LABELS = ["DAYS", "HOURS", "MINUTES", "SECONDS"];
 const WHITE = "#f1ffff";
 const BLUE = "#1d9bf0";
-const FPS = 24;
+// The swirl turns slowly, so 15 frames a second reads smooth; a low-power machine draws 10.
+const FPS = 15;
+const FPS_LOW = 10;
 const GLITCH_MS = 260;
 
 type Cells = { cw: number; ch: number; font: number };
@@ -53,6 +56,9 @@ export default function HiringPortal({ open }: { open: boolean }) {
     let cx = 0, cy = 0, rx = 1, ry = 1;
     // `hole`: how far in from the rim (in the portal's own units) the swirl is kept off the copy.
     let hole = 0.6;
+    // The swirl's cells, worked out once per layout: everything about a cell that doesn't change frame to frame, so a
+    // frame only turns the arms (two sines per cell) and draws. Cells that could never show are left out.
+    let ring = { n: 0, c: new Int16Array(0), r: new Int16Array(0), armP: new Float32Array(0), fineP: new Float32Array(0), rim: new Float32Array(0), halo: new Float32Array(0), keep: new Float32Array(0) };
 
     const atlas = (color: string) => {
       const sw = Math.ceil(cells.cw * dpr), sh = Math.ceil(cells.ch * dpr);
@@ -91,7 +97,7 @@ export default function HiringPortal({ open }: { open: boolean }) {
     const layout = () => {
       const w = canvas.clientWidth, h = canvas.clientHeight;
       if (!w || !h) return;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = canvasDpr();
       cells = w < 640 ? { cw: 6, ch: 11, font: 9.5 } : { cw: 8, ch: 14, font: 12 };
       const { cw, ch } = cells;
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
@@ -165,6 +171,23 @@ export default function HiringPortal({ open }: { open: boolean }) {
       rx = Math.max(Math.min(w * 0.42, 820), hw / 0.52);
       ry = Math.max(Math.min(h * 0.34, 420), hh / 0.45);
       hole = Math.hypot(hw / rx, hh / ry) + 0.03;
+
+      const list: number[][] = [];
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const nx = ((c + 0.5) * cw - cx) / rx, ny = ((r + 0.5) * ch - cy) / ry;
+        const d = Math.hypot(nx, ny);
+        if (d < hole || d > 1.9) continue;
+        // The swirl fades in over a short stretch outside the hole, and toward the section's edges.
+        const fade = Math.min(1, (d - hole) / 0.1, r / 10, (rows - 1 - r) / 10, c / 8, (cols - 1 - c) / 8);
+        const rimV = Math.exp(-(((d - 0.86) / 0.12) ** 2)) * fade;
+        const haloV = (d < 0.86 ? 0.4 * Math.exp(-(((d - 0.68) / 0.05) ** 2)) : 0.4 * Math.exp(-(d - 0.86) / 0.32)) * fade;
+        if (rimV + haloV < 0.07) continue;
+        const a = Math.atan2(ny, nx);
+        list.push([c, r, 4 * a + 7 * Math.log(d), 13 * a + d * 12, rimV, haloV, hash(c, r, 0.5)]);
+      }
+      const n = list.length;
+      ring = { n, c: new Int16Array(n), r: new Int16Array(n), armP: new Float32Array(n), fineP: new Float32Array(n), rim: new Float32Array(n), halo: new Float32Array(n), keep: new Float32Array(n) };
+      list.forEach(([c, r, ap, fp, rimV, haloV, k], i) => { ring.c[i] = c; ring.r[i] = r; ring.armP[i] = ap; ring.fineP[i] = fp; ring.rim[i] = rimV; ring.halo[i] = haloV; ring.keep[i] = k; });
     };
 
     const hash = (a: number, b: number, c: number) => {
@@ -188,23 +211,18 @@ export default function HiringPortal({ open }: { open: boolean }) {
       const { cw, ch } = cells, tick = Math.floor(t * 6);
 
       // The portal: log-spiral arms turning on a bright rim, a thin inner ring and a halo that thins outward.
-      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        const nx = ((c + 0.5) * cw - cx) / rx, ny = ((r + 0.5) * ch - cy) / ry;
-        const d = Math.hypot(nx, ny);
-        if (d < hole || d > 1.9) continue;
-        // The swirl fades in over a short stretch outside the hole.
-        // ...and toward the section's edges, so the ring is never cut off by them.
-        const fade = Math.min(1, (d - hole) / 0.1, r / 10, (rows - 1 - r) / 10, c / 8, (cols - 1 - c) / 8);
-        const a = Math.atan2(ny, nx);
-        const rim = Math.exp(-(((d - 0.86) / 0.12) ** 2));
-        const ring = d < 0.86 ? 0.4 * Math.exp(-(((d - 0.68) / 0.05) ** 2)) : 0.4 * Math.exp(-(d - 0.86) / 0.32);
-        const arms = 0.5 + 0.5 * Math.sin(4 * a + 7 * Math.log(d) - t * 1.3);
-        const fine = 0.5 + 0.5 * Math.sin(13 * a - t * 2.4 + d * 12);
-        const flick = hash(c, r, tick);
-        const I = (rim * (0.3 + 0.45 * arms + 0.25 * fine) + ring * arms * (0.55 + 0.45 * flick)) * fade;
-        if (I < 0.07 || (I < 0.3 && hash(c, r, 0.5) > I * 3.4)) continue;
-        const g = RAMP[Math.min(RAMP.length - 1, Math.floor(I * RAMP.length))];
-        put(rim > 0.5 && arms > 0.55 ? blue : white, g, c, r, Math.min(1, 0.12 + I * 1.1));
+      const sw = Math.ceil(cw * dpr), sh = Math.ceil(ch * dpr), ta = t * 1.3, tf = t * 2.4;
+      for (let i = 0; i < ring.n; i++) {
+        const c = ring.c[i], r = ring.r[i], rimV = ring.rim[i];
+        const arms = 0.5 + 0.5 * Math.sin(ring.armP[i] - ta);
+        const fine = 0.5 + 0.5 * Math.sin(ring.fineP[i] - tf);
+        // A cheap integer hash for the flicker, new six times a second.
+        const flick = (Math.imul(c * 73856093 ^ r * 19349663 ^ tick * 83492791, 2654435761) >>> 0) / 4294967296;
+        const I = rimV * (0.3 + 0.45 * arms + 0.25 * fine) + ring.halo[i] * arms * (0.55 + 0.45 * flick);
+        if (I < 0.07 || (I < 0.3 && ring.keep[i] > I * 3.4)) continue;
+        const gi = index.get(RAMP[Math.min(RAMP.length - 1, Math.floor(I * RAMP.length))])!;
+        ctx.globalAlpha = Math.min(1, 0.12 + I * 1.1);
+        ctx.drawImage(rimV > 0.5 && arms > 0.55 ? blue : white, gi * sw, 0, sw, sh, Math.round(c * cw * dpr), Math.round(r * ch * dpr), sw, sh);
       }
 
       // The clock, each big digit written in its own small character; a changed digit flickers through noise.
@@ -236,7 +254,7 @@ export default function HiringPortal({ open }: { open: boolean }) {
     const loop = (now: number) => {
       raf = 0;
       if (!visible) return;
-      if (now - last >= 1000 / (reduce ? 4 : FPS)) { last = now; draw(now); }
+      if (now - last >= 1000 / (reduce ? 4 : lowPower() ? FPS_LOW : FPS)) { last = now; draw(now); }
       raf = requestAnimationFrame(loop);
     };
     const start = () => { if (!raf && visible) raf = requestAnimationFrame(loop); };

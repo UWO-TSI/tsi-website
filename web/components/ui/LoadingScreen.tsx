@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PEOPLE } from "@/components/site/marks";
+import { readyWaits, warmImages } from "@/lib/site/warm";
+import { markLowPower } from "@/lib/site/perf";
 
 const SEEN = "tethos-loaded";
 // Around the ring from the top, clockwise.
@@ -11,7 +13,8 @@ const STEP = 60;
 // The people light up only after the mark has assembled, one at a time at most every LIGHT_MS, as the page loads.
 const ASSEMBLE_MS = ORDER.length * STEP + 260;
 const LIGHT_MS = 150;
-const MAX_MS = 6000;
+// The longest the screen waits, however slow the connection.
+const MAX_MS = 9000;
 const CLICK_MS = 560;
 const LIFT_MS = 440;
 // The game's UI click (Kenney, CC0), as mp3 so every browser plays it.
@@ -21,9 +24,10 @@ const SPRAY_N = 24;
 
 /**
  * The loading screen (David, 2026-11-12: "just the logo, centred, simple", and "it should actually load so each guy
- * turns blue"): on black, the Tethos mark alone in the middle. Its six people arrive one by one, then each turns blue
- * as the page really loads: the document, the fonts, the page's (non-lazy) images and the load event, so the sixth
- * lights only when loading is done (or after MAX_MS). Then the mark clicks: it presses in, plays the game's UI click,
+ * turns blue", "it needs to load during the loading screen so that everything runs super smooth"): on black, the
+ * Tethos mark alone in the middle. Its six people arrive one by one, then each turns blue as the page really loads:
+ * the document, the fonts, every image on the page (lazy ones too, decoded), the load event and the globe's first
+ * frame, so the sixth lights only when all of it is done (or after MAX_MS). Then the mark clicks: it presses in, plays the game's UI click,
  * sprays characters and sends two rings out, and the black lifts. Once per visit; reduced motion skips it. Browsers
  * may hold back the sound until the visitor has interacted with the site.
  */
@@ -82,26 +86,42 @@ export default function LoadingScreen() {
       later(() => setPhase("gone"), CLICK_MS + LIFT_MS);
     };
 
-    // How far the page has loaded, 0 to 1; it reaches 1 only with the load event (or the time limit).
+    // Everything the page will show is fetched and decoded behind the screen (lazy images too), and the heavy pieces
+    // (the globe) draw their first frame, so nothing loads or compiles once you start scrolling.
+    const warm = warmImages();
+    let timedOut = false;
+    // How far the page has loaded, 0 to 1; it reaches 1 only when all of that is done (or at the time limit).
     const progress = () => {
-      if (loaded) return 1;
-      const imgs = Array.from(document.images).filter((im) => im.loading !== "lazy");
-      const images = imgs.length ? imgs.filter((im) => im.complete).length / imgs.length : 1;
-      return Math.min(0.95, 0.1 + (document.readyState !== "loading" ? 0.15 : 0) + (fonts ? 0.2 : 0) + 0.45 * images);
+      if (timedOut) return 1;
+      const images = warm.total ? warm.settled() / warm.total : 1;
+      const w = readyWaits(), waits = w.total ? w.ready / w.total : 1;
+      if (loaded && fonts && images === 1 && waits === 1) return 1;
+      return Math.min(0.95, 0.05 + (document.readyState !== "loading" ? 0.1 : 0) + (fonts ? 0.1 : 0) + (loaded ? 0.1 : 0) + 0.45 * images + 0.2 * waits);
     };
+    // Once loaded, a short look at the frame rate: if this machine can't hold it, the visit runs the lighter version.
+    const probe = () => new Promise<void>((res) => {
+      const times: number[] = [];
+      let prev = performance.now();
+      const f = (now: number) => {
+        times.push(now - prev); prev = now;
+        if (times.length < 24) requestAnimationFrame(f);
+        else { const s = times.slice(4).sort((a, b) => a - b); if (s[Math.floor(s.length / 2)] > 24) markLowPower(); res(); }
+      };
+      requestAnimationFrame(f);
+    });
     // One more person turns blue each tick while the progress is ahead of them; the sixth means done.
     let shown = 0;
     const tick = window.setInterval(() => {
       if (performance.now() - t0 < ASSEMBLE_MS) return;
       const target = Math.floor(progress() * ORDER.length + 1e-6);
       if (shown < target) { shown += 1; setLit(shown); }
-      if (shown === ORDER.length && !done) { done = true; clearInterval(tick); later(click, 280); }
+      if (shown === ORDER.length && !done) { done = true; clearInterval(tick); probe().then(() => later(click, 120)); }
     }, LIGHT_MS);
     const onLoad = () => { loaded = true; };
     window.addEventListener("load", onLoad);
     if (document.fonts) document.fonts.ready.then(() => { fonts = true; }, () => { fonts = true; });
     else fonts = true;
-    later(() => { fonts = true; loaded = true; }, MAX_MS);
+    later(() => { fonts = true; loaded = true; timedOut = true; }, MAX_MS);
 
     return () => {
       timers.forEach(clearTimeout);

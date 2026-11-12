@@ -45,7 +45,7 @@ const LIFE: { title: string; line: string; img: string; alt: string; size: "wide
   { title: "Town halls", line: "The whole club meets every month, often with a social after.", img: "/images/site/students/town-hall.webp", alt: "Members in TSI hoodies with their arms up in a courtyard", size: "tall" },
   { title: "GENESIS", line: "Every team demos what it built, in March.", img: "/images/site/students/genesis-hearts.webp", alt: "Members making heart hands at GENESIS", size: "tall" },
   { title: "Arcade night", line: "A night out in March.", img: "/images/site/students/arcade.webp", alt: "A group of members posing in an arcade", size: "tall" },
-  { title: "Volunteering", line: "Making sandwiches for ArkAid.", img: "/images/site/students/sandwiches.webp", alt: "Members in a kitchen behind bins of sandwiches", size: "tall" },
+  { title: "Volunteering", line: "Making sandwiches for Ark Aid.", img: "/images/site/students/sandwiches.webp", alt: "Members in a kitchen behind bins of sandwiches", size: "tall" },
   { title: "Tethos Island", line: "The club's own game, for members, at play.tethos.ca.", img: "/images/site/tethos-island.webp", alt: "Tethos Island, the member world: a small island with the club's buildings", size: "tall" },
 ];
 

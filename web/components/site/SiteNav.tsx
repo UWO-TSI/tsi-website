@@ -34,11 +34,12 @@ function useToneUnder(ref: React.RefObject<HTMLElement | null>) {
       const next = under?.closest("[data-tone]")?.getAttribute("data-tone") === "light" ? "light" : "dark";
       setTone((t) => (t === next ? t : next));
     };
-    const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
+    // At most ten times a second: asking what is under the nav makes the browser settle its layout first.
+    const onScroll = () => { if (!frame) frame = window.setTimeout(check, 100); };
     check();
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
-    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); if (frame) cancelAnimationFrame(frame); };
+    return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); if (frame) clearTimeout(frame); };
   }, [ref]);
   return tone;
 }

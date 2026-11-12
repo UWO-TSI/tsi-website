@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { canvasDpr } from "@/lib/site/perf";
 
 const GROUND = { dark: "#0f0f10", deep: "#08090b", light: "#f1ffff" } as const;
 type Ground = keyof typeof GROUND;
@@ -51,7 +52,7 @@ export default function GlyphSeam({ from, to, seed = 1 }: { from: Ground; to: Gr
     let cols = 0, rows = 0, dpr = 1, visible = false, timer = 0, raf = 0;
 
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = canvasDpr();
       const w = canvas.clientWidth;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(HEIGHT * dpr);

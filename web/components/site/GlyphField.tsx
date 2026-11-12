@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { canvasDpr } from "@/lib/site/perf";
 
 type Props = {
   /** A greyscale image on black; its brightness lifts the characters over a faint field. */
@@ -126,7 +127,7 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
     };
 
     const relayout = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = canvasDpr();
       const w = canvas.clientWidth, h = canvas.clientHeight;
       if (!w || !h) return;
       // The page grain's cell (AsciiGrain), so every ASCII surface on the site is one size.

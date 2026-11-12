@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { canvasDpr } from "@/lib/site/perf";
 
 type Item = { q: string; a: string };
 
@@ -47,7 +48,7 @@ export default function FaqAscii({ items }: { items: readonly Item[] }) {
   useEffect(() => {
     const el = field.current!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = canvasDpr();
     const font = `500 14px "Sohne Mono", ui-monospace, monospace`;
     const cells = Array.from({ length: TILE_COLS * TILE_ROWS }, () => (Math.random() < DENSITY ? pick() : ""));
     const alpha = cells.map(() => 0.08 + Math.random() * 0.12);
