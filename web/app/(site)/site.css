@@ -267,20 +267,36 @@
 
 .ts { position: relative; }
 /* Laid over the whole page (not the screen), so it scrolls with the content. */
-.ts-ascii-grain { position: absolute; inset: 0; z-index: 55; pointer-events: none; opacity: 0.07; mix-blend-mode: difference; background-repeat: repeat; }
+.ts-ascii-grain { position: absolute; inset: 0; z-index: 55; pointer-events: none; opacity: 0.045; mix-blend-mode: difference; background-repeat: repeat; }
+/* A word surfacing in the grain: one cell per letter on the tile's grid. Black inside the difference blend, so
+   its box clears the noise behind it. */
+.ts-grain-word { position: absolute; display: flex; background: #000; color: #fff; white-space: pre;
+  font: 500 10px/12px "Sohne Mono", ui-monospace, monospace; }
+.ts-grain-word > span { width: 7px; height: 12px; text-align: center; }
+
+/* A slow blue aura behind the GENESIS field (the /genesis hero and the home page's GENESIS section). */
+.gx-aura { position: absolute; inset: -20% -10% auto -10%; height: 140%; pointer-events: none; opacity: 0.9;
+  background:
+    radial-gradient(40% 35% at 70% 40%, rgba(29, 155, 240, 0.18), transparent 70%),
+    radial-gradient(30% 30% at 82% 62%, rgba(29, 155, 240, 0.12), transparent 70%),
+    radial-gradient(28% 26% at 20% 20%, rgba(29, 155, 240, 0.08), transparent 70%);
+  filter: blur(20px); animation: gx-aura 18s ease-in-out infinite alternate; }
+@keyframes gx-aura { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-3%, 2%, 0) scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .gx-aura { animation: none; } }
 
 /* ── Cursor ─────────────────────────────────────────────── */
 
 .ts-cursor { position: fixed; top: 0; left: 0; z-index: 90; pointer-events: none; width: 14px; height: 17px; margin: -8px 0 0 -7px; color: var(--on-dark); mix-blend-mode: difference; transition: opacity 0.2s, color 0.2s var(--ease-ui); will-change: transform; }
-/* It leans into the direction it moves (--lean, set per frame). */
-.ts-cursor svg { width: 100%; height: 100%; display: block; rotate: var(--lean, 0deg); transition: transform 0.3s var(--ease-pop); }
+/* It swings from its head as it is dragged (--lean, set per frame). */
+.ts-cursor svg { width: 100%; height: 100%; display: block; rotate: var(--lean, 0deg); transform-origin: 50% 8%; transition: transform 0.3s var(--ease-pop); }
 /* Over anything clickable it turns blue, grows, and a ring pops out around it. */
 .ts-cursor::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 1px solid currentColor;
   opacity: 0; scale: 0.3; transition: opacity 0.18s var(--ease-ui), scale 0.32s var(--ease-pop); }
 .ts-cursor[data-hover="true"] { color: var(--signal); mix-blend-mode: normal; }
-.ts-cursor[data-hover="true"] svg { transform: scale(1.6) translateY(-1px); }
+/* It swings from its head, so the grow and the dip are shifted to stay centred in the ring. */
+.ts-cursor[data-hover="true"] svg { transform: translateY(-5.3px) scale(1.6); }
 .ts-cursor[data-hover="true"]::after { opacity: 0.28; scale: 1; }
-.ts-cursor[data-down="true"] svg { transform: scale(0.75) translateY(2px); transition-duration: 0.08s; }
+.ts-cursor[data-down="true"] svg { transform: translateY(3.3px) scale(0.75); transition-duration: 0.08s; }
 .ts-cursor[data-down="true"]::after { scale: 0.85; opacity: 0.4; transition-duration: 0.08s; }
 
 /* A click throws a ring of characters outward. */

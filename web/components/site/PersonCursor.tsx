@@ -5,11 +5,14 @@ import { Person } from "./marks";
 
 const BURST = "*+#01@%&<>/=:";
 const SPRAY = 16;
+// How much of the gap to the pointer it closes each frame (lower trails further behind).
+const DRAG = 0.17;
+const MAX_LEAN = 42;
 
 /**
- * The cursor is one person from the Tethos mark (fine pointers only). It leans as it moves; over links and
- * buttons it turns blue, grows and gets a faint ring; it dips on press, and a click sprays 16 blue
- * characters that fly out, arc and fall as they fade.
+ * The cursor is one person from the Tethos mark (fine pointers only). It trails the pointer and swings as
+ * it is dragged; over links and buttons it turns blue, grows and gets a faint ring; it dips on press, and
+ * a click sprays 16 blue characters that fly out, arc and fall as they fade.
  */
 export default function PersonCursor() {
   const ref = useRef<HTMLDivElement>(null);
@@ -20,17 +23,21 @@ export default function PersonCursor() {
     root?.classList.add("has-cursor");
     const el = ref.current!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let x = -100, y = -100, cx = -100, cy = -100, lean = 0, frame = 0;
+    let x = -100, y = -100, cx = -100, cy = -100, lean = 0, spin = 0, frame = 0;
 
     const draw = () => {
-      cx += (x - cx) * (reduce ? 1 : 0.35);
-      cy += (y - cy) * (reduce ? 1 : 0.35);
+      // It trails the pointer, and swings on a spring from its head: it tips well over when dragged
+      // sideways, overshoots when the pointer stops, and wobbles back upright.
+      cx += (x - cx) * (reduce ? 1 : DRAG);
+      cy += (y - cy) * (reduce ? 1 : DRAG);
       el.style.transform = `translate3d(${cx}px, ${cy}px, 0)`;
       if (!reduce) {
-        lean += (Math.max(-18, Math.min(18, (x - cx) * 0.9)) - lean) * 0.25;
+        const target = Math.max(-MAX_LEAN, Math.min(MAX_LEAN, (x - cx) * 1.6));
+        spin = (spin + (target - lean) * 0.16) * 0.8;
+        lean += spin;
         el.style.setProperty("--lean", `${lean.toFixed(2)}deg`);
       }
-      frame = Math.abs(x - cx) + Math.abs(y - cy) + Math.abs(lean) > 0.1 ? requestAnimationFrame(draw) : 0;
+      frame = Math.abs(x - cx) + Math.abs(y - cy) + Math.abs(lean) + Math.abs(spin) > 0.1 ? requestAnimationFrame(draw) : 0;
     };
     const onMove = (e: PointerEvent) => {
       x = e.clientX; y = e.clientY;

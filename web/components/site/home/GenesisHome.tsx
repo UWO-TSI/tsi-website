@@ -17,7 +17,8 @@ export const GENESIS_FIELD = "GENESIS · ";
 export default function GenesisHome() {
   return (
     <section className="ts-section gn" data-tone="deep" id="genesis" aria-labelledby="genesis-title">
-      {/* The field fills the section and scrolls with it; the hand and sphere sit still on the right. */}
+      {/* As the /genesis hero: the aura, then the field filling the section with the hand and sphere on the right. */}
+      <div className="gx-aura" aria-hidden="true" />
       <div className="gn-bg" aria-hidden="true">
         <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} backgroundPhrase={GENESIS_FIELD} layout="right" pixelCells />
       </div>

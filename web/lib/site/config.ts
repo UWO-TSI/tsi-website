@@ -50,6 +50,13 @@ export const NUMBERS = [
   { value: "2", label: "Chapters" },
 ] as const;
 
+/** Words that now and then surface in the page grain, by page; other pages use the home list. */
+export const GRAIN_WORDS: Record<string, readonly string[]> = {
+  "/": ["SOCIAL IMPACT", "PRO BONO", "NONPROFITS", "BUILT FOR PURPOSE", "TECH FOR SOCIAL IMPACT", "STUDENT-RUN"],
+  "/npo": ["PRO BONO", "AT NO COST", "NONPROFITS", "SOCIAL IMPACT"],
+  "/genesis": ["GENESIS"],
+};
+
 export const GENESIS_2026 = [
   { value: "260+", label: "Attendees" },
   { value: "7", label: "Project demos" },

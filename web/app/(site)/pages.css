@@ -83,13 +83,6 @@
 
 .gx { background: var(--ink-deep); }
 .gx-hero { position: relative; z-index: 56; overflow: hidden; padding-top: clamp(140px, 20vh, 200px); min-height: 100svh; }
-.gx-aura { position: absolute; inset: -20% -10% auto -10%; height: 140%; pointer-events: none; opacity: 0.9;
-  background:
-    radial-gradient(40% 35% at 70% 40%, rgba(29, 155, 240, 0.18), transparent 70%),
-    radial-gradient(30% 30% at 82% 62%, rgba(29, 155, 240, 0.12), transparent 70%),
-    radial-gradient(28% 26% at 20% 20%, rgba(29, 155, 240, 0.08), transparent 70%);
-  filter: blur(20px); animation: gx-aura 18s ease-in-out infinite alternate; }
-@keyframes gx-aura { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-3%, 2%, 0) scale(1.08); } }
 .gx-hero__grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 560px); align-items: center; min-height: calc(100svh - 260px); pointer-events: none; }
 .gx-hero__grid > * { pointer-events: auto; }
 .gx-hero__copy { display: grid; gap: 24px; }
@@ -142,6 +135,6 @@
 .gx-thanks__strip:hover .gx-thanks__track { animation-play-state: paused; }
 
 @media (prefers-reduced-motion: reduce) {
-  .gx-aura, .gx-thanks__track { animation: none; }
+  .gx-thanks__track { animation: none; }
   .gx-thanks__track { flex-wrap: wrap; width: auto; white-space: normal; gap: 16px 40px; }
 }
