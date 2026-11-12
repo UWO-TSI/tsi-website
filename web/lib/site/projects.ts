@@ -66,17 +66,20 @@ export const PROJECT_YEARS: readonly ArchiveYear[] = [
  * alumni have worked at"). Logos: Simple Icons (CC0) for Meta, AMD, Shopify, Apple and Y Combinator; Wikimedia Commons
  * for IBM, TD, KPMG and Scotiabank; RBC's own site for RBC.
  */
-export const ALUMNI_COMPANIES: readonly { name: string; logo: string }[] = [
-  { name: "Meta", logo: "/logos/alumni/meta.svg" },
-  { name: "Apple", logo: "/logos/alumni/apple.svg" },
-  { name: "Shopify", logo: "/logos/alumni/shopify.svg" },
-  { name: "AMD", logo: "/logos/alumni/amd.svg" },
-  { name: "IBM", logo: "/logos/alumni/ibm.svg" },
-  { name: "Y Combinator", logo: "/logos/alumni/ycombinator.svg" },
-  { name: "RBC", logo: "/logos/alumni/rbc.svg" },
-  { name: "TD", logo: "/logos/alumni/td.svg" },
-  { name: "Scotiabank", logo: "/logos/alumni/scotiabank.svg" },
-  { name: "KPMG", logo: "/logos/alumni/kpmg.svg" },
+/** A logo on a wall: `logo` is drawn in characters, `color` is the real logo shown on hover, `href` its site. */
+export type WallLogo = { name: string; logo: string; color?: string; href?: string };
+
+export const ALUMNI_COMPANIES: readonly WallLogo[] = [
+  { name: "Meta", logo: "/logos/alumni/meta.svg", color: "/logos/alumni/color/meta.svg" },
+  { name: "Apple", logo: "/logos/alumni/apple.svg", color: "/logos/alumni/color/apple.svg" },
+  { name: "Shopify", logo: "/logos/alumni/shopify.svg", color: "/logos/alumni/color/shopify.svg" },
+  { name: "AMD", logo: "/logos/alumni/amd.svg", color: "/logos/alumni/color/amd.svg" },
+  { name: "IBM", logo: "/logos/alumni/ibm.svg", color: "/logos/alumni/color/ibm.svg" },
+  { name: "Y Combinator", logo: "/logos/alumni/ycombinator.svg", color: "/logos/alumni/color/ycombinator.svg" },
+  { name: "RBC", logo: "/logos/alumni/rbc.svg", color: "/logos/alumni/color/rbc.svg" },
+  { name: "TD", logo: "/logos/alumni/td.svg", color: "/logos/alumni/color/td.svg" },
+  { name: "Scotiabank", logo: "/logos/alumni/scotiabank.svg", color: "/logos/alumni/color/scotiabank.svg" },
+  { name: "KPMG", logo: "/logos/alumni/kpmg.svg", color: "/logos/alumni/color/kpmg.svg" },
 ];
 
 /**
@@ -85,8 +88,31 @@ export const ALUMNI_COMPANIES: readonly { name: string; logo: string }[] = [
  * can't be used without the Red Cross's permission, so those three aren't on it.
  */
 const NOT_ON_WALL = new Set(["wsc", "plan-catalyst"]);
-export const BUILT_FOR: readonly { name: string; logo: string }[] = PROJECT_YEARS.flatMap((y) => y.projects)
+/** Each nonprofit's own site (checked live, 2026-11-12). */
+const SITES: Record<string, string> = {
+  "bgc-2026": "https://www.bgclondon.ca/",
+  "ark-aid": "https://arkaidmission.ca/",
+  "grand-theatre": "https://www.grandtheatre.com/",
+  "brain-tumour": "https://www.braintumour.ca/",
+  "growing-chefs": "https://www.growingchefs.ca/",
+  "world-vision": "https://www.worldvision.ca/",
+  irc: "https://www.rescue.org/",
+  lcm: "https://www.londonchildrensmuseum.ca/",
+  childcan: "https://childcan.com/",
+  "plan-international": "https://plancanada.ca/",
+  daya: "https://www.dayacounselling.on.ca/",
+  you: "https://www.you.ca/",
+  trea: "https://www.trea.ca/",
+  "united-way": "https://unitedwayem.ca/",
+  jam: "https://jetaircraftmuseum.ca/",
+  "go-hockey": "https://gohockey.org/",
+  empowher: "https://www.empowherto.org/",
+  "fund-homecare": "https://www.fundhomecare.ca/",
+};
+const SVG_COLOR = new Set(["world-vision", "irc", "plan-international"]);
+export const BUILT_FOR: readonly WallLogo[] = PROJECT_YEARS.flatMap((y) => y.projects)
   .filter((p) => p.logo && !NOT_ON_WALL.has(p.slug))
   .filter((p, i, all) => all.findIndex((q) => q.client === p.client) === i)
-  // Each one's icon (its mark alone, cropped from the logo and turned into black ink, so it reads in characters).
-  .map((p) => ({ name: p.client, logo: `/logos/icons/${p.slug}.png` }));
+  // Each one's icon (its mark alone, cropped from the logo and turned into black ink, so it reads in characters), and
+  // its full logo in colour for the hover.
+  .map((p) => ({ name: p.client, logo: `/logos/icons/${p.slug}.png`, color: `/logos/color/${p.slug}.${SVG_COLOR.has(p.slug) ? "svg" : "png"}`, href: SITES[p.slug] }));

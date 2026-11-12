@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Reveal from "@/components/site/Reveal";
+import type { WallLogo } from "@/lib/site/projects";
 
 // The page's fine cell; a wide wordmark that would come out only a few rows tall gets a finer one.
 const CELL = { cw: 5, ch: 9 };
@@ -9,7 +10,6 @@ const FINE = { cw: 3.5, ch: 6.3 };
 const MIN_ROWS = 8;
 const NOISE = "#%&*+=01<>/";
 const WHITE = "#f1ffff";
-const BLUE = "#1d9bf0";
 const SETTLE_MS = 520;
 
 /**
@@ -73,8 +73,7 @@ function LogoGlyph({ name, src, dense = false }: { name: string; src: string; de
           const sx = Math.floor(x0 + ((c * CW + (i + 0.5) * CW / 3) - ox) / k), sy = Math.floor(y0 + ((r * CH + (j + 0.5) * CH / 3) - oy) / k);
           if (sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1) sum += ink[sy * iw + sx] / max;
         }
-        // Dense walls (icons with thin strokes) lift light coverage, so a hairline still gets a character.
-        cover[r * cols + c] = dense ? Math.min(1, Math.pow(sum / 9, 0.5)) : sum / 9;
+        cover[r * cols + c] = sum / 9;
       }
       settle = Float32Array.from({ length: cols * rows }, () => Math.random() * SETTLE_MS);
     };
@@ -92,7 +91,7 @@ function LogoGlyph({ name, src, dense = false }: { name: string; src: string; de
         const flicker = hot && !reduce && t < settle[i];
         if (flicker) busy = true;
         const ch = v < 0.3 ? "." : flicker ? NOISE[Math.floor(Math.random() * NOISE.length)] : fill[(r * cols + c) % fill.length];
-        ctx.fillStyle = hot ? BLUE : WHITE;
+        ctx.fillStyle = WHITE;
         ctx.globalAlpha = v < 0.3 ? 0.3 : Math.min(1, 0.32 + v * 0.68);
         ctx.fillText(ch, c * CW + CW / 2, r * CH + CH / 2 + 0.5);
       }
@@ -123,20 +122,34 @@ function LogoGlyph({ name, src, dense = false }: { name: string; src: string; de
 
 /**
  * A wall of logos, each written in characters with its name underneath: where members and alumni have worked (on
- * /students), and the nonprofits teams have built for (on /npo).
+ * /students), and the nonprofits teams have built for (on /npo). Pointing at one turns its tile white and shows the
+ * real logo in its own colours; a nonprofit's tile opens its website.
  */
-export default function AlumniLogos({ companies, id = "alumni", title = "Where our members and alumni have worked.", cols = 5, dense = false }: { companies: readonly { name: string; logo: string }[]; id?: string; title?: string; cols?: number; dense?: boolean }) {
+export default function AlumniLogos({ companies, id = "alumni", title = "Where our members and alumni have worked.", cols = 5, dense = false }: { companies: readonly WallLogo[]; id?: string; title?: string; cols?: number; dense?: boolean }) {
   return (
     <section className="ts-section" data-tone="dark" id={id} aria-labelledby={`${id}-title`}>
       <div className="ts-wrap">
         <Reveal delay={0.06}><h2 className="ts-h2" id={`${id}-title`} style={{ maxWidth: "14em" }}>{title}</h2></Reveal>
         <ul className="st-logos" data-dense={dense || undefined} style={{ ["--cols" as string]: cols }}>
-          {companies.map((co, i) => (
-            <Reveal as="li" key={co.name} className="st-logo" delay={0.04 * (i % 5)}>
-              <LogoGlyph name={co.name} src={co.logo} dense={dense} />
-              <span className="st-logo__name">{co.name}</span>
-            </Reveal>
-          ))}
+          {companies.map((co, i) => {
+            const body = (
+              <>
+                <div className="st-logo__art">
+                  <LogoGlyph name={co.name} src={co.logo} dense={dense} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {co.color && <img className="st-logo__color" src={co.color} alt="" loading="lazy" draggable={false} />}
+                </div>
+                <span className="st-logo__name">{co.name}</span>
+              </>
+            );
+            return (
+              <Reveal as="li" key={co.name} className="st-logo" data-color={co.color ? "" : undefined} delay={0.04 * (i % 5)}>
+                {co.href
+                  ? <a className="st-logo__in" href={co.href} target="_blank" rel="noopener noreferrer" aria-label={`${co.name}, opens their website`}>{body}</a>
+                  : <div className="st-logo__in">{body}</div>}
+              </Reveal>
+            );
+          })}
         </ul>
       </div>
     </section>
