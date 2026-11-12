@@ -6,7 +6,6 @@ import Reveal from "@/components/site/Reveal";
 import GlyphSeam from "@/components/site/GlyphSeam";
 import DotNav from "@/components/site/DotNav";
 import StudentCrowd from "@/components/site/students/StudentCrowd";
-import { Person } from "@/components/site/marks";
 import { TETHOS } from "@/lib/site/config";
 import { loadSeasonCta } from "@/lib/site/season-server";
 
@@ -16,14 +15,6 @@ export const metadata: Metadata = {
 };
 
 const APPLY = "/student/apply";
-
-/** The roles, from the live positions and the year on the home page. */
-const ROLES = [
-  { role: "Developer", line: "Build useful software with a project team for a nonprofit client.", when: "September", people: 3 },
-  { role: "Project manager", line: "Lead a project team and work with its nonprofit from October to April.", when: "September", people: 1 },
-  { role: "Director", line: "Marketing, internal or external: make the work visible, keep the team connected, or build ties with partners and sponsors.", when: "September", people: 2 },
-  { role: "Leadership", line: "Run the club as next year's executive team.", when: "May", people: 4 },
-];
 
 /** How a September round runs, from the applicant portal's stages (screening, interview, final review). */
 const STEPS = [
@@ -50,7 +41,6 @@ const CHAPTER_MAIL = `mailto:${TETHOS.contact}?subject=${encodeURIComponent("Sta
 
 const SECTIONS = [
   { id: "students", label: "Students" },
-  { id: "roles", label: "Roles" },
   { id: "hiring", label: "Hiring" },
   { id: "life", label: "Outside the projects" },
   { id: "chapter", label: "Start a chapter" },
@@ -70,7 +60,6 @@ export default async function StudentsPage() {
             </Reveal>
             <Reveal delay={0.18} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link href={APPLY} className="ts-btn ts-btn--primary">See open roles <span className="ts-btn__arrow">→</span></Link>
-              <a href="#roles" className="ts-btn ts-btn--ghost">Pick a role</a>
             </Reveal>
           </div>
           <div className="st-hero__crowd">
@@ -79,28 +68,6 @@ export default async function StudentsPage() {
         </div>
       </section>
 
-      <GlyphSeam from="dark" to="light" seed={31} />
-      <section className="ts-section" data-tone="light" id="roles" aria-labelledby="roles-title">
-        <div className="ts-wrap">
-          <Reveal delay={0.06}><h2 className="ts-h2" id="roles-title">Pick a role.</h2></Reveal>
-          <ul className="st-roles">
-            {ROLES.map((r, i) => (
-              <Reveal as="li" key={r.role} className="st-role" delay={0.06 * i}>
-                <div className="st-role__card">
-                  <span className="st-role__people" aria-hidden="true">
-                    {Array.from({ length: r.people }, (_, k) => <Person key={k} className="st-role__person" />)}
-                  </span>
-                  <h3 className="ts-h3">{r.role}</h3>
-                  <p className="ts-body">{r.line}</p>
-                  <p className="st-role__when">Hiring in {r.when}</p>
-                </div>
-              </Reveal>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <GlyphSeam from="light" to="dark" seed={32} />
       <section className="ts-section" data-tone="dark" id="hiring" aria-labelledby="hiring-title">
         <div className="ts-wrap">
           <div className="st-hiring__head">

@@ -146,21 +146,6 @@
 .st-hero__copy { display: grid; gap: 24px; }
 .st-hero__title { max-width: 12em; font-size: clamp(2.75rem, 5.4vw, 5rem); }
 .st-hero__crowd { height: min(72svh, 660px); width: 100%; justify-self: center; }
-.st-role { display: flex; }
-.st-roles { list-style: none; margin: 56px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-/* Cards tip a little and their people hop when you point at one. */
-.st-role__card { height: 100%; display: flex; flex-direction: column; gap: 12px; padding: 28px; border-radius: 14px; background: #fff; border: 1px solid var(--line-light);
-  transition: transform 0.4s var(--ease-pop), box-shadow 0.4s var(--ease-ui); }
-.st-role:hover .st-role__card { transform: translateY(-6px) rotate(-1.2deg); box-shadow: 0 24px 50px rgba(15, 15, 16, 0.1); }
-.st-role:nth-child(even):hover .st-role__card { transform: translateY(-6px) rotate(1.2deg); }
-.st-role__people { display: flex; gap: 4px; height: 34px; margin-bottom: 8px; color: var(--signal-light); }
-.st-role__person { width: 28px; height: 34px; }
-.st-role:hover .st-role__person { animation: st-hop 0.5s var(--ease-pop) both; }
-.st-role:hover .st-role__person:nth-child(2) { animation-delay: 0.06s; }
-.st-role:hover .st-role__person:nth-child(3) { animation-delay: 0.12s; }
-.st-role:hover .st-role__person:nth-child(4) { animation-delay: 0.18s; }
-@keyframes st-hop { 40% { transform: translateY(-10px); } }
-.st-role__when { margin-top: auto; padding-top: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-light-3); }
 .st-hiring__head, .st-life__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px 32px; }
 /* Shown only while a round is open (the same check as the nav's call to action). */
 .st-open { display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 999px; background: rgba(29, 155, 240, 0.14); color: var(--signal); font-size: 15px; }
@@ -195,10 +180,8 @@
   .st-tile--tall { grid-column: auto; }
 }
 @media (max-width: 560px) { .st-tile--tall { grid-column: 1 / -1; } }
-@media (max-width: 1000px) { .st-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 820px) { .st-hero__grid { grid-template-columns: 1fr; } .st-hero__crowd { height: 420px; } }
-@media (max-width: 600px) { .st-roles { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: reduce) { .st-role:hover .st-role__card, .st-tile:hover img { transform: none; } .st-role:hover .st-role__person, .st-open i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .st-tile:hover img { transform: none; } .st-open i { animation: none; } }
 
 /* ── /npo: all dark until the white apply section at the end ── */
 
