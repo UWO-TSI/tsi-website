@@ -19,7 +19,7 @@ const TICK_MS = 45;
 const pick = () => (Math.random() < 0.7 ? NOISE[Math.floor(Math.random() * NOISE.length)] : SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]);
 
 /** Glitches a text node's content in from noise, leaving spaces where they are. */
-function glitch(node: HTMLElement | null, text: string) {
+export function glitch(node: HTMLElement | null, text: string) {
   if (!node) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { node.textContent = text; return; }
   const settle = Array.from(text, () => Math.random() * SETTLE_MS);

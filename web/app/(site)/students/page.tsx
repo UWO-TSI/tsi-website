@@ -8,6 +8,9 @@ import DotNav from "@/components/site/DotNav";
 import StudentCrowd from "@/components/site/students/StudentCrowd";
 import HiringPortal from "@/components/site/students/HiringPortal";
 import NpoTimeline, { type TimelineStop } from "@/components/site/npo/NpoTimeline";
+import ProjectArchive from "@/components/site/students/ProjectArchive";
+import AlumniLogos from "@/components/site/students/AlumniLogos";
+import { ALUMNI_COMPANIES, PROJECT_YEARS } from "@/lib/site/projects";
 import { TETHOS } from "@/lib/site/config";
 import { loadSeasonCta } from "@/lib/site/season-server";
 
@@ -60,6 +63,8 @@ const CHAPTER_MAIL = `mailto:${TETHOS.contact}?subject=${encodeURIComponent("Sta
 const SECTIONS = [
   { id: "students", label: "Students" },
   { id: "year", label: "A year at TSI" },
+  { id: "projects", label: "Projects" },
+  { id: "alumni", label: "Where members worked" },
   { id: "hiring", label: "Hiring" },
   { id: "life", label: "Outside the projects" },
   { id: "portal", label: "Portal opens" },
@@ -89,6 +94,11 @@ export default async function StudentsPage() {
       </section>
 
       <NpoTimeline id="year" title="A year at TSI." stops={YEAR} months={YEAR_MONTHS} />
+
+      <GlyphSeam from="dark" to="light" seed={36} />
+      <ProjectArchive years={PROJECT_YEARS} />
+      <GlyphSeam from="light" to="dark" seed={37} />
+      <AlumniLogos companies={ALUMNI_COMPANIES} />
 
       <section className="ts-section" data-tone="dark" id="hiring" aria-labelledby="hiring-title">
         <div className="ts-wrap">

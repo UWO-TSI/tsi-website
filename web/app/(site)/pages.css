@@ -169,6 +169,32 @@
 .st-tile__cap { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 4px; padding: 56px 20px 18px; background: linear-gradient(transparent, rgba(8, 9, 11, 0.8)); color: #f1ffff; font-size: 15px; line-height: 1.45; }
 .st-tile__cap b { font-size: 17px; font-weight: 500; }
 .st-tile__cap span { color: rgba(241, 255, 255, 0.8); }
+/* What teams have built: one year at a time, picked from the chips. */
+.st-arch__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px 40px; }
+.st-arch__years { display: flex; flex-wrap: wrap; gap: 8px; }
+.st-arch__years button { display: inline-flex; align-items: baseline; gap: 10px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line-light); background: transparent; color: var(--on-light);
+  font: inherit; font-size: 15px; cursor: pointer; transition: background-color 0.25s var(--ease-ui), border-color 0.25s var(--ease-ui), color 0.25s var(--ease-ui); }
+.st-arch__years button:hover { border-color: rgba(15, 15, 16, 0.4); }
+.st-arch__years b { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.06em; }
+.st-arch__years span { color: var(--on-light-2); }
+.st-arch__years button[aria-selected="true"] { background: var(--signal-light); border-color: var(--signal-light); color: var(--ink); }
+.st-arch__years button[aria-selected="true"] span { color: var(--ink); }
+.st-arch__list { list-style: none; margin: 56px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px 32px; }
+.st-arch__item { display: grid; align-content: start; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line-light); animation: st-arch-in 0.5s var(--ease-settle) both; animation-delay: calc(var(--i) * 40ms); }
+@keyframes st-arch-in { from { opacity: 0; transform: translateY(10px); } }
+.st-arch__meta { margin: 0; display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-light-3); }
+.st-arch__client { margin: 0; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; }
+.st-arch__built { margin: 0; font-size: 16px; line-height: 1.5; color: var(--on-light-2); }
+@media (max-width: 1000px) { .st-arch__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .st-arch__list { grid-template-columns: 1fr; gap: 28px; } }
+/* Where members and alumni have worked: each logo written in characters. */
+.st-logos { list-style: none; margin: 56px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.st-logo { display: grid; gap: 10px; padding: 18px 16px 14px; border: 1px solid var(--line-dark); border-radius: 14px; transition: border-color 0.3s var(--ease-ui), background-color 0.3s var(--ease-ui); }
+.st-logo:hover { border-color: rgba(29, 155, 240, 0.5); background: rgba(29, 155, 240, 0.05); }
+.st-logo__glyph { display: block; width: 100%; height: 108px; }
+.st-logo__name { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-3); }
+@media (max-width: 900px) { .st-logos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .st-arch__item { animation: none; } }
 /* The application portal countdown: a swirl of characters around a clock written in characters. */
 .hp { position: relative; overflow: hidden; min-height: min(100svh, 960px); display: grid; place-items: center; }
 .hp__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
