@@ -42,12 +42,13 @@ export const YEAR = [
   { when: "May", title: "Leadership hiring", detail: "Next year's executive team." },
 ] as const;
 
+/** The club's numbers, each with one plain line of what it counts (only facts the site already states). */
 export const NUMBERS = [
-  { value: "$500K+", label: "Value created" },
-  { value: "100+", label: "Student developers" },
-  { value: "150+", label: "Members" },
-  { value: "20+", label: "Projects delivered" },
-  { value: "2", label: "Chapters" },
+  { value: "$500K+", label: "Value created", line: "In pro bono software for nonprofits." },
+  { value: "100+", label: "Student developers", line: "Building in teams from October to April." },
+  { value: "150+", label: "Members", line: "Developers, designers, project managers and directors." },
+  { value: "20+", label: "Projects delivered", line: "For nonprofits, since our first teams in 2024." },
+  { value: "2", label: "Chapters", line: "Western, where TSI started, and UBC." },
 ] as const;
 
 /** Words that now and then surface in the page grain, by page; other pages use the home list. */

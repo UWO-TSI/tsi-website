@@ -7,7 +7,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import GlobeVisualizer from "@/components/ui/GlobeVisualizer";
 import AsciiGrain from "@/components/site/AsciiGrain";
 import type { DiveRef } from "@/components/ui/GlobeVisualizerWebGPU";
-import { NUMBERS } from "@/lib/site/config";
 import { canvasDpr } from "@/lib/site/perf";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
@@ -223,14 +222,6 @@ export default function HeroDive() {
             <p className="ts-body hd-mission__body">
               Tethos runs Tech for Social Impact (TSI), our first branch, with chapters at Western and UBC. Each year its teams build for nonprofits and show the work at GENESIS.
             </p>
-            <dl className="hd-numbers">
-              {NUMBERS.map((n) => (
-                <div key={n.label} className="hd-numbers__item">
-                  <dt className="ts-label">{n.label}</dt>
-                  <dd className="ts-num hd-numbers__value">{n.value}</dd>
-                </div>
-              ))}
-            </dl>
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import "./home.css";
 import HeroDive from "@/components/site/home/HeroDive";
+import Numbers from "@/components/site/home/Numbers";
 import WhoAreYou from "@/components/site/home/WhoAreYou";
 import Dates from "@/components/site/home/Dates";
 import GenesisHome from "@/components/site/home/GenesisHome";
@@ -10,6 +11,7 @@ import DotNav from "@/components/site/DotNav";
 
 const SECTIONS = [
   { id: "hero", label: "Tethos" },
+  { id: "numbers", label: "In numbers" },
   { id: "audiences", label: "Who are you" },
   { id: "dates", label: "The year" },
   { id: "genesis", label: "GENESIS" },
@@ -22,6 +24,7 @@ export default function HomePage() {
     <>
       <DotNav sections={SECTIONS} />
       <HeroDive />
+      <Numbers />
       <GlyphSeam from="light" to="dark" seed={1} />
       {/* Dark from here to the one white section at the end, the call to join. */}
       <WhoAreYou />
