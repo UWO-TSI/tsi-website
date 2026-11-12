@@ -293,16 +293,19 @@
 
 /* ── Cursor ─────────────────────────────────────────────── */
 
-.ts-cursor { position: fixed; top: 0; left: 0; z-index: 90; pointer-events: none; width: 14px; height: 17px; margin: -8px 0 0 -7px; color: var(--on-dark); mix-blend-mode: difference; transition: opacity 0.2s, color 0.2s var(--ease-ui); will-change: transform; }
+/* A solid figure with a thin edge of the opposite shade, so it shows on dark, light, grey and blue alike. */
+.ts-cursor { --edge: #0f0f10; position: fixed; top: 0; left: 0; z-index: 90; pointer-events: none; width: 14px; height: 17px; margin: -8px 0 0 -7px; color: var(--on-dark); transition: opacity 0.2s, color 0.2s var(--ease-ui); will-change: transform; }
+.ts-cursor svg path { stroke: var(--edge); stroke-width: 34px; stroke-linejoin: round; paint-order: stroke; transition: stroke 0.2s var(--ease-ui); }
 /* It swings from its head as it is dragged (--lean, set per frame). */
 .ts-cursor svg { width: 100%; height: 100%; display: block; rotate: var(--lean, 0deg); transform-origin: 50% 8%; transition: transform 0.3s var(--ease-pop); }
 /* Over anything clickable it turns blue, grows, and a ring pops out around it. */
 .ts-cursor::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 1px solid currentColor;
   opacity: 0; scale: 0.3; transition: opacity 0.18s var(--ease-ui), scale 0.32s var(--ease-pop); }
-.ts-cursor[data-hover="true"] { color: var(--signal); mix-blend-mode: normal; }
+.ts-cursor[data-hover="true"] { color: var(--signal); --edge: #f1ffff; }
+.ts-cursor[data-hover="primary"] { color: #f1ffff; --edge: #0f0f10; }
 /* It swings from its head, so the grow and the dip are shifted to stay centred in the ring. */
-.ts-cursor[data-hover="true"] svg { transform: translateY(-5.3px) scale(1.6); }
-.ts-cursor[data-hover="true"]::after { opacity: 0.28; scale: 1; }
+.ts-cursor[data-hover="true"] svg, .ts-cursor[data-hover="primary"] svg { transform: translateY(-5.3px) scale(1.6); }
+.ts-cursor[data-hover="true"]::after, .ts-cursor[data-hover="primary"]::after { opacity: 0.28; scale: 1; }
 .ts-cursor[data-down="true"] svg { transform: translateY(3.3px) scale(0.75); transition-duration: 0.08s; }
 .ts-cursor[data-down="true"]::after { scale: 0.85; opacity: 0.4; transition-duration: 0.08s; }
 

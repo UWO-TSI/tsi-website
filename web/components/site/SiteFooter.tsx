@@ -14,7 +14,7 @@ export default function SiteFooter({ site }: { site: SiteConfig }) {
           <nav className="ts-footer__links" aria-label="Footer">
             <Link href="/npo">Nonprofits</Link>
             <Link href="/genesis">GENESIS</Link>
-            <a href={`mailto:${site.contact}`}>Contact</a>
+            <Link href="/contact">Contact</Link>
           </nav>
         </div>
         <div className="ts-footer__small">

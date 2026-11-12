@@ -35,7 +35,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
       <SiteScroll />
       <PersonCursor />
       <AsciiGrain />
-      <SiteNav cta={cta} contact={site.contact} />
+      <SiteNav cta={cta} />
       <main>{children}</main>
       <SiteFooter site={site} />
     </div>

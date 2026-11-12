@@ -14,7 +14,7 @@ const PHOTOS = [
 
 export default function Team() {
   return (
-    <section className="ts-section" data-tone="light" id="team" aria-labelledby="team-title">
+    <section className="ts-section" data-tone="dark" id="team" aria-labelledby="team-title">
       <div className="ts-wrap">
         <Reveal delay={0.08}><h2 className="ts-h2" id="team-title" style={{ maxWidth: "15em" }}>150+ members across two chapters.</h2></Reveal>
         <div className="tm-photos">

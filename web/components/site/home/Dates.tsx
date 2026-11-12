@@ -7,6 +7,7 @@ export default function Dates() {
       id="dates"
       title="When to apply, when to show up."
       rows={YEAR}
+      tone="dark"
     />
   );
 }

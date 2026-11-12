@@ -43,7 +43,9 @@ export default function PersonCursor() {
       x = e.clientX; y = e.clientY;
       el.style.opacity = "1";
       const target = e.target as Element | null;
-      el.dataset.hover = String(!!target?.closest("a, button, [role='button'], label, summary, select, input[type='submit'], input[type='checkbox'], input[type='radio']"));
+      const hit = target?.closest("a, button, [role='button'], label, summary, select, input[type='submit'], input[type='checkbox'], input[type='radio']");
+      // Over a blue button it stays light with a dark edge; over anything else clickable it turns blue.
+      el.dataset.hover = !hit ? "false" : hit.closest(".ts-btn--primary, [aria-current='step']") ? "primary" : "true";
       if (!frame) frame = requestAnimationFrame(draw);
     };
     const onDown = (e: PointerEvent) => {

@@ -23,16 +23,13 @@ export default function HomePage() {
       <DotNav sections={SECTIONS} />
       <HeroDive />
       <GlyphSeam from="light" to="dark" seed={1} />
+      {/* Dark from here to the one white section at the end, the call to join. */}
       <WhoAreYou />
-      <GlyphSeam from="dark" to="light" seed={2} />
       <Dates />
-      <GlyphSeam from="light" to="deep" seed={3} />
       <GenesisHome />
-      <GlyphSeam from="deep" to="light" seed={4} />
       <Team />
-      <GlyphSeam from="light" to="dark" seed={5} />
+      <GlyphSeam from="dark" to="light" seed={5} />
       <Closing />
-      <GlyphSeam from="dark" to="light" seed={6} />
     </>
   );
 }

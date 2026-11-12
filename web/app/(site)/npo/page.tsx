@@ -6,7 +6,7 @@ import GlyphField from "@/components/site/GlyphField";
 import DotNav from "@/components/site/DotNav";
 import NpoApplyForm from "@/components/site/npo/NpoApplyForm";
 import NpoTimeline, { type TimelineStop } from "@/components/site/npo/NpoTimeline";
-import FaqBubbles from "@/components/site/npo/FaqBubbles";
+import FaqAscii from "@/components/site/npo/FaqAscii";
 import { npoFormOpen, NPO_WINDOW_LABEL } from "@/lib/npo-applications";
 import { TETHOS } from "@/lib/site/config";
 
@@ -37,12 +37,12 @@ const KEEP = [
 ] as const;
 
 const TIMELINE: TimelineStop[] = [
-  { when: "Aug", title: "Applications", detail: `Tell us about your organization and what you need. The form is open ${NPO_WINDOW_LABEL}.` },
-  { when: "Sep", title: "Selection", detail: "We choose the partners where a student team can do the most good." },
-  { when: "Oct", title: "Kickoff", detail: "Your team meets you, learns how your organization works and agrees on what to build." },
-  { when: "Oct–Mar", title: "Build", detail: "Design first, then code, with a demo every two weeks. You see it working long before it's done." },
-  { when: "Mar", title: "GENESIS", detail: "Your team presents the project at our year-end showcase. You're invited." },
-  { when: "Apr", title: "Handoff", detail: "Everything transfers to you, and it's yours to keep:", keep: KEEP },
+  { at: 0, when: "Aug", title: "Applications", detail: `Tell us about your organization and what you need. The form is open ${NPO_WINDOW_LABEL}.` },
+  { at: 1, when: "Sep", title: "Selection", detail: "We choose the partners where a student team can do the most good." },
+  { at: 2, when: "Oct", title: "Kickoff", detail: "Your team meets you, learns how your organization works and agrees on what to build." },
+  { at: 2.6, until: 7, when: "Oct–Mar", title: "Build", detail: "Design first, then code, with a demo every two weeks. You see it working long before it's done." },
+  { at: 7, when: "Mar", title: "GENESIS", detail: "Your team presents the project at our year-end showcase. You're invited." },
+  { at: 8, when: "Apr", title: "Handoff", detail: "Everything transfers to you, and it's yours to keep:", keep: KEEP },
 ];
 
 const FAQ = [
@@ -95,13 +95,14 @@ export default function NpoPage() {
       <section className="ts-section np-questions" data-tone="dark" id="questions" aria-labelledby="questions-title">
         <div className="ts-wrap">
           <Reveal delay={0.06}><h2 className="ts-h2" id="questions-title">Before you apply</h2></Reveal>
-          <Reveal delay={0.1}><FaqBubbles items={FAQ} /></Reveal>
+          <Reveal delay={0.08}><p className="np-questions__hint">Click a question to open it.</p></Reveal>
+          <Reveal delay={0.1}><FaqAscii items={FAQ} /></Reveal>
         </div>
       </section>
 
       <GlyphSeam from="dark" to="light" seed={15} />
-      <section className="ts-section" data-tone="light" id="apply" aria-labelledby="apply-title">
-        <div className="ts-wrap np-apply">
+      <section className="ts-section np-apply-section" data-tone="light" id="apply" aria-labelledby="apply-title">
+        <div className="ts-wrap np-apply np-apply--one">
           <div className="np-apply__intro">
             <h2 className="ts-h2" id="apply-title">{open ? "Tell us what you need." : "Applications open Aug 10."}</h2>
             <p className="ts-body" style={{ marginTop: 18 }}>

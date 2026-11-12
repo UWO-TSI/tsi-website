@@ -27,7 +27,7 @@ const WORD_TICK_MS = 70;
 const GLOW_SIZE = 560;
 const GLOW_IDLE_MS = 1200;
 // Layers that sit above the page grain; a word isn't placed where one of them covers it.
-const COVERED = ".hd-stage, .hd-reveal, .gn, .gx-hero, .ts-nav";
+const COVERED = ".hd-stage, .hd-reveal, .gn, .gx-hero, .np-tl__stage, .ts-nav";
 
 const between = ([a, b]: readonly [number, number]) => a + Math.random() * (b - a);
 

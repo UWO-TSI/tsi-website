@@ -67,7 +67,7 @@ function useCompact() {
   return compact;
 }
 
-export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: string }) {
+export default function SiteNav({ cta }: { cta: SeasonCta }) {
   const navRef = useRef<HTMLElement>(null);
   const tone = useToneUnder(navRef);
   const compact = useCompact();
@@ -112,7 +112,7 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
               {LINKS.map((l) => (
                 <Link key={l.href} href={l.href} className="ts-nav__link" aria-current={path === l.href ? "page" : undefined}>{l.label}</Link>
               ))}
-              <a href={`mailto:${contact}`} className="ts-nav__link">Contact</a>
+              <Link href="/contact" className="ts-nav__link" aria-current={path === "/contact" ? "page" : undefined}>Contact</Link>
               <a href={`${PLAY_ORIGIN}/`} className="ts-nav__link ts-nav__link--quiet">Student portal ↗</a>
             </nav>
           </div>
@@ -123,9 +123,9 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
                   <l.Icon size={16} />
                 </Link>
               ))}
-              <a href={`mailto:${contact}`} className="ts-nav__icon" style={{ "--i": 3 } as React.CSSProperties} {...tipProps("Contact")}>
+              <Link href="/contact" className="ts-nav__icon" style={{ "--i": 3 } as React.CSSProperties} {...tipProps("Contact")}>
                 <EnvelopeIcon size={16} />
-              </a>
+              </Link>
               <a href={`${PLAY_ORIGIN}/`} className="ts-nav__icon" style={{ "--i": 4 } as React.CSSProperties} {...tipProps("Student portal")}>
                 <IslandIcon size={16} />
               </a>
@@ -153,7 +153,7 @@ export default function SiteNav({ cta, contact }: { cta: SeasonCta; contact: str
         {LINKS.map((l, i) => (
           <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="ts-sheet__link" style={{ transitionDelay: open ? `${0.07 + i * 0.07}s` : "0s" }}>{l.label}</Link>
         ))}
-        <a href={`mailto:${contact}`} className="ts-sheet__link" style={{ transitionDelay: open ? "0.28s" : "0s" }}>Contact</a>
+        <Link href="/contact" className="ts-sheet__link" style={{ transitionDelay: open ? "0.28s" : "0s" }}>Contact</Link>
         <div className="ts-sheet__foot">
           <Link href={cta.href} onClick={() => setOpen(false)} className="ts-btn ts-btn--primary" style={{ alignSelf: "flex-start" }}>{cta.label}</Link>
           <a href={`${PLAY_ORIGIN}/`} className="ts-dim" style={{ fontSize: 14 }}>Student portal ↗</a>

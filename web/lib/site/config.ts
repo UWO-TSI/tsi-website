@@ -55,6 +55,7 @@ export const GRAIN_WORDS: Record<string, readonly string[]> = {
   "/": ["SOCIAL IMPACT", "PRO BONO", "NONPROFITS", "BUILT FOR PURPOSE", "TECH FOR SOCIAL IMPACT", "STUDENT-RUN"],
   "/npo": ["PRO BONO", "AT NO COST", "NONPROFITS", "SOCIAL IMPACT"],
   "/genesis": ["GENESIS"],
+  "/contact": ["SAY HI", "GET IN TOUCH", "INFO@TETHOS.CA", "WE READ EVERYTHING"],
   "/students": ["BUILD WITH US", "DEVELOPERS", "PROJECT MANAGERS", "TETHOS ISLAND", "SHIP IT"],
 };
 

@@ -16,7 +16,7 @@ export const GENESIS_FIELD = "GENESIS · ";
 
 export default function GenesisHome() {
   return (
-    <section className="ts-section gn" data-tone="deep" id="genesis" aria-labelledby="genesis-title">
+    <section className="ts-section gn" data-tone="dark" id="genesis" aria-labelledby="genesis-title">
       {/* As the /genesis hero: the aura, then the field filling the section with the hand and sphere on the right. */}
       <div className="gx-aura" aria-hidden="true" />
       <div className="gn-bg" aria-hidden="true">

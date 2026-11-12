@@ -55,6 +55,7 @@ export default function NpoApplyForm({ contact }: { contact: string }) {
           </select>
         </label>
         <label className="np-field"><span>City <em>optional</em></span><input name="city" maxLength={120} autoComplete="address-level2" /></label>
+        <label className="np-check"><input type="checkbox" name="can_commit" value="yes" /><span>Someone on our team can give 2 to 3 hours a week to check in with the students.</span></label>
       </fieldset>
 
       <fieldset className="np-form__group">
@@ -62,15 +63,14 @@ export default function NpoApplyForm({ contact }: { contact: string }) {
         <label className="np-field"><span>Your name</span><input name="contact_name" required maxLength={160} autoComplete="name" /></label>
         <label className="np-field"><span>Email</span><input name="contact_email" type="email" required maxLength={254} autoComplete="email" /></label>
         <label className="np-field"><span>Your role <em>optional</em></span><input name="contact_role" maxLength={160} autoComplete="organization-title" /></label>
+        <label className="np-field"><span>How did you hear about us? <em>optional</em></span><input name="heard_about" maxLength={200} /></label>
       </fieldset>
 
       <fieldset className="np-form__group">
         <legend className="np-legend">What you need</legend>
-        <label className="np-field np-field--wide"><span>What would you want built, and what problem does it solve?</span><textarea name="problem" required minLength={20} maxLength={4000} rows={5} /></label>
-        <label className="np-field np-field--wide"><span>Who would use it? <em>optional</em></span><textarea name="users" maxLength={2000} rows={3} /></label>
-        <label className="np-field np-field--wide"><span>What do you use today? <em>optional</em></span><textarea name="current_tools" maxLength={2000} rows={3} placeholder="Spreadsheets, a website builder, paper forms..." /></label>
-        <label className="np-check"><input type="checkbox" name="can_commit" value="yes" /><span>Someone on our team can give 2 to 3 hours a week to check in with the students.</span></label>
-        <label className="np-field"><span>How did you hear about us? <em>optional</em></span><input name="heard_about" maxLength={200} /></label>
+        <label className="np-field np-field--wide"><span>What would you want built, and what problem does it solve?</span><textarea name="problem" required minLength={20} maxLength={4000} rows={4} /></label>
+        <label className="np-field np-field--wide"><span>Who would use it? <em>optional</em></span><textarea name="users" maxLength={2000} rows={2} /></label>
+        <label className="np-field np-field--wide"><span>What do you use today? <em>optional</em></span><textarea name="current_tools" maxLength={2000} rows={2} placeholder="Spreadsheets, a website builder, paper forms..." /></label>
         <label className="np-trap" aria-hidden="true">Fax<input name="company_fax" tabIndex={-1} autoComplete="off" /></label>
       </fieldset>
 
