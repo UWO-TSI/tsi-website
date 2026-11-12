@@ -4,7 +4,7 @@ import Reveal from "@/components/site/Reveal";
 const PATHS = [
   { who: "Nonprofits", go: "Apply for a build", href: "/npo#apply" },
   { who: "Sponsors", go: "Sponsor GENESIS", href: "/genesis#sponsor" },
-  { who: "Students", go: "See open roles", href: "/student/apply" },
+  { who: "Students", go: "Find your role", href: "/students" },
 ];
 
 /** The last call, one way in for each audience: the page's one white section, at the end (David cut the closing globe and its circle). */

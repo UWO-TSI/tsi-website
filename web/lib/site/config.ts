@@ -21,7 +21,7 @@ export const TETHOS: SiteConfig = {
   accent: "#1d9bf0",
   accentOnLight: "#1d9bf0",
   contact: "info@tethos.ca",
-  instagram: "https://instagram.com/uwotsi",
+  instagram: "https://www.instagram.com/westerntsi/",
   github: "https://github.com/UWO-TSI",
 };
 

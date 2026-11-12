@@ -156,7 +156,6 @@
 .ts-nav__link { font-size: 13px; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(241, 255, 255, 0.74); white-space: nowrap; transition: color 0.3s var(--ease-ui); }
 .ts-nav__link:hover, .ts-nav__link[aria-current="page"] { color: var(--on-dark); }
 .ts-nav__link:focus-visible { outline: 2px solid var(--signal); outline-offset: 4px; border-radius: 4px; }
-.ts-nav__link--quiet { color: rgba(241, 255, 255, 0.55); }
 
 .ts-nav__icons { display: flex; align-items: center; gap: 2px; padding-left: 6px; }
 .ts-nav__icon { display: grid; place-items: center; flex: none; width: var(--item); height: var(--item); border-radius: 50%; color: rgba(241, 255, 255, 0.88);
@@ -211,7 +210,6 @@
 .ts-nav[data-tone="light"] { background: rgba(241, 255, 255, 0.8); border-color: var(--line-light); color: var(--on-light); }
 .ts-nav[data-tone="light"] .ts-nav__link { color: rgba(15, 15, 16, 0.72); }
 .ts-nav[data-tone="light"] .ts-nav__link:hover, .ts-nav[data-tone="light"] .ts-nav__link[aria-current="page"] { color: var(--on-light); }
-.ts-nav[data-tone="light"] .ts-nav__link--quiet { color: rgba(15, 15, 16, 0.55); }
 .ts-nav[data-tone="light"] .ts-nav__icon { color: rgba(15, 15, 16, 0.82); }
 .ts-nav[data-tone="light"] .ts-nav__icon:hover, .ts-nav[data-tone="light"] .ts-nav__icon:focus-visible { background: rgba(15, 15, 16, 0.07); color: var(--signal); }
 .ts-nav[data-tone="light"] .ts-nav__icon[aria-current="page"] { color: var(--on-light); }

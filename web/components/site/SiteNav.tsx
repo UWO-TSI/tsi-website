@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { CoinHandIcon, EnvelopeIcon, HeartIcon, IslandIcon, PersonIcon, SparkIcon } from "@/components/site/icons";
+import { CoinHandIcon, EnvelopeIcon, HeartIcon, PersonIcon, SparkIcon } from "@/components/site/icons";
 import TsiLogo from "@/components/ui/TsiLogo";
-import { PLAY_ORIGIN } from "@/lib/hosts";
 import type { SeasonCta } from "@/lib/site/season";
 
 const LINKS = [
@@ -113,7 +112,6 @@ export default function SiteNav({ cta }: { cta: SeasonCta }) {
                 <Link key={l.href} href={l.href} className="ts-nav__link" aria-current={path === l.href ? "page" : undefined}>{l.label}</Link>
               ))}
               <Link href="/contact" className="ts-nav__link" aria-current={path === "/contact" ? "page" : undefined}>Contact</Link>
-              <a href={`${PLAY_ORIGIN}/`} className="ts-nav__link ts-nav__link--quiet">Student portal ↗</a>
             </nav>
           </div>
           <div className="ts-nav__icons-wrap" inert={!compact}>
@@ -126,9 +124,6 @@ export default function SiteNav({ cta }: { cta: SeasonCta }) {
               <Link href="/contact" className="ts-nav__icon" style={{ "--i": 3 } as React.CSSProperties} {...tipProps("Contact")}>
                 <EnvelopeIcon size={16} />
               </Link>
-              <a href={`${PLAY_ORIGIN}/`} className="ts-nav__icon" style={{ "--i": 4 } as React.CSSProperties} {...tipProps("Student portal")}>
-                <IslandIcon size={16} />
-              </a>
             </nav>
           </div>
           <div className="ts-nav__right">
@@ -156,7 +151,6 @@ export default function SiteNav({ cta }: { cta: SeasonCta }) {
         <Link href="/contact" className="ts-sheet__link" style={{ transitionDelay: open ? "0.28s" : "0s" }}>Contact</Link>
         <div className="ts-sheet__foot">
           <Link href={cta.href} onClick={() => setOpen(false)} className="ts-btn ts-btn--primary" style={{ alignSelf: "flex-start" }}>{cta.label}</Link>
-          <a href={`${PLAY_ORIGIN}/`} className="ts-dim" style={{ fontSize: 14 }}>Student portal ↗</a>
         </div>
       </div>
     </>

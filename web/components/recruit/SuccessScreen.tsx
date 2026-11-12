@@ -221,12 +221,12 @@ export default function SuccessScreen({
               <span>
                 Follow{" "}
                 <a
-                  href="https://instagram.com/uwotsi"
+                  href="https://www.instagram.com/westerntsi/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#F1FFFF] underline underline-offset-2 hover:text-[#1D9BF0] transition"
                 >
-                  @uwotsi on Instagram
+                  @westerntsi on Instagram
                 </a>{" "}
                 for updates on the cohort.
               </span>

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Reveal from "@/components/site/Reveal";
-import { PLAY_ORIGIN } from "@/lib/hosts";
 
 /** Hovering a photo shows what it is. */
 const PHOTOS = [
@@ -35,8 +34,7 @@ export default function Team() {
             <Reveal delay={0.06}><h3 className="ts-h2" style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)" }}>Members get an island.</h3></Reveal>
             <Reveal delay={0.12}><p className="ts-body">Tethos Island is our member world: projects, events and the club in one place you walk around in. Join a team to get in.</p></Reveal>
             <Reveal delay={0.16} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/student/apply" className="ts-btn ts-btn--primary">See open roles <span className="ts-btn__arrow">→</span></Link>
-              <a href={`${PLAY_ORIGIN}/`} className="ts-btn ts-btn--ghost">Member sign-in</a>
+              <Link href="/students" className="ts-btn ts-btn--primary">Find your role <span className="ts-btn__arrow">→</span></Link>
             </Reveal>
           </div>
           <Reveal className="tm-window">
