@@ -1,33 +1,37 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { PERSON_PATH } from "../marks";
 
-// 162 people for the club's 150+ members, and one more in blue at the end: you.
-const COLS = 18;
-const ROWS = 9;
-// A person is three lines tall and takes three and a half, so the rows sit close like a crowd.
-const ROW_LINES = 3.5;
-// Each person is three lines of text; near the pointer (or in a click's wave) they throw their arms up.
-const STAND = [" o ", "/|\\", "/ \\"];
-const CHEER = ["\\o/", " | ", "/ \\"];
+// A fine character cell (8 px type), so each small figure has enough cells to read as the person.
+const CW = 5;
+const CH = 9;
+// One person, in cells: the cursor's figure sampled onto a 12 x 8 block (the figure's own proportions).
+const SPRITE_W = 12;
+const SPRITE_H = 8;
+// Three empty columns between people, so their arms never run together.
+const GAP_X = 3;
+// The words the people are written in, run together with dots so no cell inside a figure is left blank.
+const PHRASE = "DEVELOPERS·DESIGNERS·PROJECT·MANAGERS·DIRECTORS·TSI·";
+const NOISE = "#%&*+=01<>/";
+const WHITE = "#f1ffff";
 const BLUE = "#1d9bf0";
-// Mono advance and line height as fractions of the font size.
-const ADVANCE = 0.6;
-const LEADING = 1.2;
+// The figure's box in PERSON_PATH's coordinates (the Person mark's viewBox).
+const VB_X = 470, VB_Y = -5, VB_W = 470, VB_H = 567;
 // The pointer lifts the people near it; a click sends a wave of hops out across the crowd.
-const REACH = 140;
-const HOP = 10;
+const REACH = 150;
+const HOP = 12;
 const WAVE_SPEED = 520;
-const WAVE_WIDTH = 50;
+const WAVE_WIDTH = 54;
 const WAVE_S = 1.6;
 
-type Body = { x: number; y: number; lift: number; v: number; you: boolean };
+type Body = { x: number; y: number; lift: number; v: number; you: boolean; seed: number };
 
 /**
- * The students hero's crowd, in text: one block of little ASCII people, one per member, in the site's mono. They hop
- * and throw their arms up as the pointer passes, a click sends a cheering wave through them, and the blue one at the
- * end (you) bobs and waves on its own. Draws only while on screen and only while something moves; still for reduced
- * motion.
+ * The students hero's crowd: the Tethos figure (the cursor) written in small characters, over and over, as one block of
+ * text, with one more in blue at the end for you. The people near the pointer brighten and hop, a click sends a wave
+ * of hops through the block, a few letters flicker, and the blue one bobs. Draws only while on screen and only while
+ * something moves; still for reduced motion.
  */
 export default function StudentCrowd({ className = "" }: { className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -36,10 +40,48 @@ export default function StudentCrowd({ className = "" }: { className?: string })
     const canvas = ref.current!;
     const ctx = canvas.getContext("2d")!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const glyphs = Array.from(new Set((PHRASE + NOISE).split(""))).join("");
     let bodies: Body[] = [];
-    let fs = 16, cw = 9.6, lh = 19.2, dpr = 1, raf = 0, visible = false;
+    let sprite = new Float32Array(SPRITE_W * SPRITE_H);
+    let dpr = 1, raf = 0, visible = false;
+    let atlas: HTMLCanvasElement | null = null, blue: HTMLCanvasElement | null = null;
     const mouse = { x: -1e4, y: -1e4, active: false };
     const waves: { x: number; y: number; t: number }[] = [];
+
+    /** How much of each cell of the 8 x 6 block the figure covers. */
+    const sample = () => {
+      const w = SPRITE_W * CW * 4, h = SPRITE_H * CH * 4;
+      const off = document.createElement("canvas");
+      off.width = w; off.height = h;
+      const g = off.getContext("2d", { willReadFrequently: true })!;
+      const s = Math.min(w / VB_W, h / VB_H) * 0.98;
+      g.translate((w - VB_W * s) / 2, (h - VB_H * s) / 2);
+      g.scale(s, s);
+      g.translate(-VB_X, -VB_Y);
+      g.fillStyle = "#fff";
+      g.fill(new Path2D(PERSON_PATH));
+      const px = g.getImageData(0, 0, w, h).data;
+      sprite = new Float32Array(SPRITE_W * SPRITE_H);
+      for (let r = 0; r < SPRITE_H; r++) for (let c = 0; c < SPRITE_W; c++) {
+        let sum = 0;
+        for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+          const x = Math.floor((c * CW + (i + 0.5) * CW / 4) * 4), y = Math.floor((r * CH + (j + 0.5) * CH / 4) * 4);
+          sum += px[(y * w + x) * 4 + 3] / 255;
+        }
+        sprite[r * SPRITE_W + c] = sum / 16;
+      }
+    };
+
+    const makeAtlas = (color: string) => {
+      const sw = Math.ceil(CW * dpr), sh = Math.ceil(CH * dpr);
+      const a = document.createElement("canvas");
+      a.width = sw * glyphs.length; a.height = sh;
+      const g = a.getContext("2d")!;
+      g.font = `600 ${Math.round((CH - 1) * dpr)}px "Sohne Mono", ui-monospace, monospace`;
+      g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = color;
+      for (let i = 0; i < glyphs.length; i++) g.fillText(glyphs[i], i * sw + sw / 2, sh / 2);
+      return a;
+    };
 
     const layout = () => {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -47,32 +89,33 @@ export default function StudentCrowd({ className = "" }: { className?: string })
       if (!w || !h) return;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
-      // Four characters per person across (three and a gap), ROW_LINES lines down, plus room for you.
-      const colsOfChars = COLS * 4 + 2, linesOfText = ROWS * ROW_LINES + 5;
-      fs = Math.min(20, w / colsOfChars / ADVANCE, h / linesOfText / LEADING);
-      cw = fs * ADVANCE;
-      lh = fs * LEADING;
-      const x0 = (w - colsOfChars * cw) / 2, y0 = Math.max(0, (h - linesOfText * lh) / 2);
+      sample();
+      atlas = makeAtlas(WHITE);
+      blue = makeAtlas(BLUE);
+      // People in rows, a cell apart, every other row half a person over; the last rows leave room for you.
+      const stepX = SPRITE_W + GAP_X, stepY = SPRITE_H + 1;
+      const cols = Math.max(1, Math.floor((w / CW - SPRITE_W / 2) / stepX));
+      const rows = Math.max(1, Math.floor((h / CH - SPRITE_H - 3) / stepY));
+      const blockW = (cols * stepX + SPRITE_W / 2) * CW, blockH = (rows * stepY + SPRITE_H + 3) * CH;
+      const x0 = Math.round((w - blockW) / 2 / CW) * CW, y0 = Math.round(Math.max(0, (h - blockH) / 2) / CH) * CH;
       bodies = [];
-      // Every other row sits half a person over, like a crowd rather than a table.
-      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-        bodies.push({ x: x0 + (c * 4 + (r % 2 ? 2 : 0)) * cw, y: y0 + r * ROW_LINES * lh, lift: 0, v: 0, you: false });
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        bodies.push({ x: x0 + (c * stepX + (r % 2 ? SPRITE_W / 2 : 0)) * CW, y: y0 + r * stepY * CH, lift: 0, v: 0, you: false, seed: Math.random() * 6.28 });
       }
-      bodies.push({ x: x0 + (COLS * 2 - 1) * cw, y: y0 + (ROWS * ROW_LINES + 0.5) * lh, lift: 0, v: 0, you: true });
+      bodies.push({ x: x0 + Math.round((blockW / CW - SPRITE_W) / 2) * CW, y: y0 + rows * stepY * CH + CH, lift: 0, v: 0, you: true, seed: 0 });
     };
 
     const draw = (now: number) => {
+      if (!atlas || !blue) return false;
       const t = now / 1000;
+      const sw = Math.ceil(CW * dpr), sh = Math.ceil(CH * dpr);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const font = `500 ${fs.toFixed(2)}px "Sohne Mono", ui-monospace, monospace`;
-      ctx.font = font;
-      ctx.textBaseline = "top";
       let moving = false;
       for (let i = waves.length - 1; i >= 0; i--) if (t - waves[i].t > WAVE_S) waves.splice(i, 1);
-      for (const b of bodies) {
-        const cx = b.x + 1.5 * cw, cy = b.y + 1.5 * lh;
+      const flipFrame = Math.floor(t * 2.5);
+      bodies.forEach((b, n) => {
+        const cx = b.x + (SPRITE_W * CW) / 2, cy = b.y + (SPRITE_H * CH) / 2;
         const near = mouse.active ? Math.max(0, 1 - Math.hypot(mouse.x - cx, mouse.y - cy) / REACH) : 0;
         let wave = 0;
         for (const wv of waves) {
@@ -84,16 +127,28 @@ export default function StudentCrowd({ className = "" }: { className?: string })
         b.v = (b.v + (target - b.lift) * 0.22) * 0.72;
         b.lift += b.v;
         if (Math.abs(b.v) + Math.abs(target - b.lift) > 0.02) moving = true;
-
-        const cheer = near > 0.35 || wave > 0.3 || (b.you && !reduce && Math.sin(t * 1.6) > 0.6);
-        ctx.fillStyle = b.you ? BLUE : `rgba(241, 255, 255, ${(0.34 + 0.62 * near + Math.min(0.3, (b.lift / HOP) * 0.3)).toFixed(3)})`;
-        (cheer ? CHEER : STAND).forEach((line, k) => ctx.fillText(line, b.x, b.y + k * lh - b.lift));
-        if (b.you) {
-          ctx.font = `600 ${(fs * 0.62).toFixed(2)}px "Sohne Mono", ui-monospace, monospace`;
-          ctx.fillText("YOU?", b.x - 0.1 * cw, b.y + 3.2 * lh);
-          ctx.font = font;
+        const strength = b.you ? 1 : 0.42 + 0.58 * Math.max(near, wave) + Math.min(0.25, (b.lift / HOP) * 0.25);
+        const src = b.you ? blue! : atlas!;
+        for (let r = 0; r < SPRITE_H; r++) for (let c = 0; c < SPRITE_W; c++) {
+          const cover = sprite[r * SPRITE_W + c];
+          if (cover < 0.12) continue;
+          // Each person spells the phrase on from where the last left off; now and then a letter flickers.
+          let gi = glyphs.indexOf(PHRASE[(n * 7 + r * SPRITE_W + c) % PHRASE.length]);
+          const flick = (Math.sin(t * 1.1 + b.seed * 3 + r * 1.7 + c * 2.3) + 1) / 2;
+          if (!reduce && flick > 0.985) gi = (gi + 1 + flipFrame) % glyphs.length;
+          ctx.globalAlpha = Math.min(1, Math.pow(cover, 0.6) * strength);
+          ctx.drawImage(src, gi * sw, 0, sw, sh, Math.round((b.x + c * CW) * dpr), Math.round((b.y + r * CH - b.lift) * dpr), sw, sh);
         }
-      }
+        if (b.you) {
+          ctx.globalAlpha = 1;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.font = `600 10px "Sohne Mono", ui-monospace, monospace`;
+          ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = BLUE;
+          ctx.fillText("YOU?", b.x + (SPRITE_W * CW) / 2, b.y + SPRITE_H * CH + 6);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+      });
+      ctx.globalAlpha = 1;
       return moving || waves.length > 0 || mouse.active;
     };
 
@@ -102,9 +157,9 @@ export default function StudentCrowd({ className = "" }: { className?: string })
       if (!visible) return;
       const busy = draw(now);
       const next = () => { raf = requestAnimationFrame(loop); };
-      // Full speed while the crowd moves; otherwise only the blue one bobs, at a gentler rate.
+      // Full speed while the crowd moves; otherwise only the blue one bobs and a few letters flicker, more gently.
       if (busy) next();
-      else if (!reduce) setTimeout(() => { if (visible && !raf) next(); }, 1000 / 24);
+      else if (!reduce) setTimeout(() => { if (visible && !raf) next(); }, 1000 / 20);
     };
     const start = () => { if (!raf && visible) raf = requestAnimationFrame(loop); };
 
