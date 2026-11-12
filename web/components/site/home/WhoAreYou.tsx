@@ -1,7 +1,7 @@
 import Reveal from "@/components/site/Reveal";
 
 const CARDS = [
-  { who: "Nonprofits", line: "Apply for an 8-month build with a student team. It costs your organization nothing.", go: "See the program", href: "/npo" },
+  { who: "Nonprofits", line: "Apply for an 8-month build with a student team. The build costs your organization nothing.", go: "See the program", href: "/npo" },
   { who: "Sponsors", line: "Back the students and their projects, and meet them at GENESIS in March.", go: "Sponsor GENESIS", href: "/genesis" },
   { who: "Students", line: "Join a team and ship software people use. Hiring runs in September and May.", go: "Find your role", href: "/students" },
 ];

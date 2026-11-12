@@ -287,7 +287,8 @@
     radial-gradient(40% 35% at 70% 40%, rgba(29, 155, 240, 0.18), transparent 70%),
     radial-gradient(30% 30% at 82% 62%, rgba(29, 155, 240, 0.12), transparent 70%),
     radial-gradient(28% 26% at 20% 20%, rgba(29, 155, 240, 0.08), transparent 70%);
-  animation: gx-aura 18s ease-in-out infinite alternate; }
+  animation: gx-aura 18s ease-in-out infinite alternate;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 6%, #000 26%, #000 46%, transparent 78%); mask-image: linear-gradient(to bottom, transparent 6%, #000 26%, #000 46%, transparent 78%); }
 @keyframes gx-aura { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-3%, 2%, 0) scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .gx-aura { animation: none; } }
 

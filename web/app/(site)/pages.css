@@ -82,7 +82,7 @@
 .gx-hero__grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 560px); align-items: center; min-height: calc(100svh - 260px); pointer-events: none; }
 .gx-hero__grid > * { pointer-events: auto; }
 .gx-hero__copy { display: grid; gap: 24px; }
-.gx-hero__field { position: absolute; inset: 0; }
+.gx-hero__field { position: absolute; inset: 0; -webkit-mask-image: linear-gradient(to bottom, #000 76%, transparent); mask-image: linear-gradient(to bottom, #000 76%, transparent); }
 /* Keeps the copy readable over the field; the hand on the right stays bright. */
 .gx-hero__field::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(8, 9, 11, 0.82) 0%, rgba(8, 9, 11, 0.55) 38%, transparent 62%); }
 .gx-word { font-family: var(--sans); font-weight: 500; font-size: clamp(4rem, 11vw, 10.5rem); line-height: 0.9; letter-spacing: -0.05em; margin: 0; }
@@ -210,10 +210,11 @@
 .np-tl { position: relative; background: var(--ink); color: var(--on-dark); height: calc(100svh + 8 * 30svh); }
 .np-tl__stage { position: sticky; top: 0; z-index: 56; height: 100svh; overflow: hidden; display: flex; flex-direction: column; padding-top: clamp(96px, 13vh, 132px); background: var(--ink); }
 .np-tl__grain { z-index: 3; }
-/* The month the walker is in, huge and outlined behind everything. */
-.np-tl__month { position: absolute; right: 3vw; bottom: -5vw; z-index: 0; margin: 0; pointer-events: none; font-size: clamp(9rem, 27vw, 30rem); line-height: 0.8; font-weight: 600; letter-spacing: -0.06em;
-  text-transform: uppercase; color: transparent; -webkit-text-stroke: 1px rgba(241, 255, 255, 0.09); animation: np-month 0.6s var(--ease-settle) both; }
-@keyframes np-month { from { opacity: 0; transform: translateY(6%); } }
+/* The month the walker is in: built out of characters (MonthGlyph), with its full name small above it. */
+.np-tl__glyph { position: absolute; right: 2vw; bottom: 3vh; z-index: 0; width: min(64vw, 1180px); height: 54svh; pointer-events: none; }
+.np-tl__monthname { position: absolute; right: calc(2vw + 4px); bottom: calc(3vh + 54svh + 8px); z-index: 0; margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: 0.4em;
+  color: rgba(241, 255, 255, 0.32); pointer-events: none; }
+.np-tl__confetti { position: absolute; inset: 0; z-index: 5; width: 100%; height: 100%; pointer-events: none; }
 .np-tl__head { position: relative; z-index: 1; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px 40px; }
 .np-tl__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .np-tl__chips button { display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-dark); background: rgba(15, 15, 16, 0.6); color: var(--on-dark-2);
@@ -222,11 +223,12 @@
 .np-tl__chips button:hover { border-color: rgba(241, 255, 255, 0.4); color: var(--on-dark); transform: translateY(-2px); }
 .np-tl__chips button[aria-current] { background: var(--signal); border-color: var(--signal); color: var(--ink); }
 .np-tl__chips button[aria-current] span { color: rgba(15, 15, 16, 0.65); }
+.np-tl__chips button[data-past] { border-color: rgba(29, 155, 240, 0.45); color: var(--on-dark); }
 .np-tl__viewport { position: relative; z-index: 1; flex: 1; }
 .np-tl__track { --unit: clamp(220px, 19vw, 320px); --lead: max(var(--gutter), calc((100vw - var(--max)) / 2 + var(--gutter)));
   position: relative; height: 100%; width: calc(var(--lead) + 8 * var(--unit) + max(44vw, 560px)); will-change: transform; }
 .np-tl__line, .np-tl__fill { position: absolute; top: 50%; left: var(--lead); height: 2px; margin-top: -1px; pointer-events: none; }
-.np-tl__line { width: calc(8 * var(--unit)); background: var(--line-dark); }
+.np-tl__line { width: calc(8 * var(--unit)); background: repeating-linear-gradient(90deg, rgba(241, 255, 255, 0.28) 0 6px, transparent 6px 14px); }
 .np-tl__fill { width: calc(var(--x, var(--lead)) - var(--lead)); background: linear-gradient(90deg, rgba(29, 155, 240, 0.15), var(--signal)); box-shadow: 0 0 12px rgba(29, 155, 240, 0.5); }
 /* The ruler: a tick and a label for every month under the line. */
 .np-tl__ruler { position: absolute; inset: 50% 0 auto 0; height: 0; pointer-events: none; }
@@ -237,33 +239,48 @@
 /* The build: a stretch from October to March, with a marker for each two-weekly demo that lights as it's passed. */
 .np-tl__stretch { position: absolute; top: 50%; left: calc(var(--lead) + var(--at) * var(--unit)); width: calc((var(--until) - var(--at)) * var(--unit)); height: 12px; margin-top: -6px;
   border-radius: 8px; border: 1px solid rgba(29, 155, 240, 0.35); background: rgba(29, 155, 240, 0.08); pointer-events: none; }
+.np-tl__stretch-label { position: absolute; left: 12px; top: -26px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(29, 155, 240, 0.85); white-space: nowrap; }
 .np-tl__demo { position: absolute; top: 50%; left: calc(var(--lead) + var(--at) * var(--unit)); width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; rotate: 45deg; border: 1px solid rgba(29, 155, 240, 0.6);
   background: var(--ink); transition: background-color 0.3s var(--ease-ui), scale 0.35s var(--ease-pop); pointer-events: none; }
 .np-tl__demo[data-on="true"] { background: var(--signal); scale: 1.25; }
 /* A stop: a dot on the line and a card on a stem, above or below, alternating. */
-.np-tl__stop { position: absolute; top: 50%; left: calc(var(--lead) + var(--at) * var(--unit)); width: 0; height: 0; opacity: 0.34; transition: opacity 0.45s var(--ease-ui); }
-.np-tl__stop[data-past] { opacity: 0.62; }
-.np-tl__stop[data-on] { opacity: 1; }
+/* Upcoming and past stops dim their words, not their panel, so the month behind never shows through. */
+.np-tl__stop { position: absolute; top: 50%; left: calc(var(--lead) + var(--at) * var(--unit)); width: 0; height: 0; }
+.np-tl__card > * { opacity: 0.38; transition: opacity 0.45s var(--ease-ui); }
+.np-tl__stop[data-past] .np-tl__card > * { opacity: 0.66; }
+.np-tl__stop[data-on] .np-tl__card > * { opacity: 1; }
 .np-tl__dot { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 2px solid rgba(241, 255, 255, 0.45); z-index: 1;
   transition: background-color 0.3s var(--ease-ui), border-color 0.3s var(--ease-ui), scale 0.45s var(--ease-pop), box-shadow 0.45s var(--ease-ui); }
 .np-tl__stop[data-past] .np-tl__dot, .np-tl__stop[data-on] .np-tl__dot { background: var(--signal); border-color: var(--signal); }
 .np-tl__stop[data-on] .np-tl__dot { scale: 1.3; box-shadow: 0 0 0 8px rgba(29, 155, 240, 0.16), 0 0 24px rgba(29, 155, 240, 0.45); }
-.np-tl__card { position: absolute; left: 0; width: clamp(240px, 21vw, 330px); padding-left: 18px; transition: transform 0.5s var(--ease-pop); }
-.np-tl__card::before { content: ""; position: absolute; left: 0; width: 1px; background: linear-gradient(var(--line-dark), rgba(241, 255, 255, 0.3)); }
+.np-tl__card { position: absolute; left: -1px; width: clamp(250px, 21vw, 330px); padding: 14px 18px 18px; border: 1px solid var(--line-dark); border-radius: 12px;
+  background: #111214;
+  transition: transform 0.5s var(--ease-pop), border-color 0.4s var(--ease-ui), box-shadow 0.4s var(--ease-ui); }
+.np-tl__stop[data-on] .np-tl__card { border-color: rgba(29, 155, 240, 0.7); box-shadow: 0 0 0 1px rgba(29, 155, 240, 0.25), 0 18px 50px rgba(29, 155, 240, 0.14); }
+.np-tl__cardhead { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 10px; margin-bottom: 4px; border-bottom: 1px dashed var(--line-dark);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-3); }
+.np-tl__stop[data-on] .np-tl__cardhead span:first-child, .np-tl__stop[data-past] .np-tl__cardhead span:first-child { color: var(--signal); }
+.np-tl__cardhead span:last-child { color: var(--signal); }
+.np-tl__card::before { content: ""; position: absolute; left: 0; width: 1px; background: linear-gradient(rgba(241, 255, 255, 0.12), rgba(241, 255, 255, 0.32)); }
 .np-tl__stop--above .np-tl__card { bottom: 30px; }
-.np-tl__stop--above .np-tl__card::before { top: 0; bottom: -30px; }
+.np-tl__stop--above .np-tl__card::before { top: 100%; height: 30px; }
 .np-tl__stop--below .np-tl__card { top: 44px; }
-.np-tl__stop--below .np-tl__card::before { top: -44px; bottom: 0; }
+.np-tl__stop--below .np-tl__card::before { bottom: 100%; height: 44px; }
 .np-tl__stop--above[data-on] .np-tl__card { transform: translateY(-8px); }
 .np-tl__stop--below[data-on] .np-tl__card { transform: translateY(8px); }
 .np-tl__stop--keep .np-tl__card { width: clamp(340px, 34vw, 560px); }
-.np-tl__when { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--signal); }
-.np-tl__title { margin-top: 8px; font-size: clamp(1.6rem, 2.6vw, 2.5rem); line-height: 1.05; letter-spacing: -0.03em; font-weight: 500; }
+.np-tl__title { margin-top: 8px; font-size: clamp(1.5rem, 2.3vw, 2.25rem); line-height: 1.05; letter-spacing: -0.03em; font-weight: 500; }
 .np-tl__detail { margin-top: 10px; font-size: 15.5px; line-height: 1.55; color: var(--on-dark-2); }
 .np-tl__keep { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; }
 .np-tl__keep li { display: flex; gap: 10px; align-items: baseline; font-size: 14.5px; line-height: 1.4; color: var(--on-dark); }
 .np-tl__keep li::before { content: "✓"; color: var(--signal); font-weight: 600; }
 /* The walker stands on the line at --x, bobs while the page moves, faces the way it goes and hops at each stop. */
+.np-tl__flag { position: absolute; top: 50%; left: calc(var(--lead) + 8 * var(--unit) + 30px); width: 22px; height: 30px; margin: -30px 0 0 -2px; color: rgba(241, 255, 255, 0.5); transition: color 0.4s var(--ease-ui); pointer-events: none; }
+.np-tl__flag svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.np-tl__pennant { transform-origin: 4px 8px; }
+.np-tl__flag[data-reached] { color: var(--signal); filter: drop-shadow(0 0 10px rgba(29, 155, 240, 0.6)); }
+.np-tl__flag[data-reached] .np-tl__pennant { animation: np-wave 0.9s ease-in-out infinite; }
+@keyframes np-wave { 50% { transform: skewY(-8deg) scaleX(0.92); } }
 .np-tl__walker { position: absolute; top: 50%; left: var(--x, var(--lead)); z-index: 2; width: 26px; height: 32px; margin: -34px 0 0 -13px; color: var(--signal); pointer-events: none; }
 .np-tl__walker-body { display: block; width: 100%; height: 100%; transform-origin: 50% 100%; }
 .np-tl__walker-body svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 10px rgba(29, 155, 240, 0.55)); }
@@ -276,24 +293,31 @@
 @media (max-width: 820px), (prefers-reduced-motion: reduce) {
   .np-tl { height: auto; }
   .np-tl__stage { position: static; z-index: auto; height: auto; overflow: visible; padding-block: 96px; }
-  .np-tl__grain, .np-tl__month, .np-tl__chips, .np-tl__walker, .np-tl__line, .np-tl__fill, .np-tl__ruler, .np-tl__stretch, .np-tl__demo { display: none; }
+  .np-tl__grain, .np-tl__glyph, .np-tl__monthname, .np-tl__confetti, .np-tl__flag, .np-tl__chips, .np-tl__walker, .np-tl__line, .np-tl__fill, .np-tl__ruler, .np-tl__stretch, .np-tl__demo { display: none; }
   .np-tl__viewport { margin-top: 40px; }
   .np-tl__track { width: auto; height: auto; display: grid; gap: 32px; padding-inline: var(--gutter); transform: none !important; }
   .np-tl__stop { position: relative; left: auto; top: auto; width: auto; height: auto; opacity: 1; padding-left: 28px; border-left: 2px solid var(--line-dark); }
   .np-tl__dot { top: 4px; left: -9px; }
-  .np-tl__card, .np-tl__stop--keep .np-tl__card { position: static; width: auto; padding-left: 0; transform: none !important; }
+  .np-tl__card, .np-tl__stop--keep .np-tl__card { position: static; width: auto; transform: none !important; }
   .np-tl__card::before { display: none; }
 }
 
 /* The questions: written into a field of characters, in white, on its grid; an answer glitches in on a click. */
 .np-questions { padding-bottom: clamp(96px, 14vh, 160px); }
 .np-questions__hint { margin-top: 14px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-dark-3); }
-.np-qf { --ls: 0px; --w: 432px; margin-top: 40px; padding: 64px 18px; border-radius: 4px; background-repeat: repeat; background-color: var(--ink);
-  font: 500 14px/16px "Sohne Mono", ui-monospace, monospace; letter-spacing: var(--ls); }
+.np-questions { overflow-x: clip; }
+.np-qf { --ls: 0px; --w: 432px; position: relative; margin-top: 40px; padding: 64px 18px; font: 500 14px/16px "Sohne Mono", ui-monospace, monospace; letter-spacing: var(--ls); }
+/* The field runs the full width of the page and fades out at every edge, so it dissolves into the section. */
+.np-qf::before { content: ""; position: absolute; z-index: 0; top: -12%; bottom: -12%; left: calc(50% - 50vw); right: calc(50% - 50vw); pointer-events: none;
+  background-image: var(--tile); background-size: var(--tile-size); background-position: calc(50vw - 50% + 18px) 0;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent), linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent), linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  mask-composite: intersect; }
+.np-qf__list { position: relative; z-index: 1; }
 .np-qf__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, var(--w)); justify-content: space-between; row-gap: 48px; }
 /* Every other block sits two rows lower, so they read as scattered through the field, not a table. */
 .np-qf__item:nth-child(even) { margin-top: 32px; }
-.np-qf__item { width: var(--w); padding: 16px 9px; background: var(--ink); align-self: start; }
+.np-qf__item { width: var(--w); padding: 16px 9px; background: var(--ink); box-shadow: 0 0 18px 10px var(--ink); align-self: start; }
 .np-qf__btn { display: flex; gap: 0; width: 100%; padding: 0; border: 0; background: none; color: #f1ffff; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; }
 .np-qf__mark { flex: none; width: calc(4 * 9px); color: var(--signal); }
 .np-qf__q { flex: 1; text-shadow: 0 0 12px rgba(241, 255, 255, 0.25); transition: color 0.2s var(--ease-ui); }

@@ -71,13 +71,13 @@ export default function FaqAscii({ items }: { items: readonly Item[] }) {
         if (v) for (let k = 0; k < cells.length * 0.05; k++) { const i = Math.floor(Math.random() * cells.length); cells[i] = Math.random() < DENSITY ? pick() : ""; }
         variants.push(render());
       }
-      el.style.backgroundImage = variants[0];
-      el.style.backgroundSize = `${TILE_COLS * CW}px ${TILE_ROWS * CH}px`;
+      el.style.setProperty("--tile", variants[0]);
+      el.style.setProperty("--tile-size", `${TILE_COLS * CW}px ${TILE_ROWS * CH}px`);
     };
     build();
     document.fonts?.ready.then(build, () => {});
     let i = 0;
-    const timer = reduce ? 0 : window.setInterval(() => { i = (i + 1) % variants.length; el.style.backgroundImage = variants[i]; }, 220);
+    const timer = reduce ? 0 : window.setInterval(() => { i = (i + 1) % variants.length; el.style.setProperty("--tile", variants[i]); }, 220);
     // Each block is a whole number of cells wide, so its text and the field's characters share columns.
     const fit = () => {
       const cols = Math.floor((el.clientWidth - 4 * CW) / CW);

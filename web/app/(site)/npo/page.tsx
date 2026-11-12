@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 /** The hero's numbers. */
 const STATS = [
   { v: "8 months", k: "October to April" },
-  { v: "$0", k: "Cost to you" },
+  { v: "$0", k: "For the build" },
   { v: "2–3 h", k: "Your time a week" },
 ];
 
@@ -49,7 +49,7 @@ const FAQ = [
   { q: "Do we own the code?", a: "Yes. Everything transfers to your organization at handoff. No licensing fees, no strings attached." },
   { q: "How much of our time does it take?", a: "About 2 to 3 hours a week for check-ins and feedback. We need one person on your team the students can reach with questions." },
   { q: "Who can apply?", a: "Registered charities, nonprofits and social enterprises with a clear technology need and a limited budget for custom software." },
-  { q: "Is there really no cost?", a: "None. Sponsors fund the program. Students get real experience, and your organization gets working software." },
+  { q: "Is there really no cost?", a: "The build is free: sponsors fund the program. The only costs are the ones that come with running it yourself, like your domain name." },
   { q: "What do you build with?", a: "Whatever fits the project. Most often Next.js, React, Node.js, PostgreSQL and Supabase. We decide together at kickoff." },
   { q: "What happens after the support window?", a: "You have the full source code and documentation. Many organizations keep it running with their own staff or apply again for a follow-up project." },
 ];

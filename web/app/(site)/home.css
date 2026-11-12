@@ -122,7 +122,7 @@
 
 /* Above the page grain (z 55), so the field is the section's only layer of characters. */
 .gn { position: relative; z-index: 56; overflow: clip; }
-.gn-bg { position: absolute; inset: 0; pointer-events: auto; }
+.gn-bg { position: absolute; inset: 0; pointer-events: auto; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 86%, transparent); mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 86%, transparent); }
 /* As the /genesis hero: keeps the copy readable over the field; the hand on the right stays bright. */
 .gn-bg::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(8, 9, 11, 0.82) 0%, rgba(8, 9, 11, 0.55) 38%, transparent 62%); }
 .gn-content { position: relative; z-index: 1; pointer-events: none; }
