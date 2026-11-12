@@ -66,7 +66,7 @@ export default function GenesisPage() {
       <section className="ts-section gx-hero" data-tone="deep" id="genesis-hero">
         <div className="gx-aura" aria-hidden="true" />
         <div className="gx-hero__field" aria-hidden="true">
-          <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} backgroundPhrase={GENESIS_FIELD} layout="right" pixelCells />
+          <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} backgroundPhrase={GENESIS_FIELD} layout="right" pixelCells avoid=".gx-hero__copy" />
         </div>
         <div className="ts-wrap gx-hero__grid">
           <div className="gx-hero__copy">

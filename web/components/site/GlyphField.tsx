@@ -18,6 +18,8 @@ type Props = {
    * scaling or averaging, so the figure keeps its exact shape and may run past the edge. 1200 px and up.
    */
   pixelCells?: boolean;
+  /** "right" layout: a selector for the copy in the same section; the figure keeps to the right of it. */
+  avoid?: string;
 };
 
 const SCRAMBLE = "GENESIS0123456789+*#@%&";
@@ -51,7 +53,7 @@ const hash1 = (x: number) => { const s = Math.sin(x * 12.9898) * 43758.5453; ret
  * sends slow grey pond rings, and the figure arrives along a ring from its centre the first time it's
  * seen. Draws only while on screen.
  */
-export default function GlyphField({ src, phrase, backgroundPhrase, className = "", color = "#f1ffff", layout = "contain", pixelCells = false }: Props) {
+export default function GlyphField({ src, phrase, backgroundPhrase, className = "", color = "#f1ffff", layout = "contain", pixelCells = false, avoid }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -147,7 +149,13 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
         }
       } else if (img) {
         const aspect = img.w / img.h;
-        const maxW = layout === "right" && w > 820 ? w * 0.52 : w;
+        let maxW = layout === "right" && w > 820 ? w * 0.52 : w;
+        // Keep clear of the copy: the figure takes the room right of it, but never less than 360 px.
+        const copy = avoid && layout === "right" && w > 820 ? canvas.closest("section")?.querySelector(avoid) : null;
+        if (copy) {
+          const clear = copy.getBoundingClientRect().right - canvas.getBoundingClientRect().left + 40;
+          maxW = Math.max(Math.min(maxW, w - clear - w * 0.025), Math.min(360, maxW));
+        }
         const fitH = Math.min(h, window.innerHeight) * 0.96;
         let rh = fitH, rw = rh * aspect;
         if (rw > maxW) { rw = maxW; rh = rw / aspect; }
@@ -409,7 +417,7 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
       canvas.removeEventListener("pointerdown", onClick);
       window.removeEventListener("scroll", onScroll);
     };
-  }, [src, phrase, backgroundPhrase, color, layout, pixelCells]);
+  }, [src, phrase, backgroundPhrase, color, layout, pixelCells, avoid]);
 
   return <canvas ref={ref} className={className} style={{ width: "100%", height: "100%", display: "block" }} aria-hidden="true" />;
 }
