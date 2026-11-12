@@ -198,7 +198,7 @@
 
 /* The timeline: a road of months. The stage pins with its own grain (above the page's, so the texture holds still)
    and the track pans under a camera that follows the walker until the end comes into view. */
-.np-tl { position: relative; background: var(--ink); color: var(--on-dark); height: calc(100svh + 8 * 30svh); }
+.np-tl { position: relative; background: var(--ink); color: var(--on-dark); height: calc(100svh + var(--span, 8) * 30svh); }
 .np-tl__stage { position: sticky; top: 0; z-index: 56; height: 100svh; overflow: hidden; display: flex; flex-direction: column; padding-top: clamp(96px, 13vh, 132px); background: var(--ink); }
 .np-tl__grain { z-index: 3; }
 /* The month the walker is in: built out of characters (MonthGlyph), with its full name small above it. */
@@ -217,9 +217,9 @@
 .np-tl__chips button[data-past] { border-color: rgba(29, 155, 240, 0.45); color: var(--on-dark); }
 .np-tl__viewport { position: relative; z-index: 1; flex: 1; }
 .np-tl__track { --unit: clamp(220px, 19vw, 320px); --lead: max(var(--gutter), calc((100vw - var(--max)) / 2 + var(--gutter)));
-  position: relative; height: 100%; width: calc(var(--lead) + 8 * var(--unit) + max(44vw, 560px)); will-change: transform; }
+  position: relative; height: 100%; width: calc(var(--lead) + var(--span, 8) * var(--unit) + max(44vw, 560px)); will-change: transform; }
 .np-tl__line, .np-tl__fill { position: absolute; top: 50%; left: var(--lead); height: 2px; margin-top: -1px; pointer-events: none; }
-.np-tl__line { width: calc(8 * var(--unit)); background: repeating-linear-gradient(90deg, rgba(241, 255, 255, 0.28) 0 6px, transparent 6px 14px); }
+.np-tl__line { width: calc(var(--span, 8) * var(--unit)); background: repeating-linear-gradient(90deg, rgba(241, 255, 255, 0.28) 0 6px, transparent 6px 14px); }
 .np-tl__fill { width: calc(var(--x, var(--lead)) - var(--lead)); background: linear-gradient(90deg, rgba(29, 155, 240, 0.15), var(--signal)); box-shadow: 0 0 12px rgba(29, 155, 240, 0.5); }
 /* The ruler: a tick and a label for every month under the line. */
 .np-tl__ruler { position: absolute; inset: 50% 0 auto 0; height: 0; pointer-events: none; }
@@ -266,7 +266,7 @@
 .np-tl__keep li { display: flex; gap: 10px; align-items: baseline; font-size: 14.5px; line-height: 1.4; color: var(--on-dark); }
 .np-tl__keep li::before { content: "✓"; color: var(--signal); font-weight: 600; }
 /* The walker stands on the line at --x, bobs while the page moves, faces the way it goes and hops at each stop. */
-.np-tl__flag { position: absolute; top: 50%; left: calc(var(--lead) + 8 * var(--unit) + 30px); width: 22px; height: 30px; margin: -30px 0 0 -2px; color: rgba(241, 255, 255, 0.5); transition: color 0.4s var(--ease-ui); pointer-events: none; }
+.np-tl__flag { position: absolute; top: 50%; left: calc(var(--lead) + var(--span, 8) * var(--unit) + 30px); width: 22px; height: 30px; margin: -30px 0 0 -2px; color: rgba(241, 255, 255, 0.5); transition: color 0.4s var(--ease-ui); pointer-events: none; }
 .np-tl__flag svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .np-tl__pennant { transform-origin: 4px 8px; }
 .np-tl__flag[data-reached] { color: var(--signal); filter: drop-shadow(0 0 10px rgba(29, 155, 240, 0.6)); }

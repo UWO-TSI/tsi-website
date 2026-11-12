@@ -7,6 +7,7 @@ import GlyphSeam from "@/components/site/GlyphSeam";
 import DotNav from "@/components/site/DotNav";
 import StudentCrowd from "@/components/site/students/StudentCrowd";
 import HiringPortal from "@/components/site/students/HiringPortal";
+import NpoTimeline, { type TimelineStop } from "@/components/site/npo/NpoTimeline";
 import { TETHOS } from "@/lib/site/config";
 import { loadSeasonCta } from "@/lib/site/season-server";
 
@@ -16,6 +17,22 @@ export const metadata: Metadata = {
 };
 
 const APPLY = "/student/apply";
+
+/** A member's year, August to May, from the club's own calendar (the cottage trip, hiring, the build, GENESIS, exec hiring). */
+const YEAR_MONTHS = {
+  short: ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"],
+  long: ["AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER", "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY"],
+};
+const YEAR: TimelineStop[] = [
+  { at: 0, when: "Aug", title: "Cottage trip", detail: "A weekend away in late August to meet the team before the year starts." },
+  { at: 1.3, when: "Sep", title: "Hiring", detail: "Roles open Sep 10 for about two weeks: developers, project managers and directors." },
+  { at: 2, when: "Oct", title: "Final round", detail: "In person, with the team, in early October. You hear back the same month." },
+  { at: 2.6, until: 7, when: "Oct–Mar", title: "Build", detail: "Your team meets its nonprofit and agrees on what to build, then designs and codes it with a demo every two weeks." },
+  { at: 4, when: "Monthly", title: "Town halls", detail: "The whole club meets every month, often with a social after." },
+  { at: 7, when: "Mar", title: "GENESIS", detail: "Every team shows what it built to its nonprofit, the sponsors and 350+ guests." },
+  { at: 8, when: "Apr", title: "Handoff", detail: "Your team hands the software, its code and its docs to the nonprofit." },
+  { at: 9, when: "May", title: "Next year's team", detail: "The executive team for next year is hired, and the cycle starts again." },
+];
 
 /** How a September round runs, from the applicant portal's stages (screening, interview, final review). */
 const STEPS = [
@@ -42,6 +59,7 @@ const CHAPTER_MAIL = `mailto:${TETHOS.contact}?subject=${encodeURIComponent("Sta
 
 const SECTIONS = [
   { id: "students", label: "Students" },
+  { id: "year", label: "A year at TSI" },
   { id: "hiring", label: "Hiring" },
   { id: "life", label: "Outside the projects" },
   { id: "portal", label: "Portal opens" },
@@ -69,6 +87,8 @@ export default async function StudentsPage() {
           </div>
         </div>
       </section>
+
+      <NpoTimeline id="year" title="A year at TSI." stops={YEAR} months={YEAR_MONTHS} />
 
       <section className="ts-section" data-tone="dark" id="hiring" aria-labelledby="hiring-title">
         <div className="ts-wrap">

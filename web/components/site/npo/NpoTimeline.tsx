@@ -8,11 +8,14 @@ import { Person } from "../marks";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
-/** `at` is the stop's place in months from August (Aug 0 ... Apr 8); `until` makes it a stretch (the build). */
+/** `at` is the stop's place in months from the first month (Aug 0 ... Apr 8 by default); `until` makes it a stretch (the build). */
 export type TimelineStop = { when: string; title: string; detail: string; at: number; until?: number; keep?: readonly string[] };
 
 const MONTHS = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr"];
 const MONTH_NAMES = ["AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER", "JANUARY", "FEBRUARY", "MARCH", "APRIL"];
+/** The ruler's months, short and in full; the program's year by default. */
+export type TimelineMonths = { short: readonly string[]; long: readonly string[] };
+const PROGRAM: TimelineMonths = { short: MONTHS, long: MONTH_NAMES };
 const WIDE = "(min-width: 821px)";
 // Where the walker stands on screen while the camera follows (a fraction of the width).
 const ANCHOR = 0.36;
@@ -27,7 +30,7 @@ const CONFETTI = ["#1d9bf0", "#f1ffff", "#8fd0ff", "#4cb1f4", "#c9e9ff"];
  * The month the walker is in, built out of characters (the site's 7 x 12 cell) and spelled in its full name. When
  * the month changes, every cell glitches across at its own moment from the old letters to the new ones.
  */
-function MonthGlyph({ month }: { month: number }) {
+function MonthGlyph({ month, months }: { month: number; months: TimelineMonths }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const shown = useRef<{ mask: Float32Array; month: number } | null>(null);
 
@@ -47,7 +50,7 @@ function MonthGlyph({ month }: { month: number }) {
       const off = document.createElement("canvas");
       off.width = w; off.height = h;
       const g = off.getContext("2d", { willReadFrequently: true })!;
-      const label = MONTHS[m].toUpperCase();
+      const label = months.short[m].toUpperCase();
       let size = h * 1.08;
       g.font = `700 ${size}px Sohne, "Inter Tight", system-ui, sans-serif`;
       const tw = g.measureText(label).width;
@@ -79,7 +82,7 @@ function MonthGlyph({ month }: { month: number }) {
         const src = before ? from! : to;
         const cover = glitching ? Math.max(from!.mask[i], to.mask[i]) : src.mask[i];
         if (cover < 0.2) continue;
-        const name = MONTH_NAMES[src.month] + " ";
+        const name = months.long[src.month] + " ";
         const ch = glitching ? NOISE[Math.floor(Math.random() * NOISE.length)] : name[(c + r * 3) % name.length];
         ctx.globalAlpha = glitching ? 0.42 : GLYPH_ALPHA * Math.min(1, cover * 1.4);
         ctx.fillText(ch, c * CELL_W + CELL_W / 2, r * CELL_H + CELL_H / 2);
@@ -102,7 +105,7 @@ function MonthGlyph({ month }: { month: number }) {
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [month]);
+  }, [month, months]);
 
   return <canvas ref={ref} className="np-tl__glyph" aria-hidden="true" />;
 }
@@ -150,7 +153,8 @@ function burst(canvas: HTMLCanvasElement, x: number, y: number) {
  * stands huge behind it all, written in characters, glitching into the next. They face the way the page moves. Chips
  * jump to a stop. A plain list on narrow screens and for reduced motion.
  */
-export default function NpoTimeline({ title, stops }: { title: string; stops: readonly TimelineStop[] }) {
+export default function NpoTimeline({ title, stops, months = PROGRAM, id = "timeline", stretchLabel = "A demo every two weeks" }: { title: string; stops: readonly TimelineStop[]; months?: TimelineMonths; id?: string; stretchLabel?: string }) {
+  const span = months.short.length - 1;
   const section = useRef<HTMLElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
@@ -178,7 +182,7 @@ export default function NpoTimeline({ title, stops }: { title: string; stops: re
     };
     const apply = (p: number) => {
       if (!wide.matches || reduce) { tr.style.transform = ""; return; }
-      const x = lead + p * 8 * unit;
+      const x = lead + p * span * unit;
       const room = tr.scrollWidth - vp.clientWidth;
       const cam = Math.min(Math.max(0, x - vp.clientWidth * ANCHOR), Math.max(0, room));
       tr.style.transform = `translate3d(${(-cam).toFixed(1)}px, 0, 0)`;
@@ -187,10 +191,10 @@ export default function NpoTimeline({ title, stops }: { title: string; stops: re
       let reached = -1;
       stops.forEach((s, i) => { if (m >= s.at - 0.02) reached = i; });
       setActive(reached);
-      setMonth(Math.min(8, Math.max(0, Math.round(m))));
+      setMonth(Math.min(span, Math.max(0, Math.round(m))));
       demos.forEach((d) => { d.dataset.on = Number(d.dataset.at) <= m ? "true" : "false"; });
       // At the finish: confetti once, again only after walking back away from it.
-      const atEnd = m >= 7.98;
+      const atEnd = m >= span - 0.02;
       setEnd(atEnd);
       if (atEnd && !reachedEnd.current && confetti.current) {
         const s = confetti.current.getBoundingClientRect(), w = walker.getBoundingClientRect();
@@ -214,7 +218,7 @@ export default function NpoTimeline({ title, stops }: { title: string; stops: re
     ro.observe(vp);
     document.fonts?.ready.then(onResize, () => {});
     return () => { trigger.current?.kill(); ro.disconnect(); clearTimeout(still); };
-  }, [stops]);
+  }, [stops, span]);
 
   // A hop each time the walker reaches a new stop.
   useEffect(() => {
@@ -232,7 +236,7 @@ export default function NpoTimeline({ title, stops }: { title: string; stops: re
       section.current?.querySelectorAll(".np-tl__stop")[i]?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    const y = s.start + (stops[i].at / 8) * (s.end - s.start) + 2;
+    const y = s.start + (stops[i].at / span) * (s.end - s.start) + 2;
     const lenis = (window as unknown as { __lenis?: { scrollTo: (y: number, o: object) => void } }).__lenis;
     if (lenis) lenis.scrollTo(y, { duration: 1.2 });
     else window.scrollTo({ top: y, behavior: "smooth" });
@@ -243,13 +247,13 @@ export default function NpoTimeline({ title, stops }: { title: string; stops: re
   if (build?.until !== undefined) for (let m = build.at + 0.5; m <= build.until + 0.001; m += 0.5) demoAt.push(Math.round(m * 10) / 10);
 
   return (
-    <section ref={section} className="np-tl" data-tone="dark" id="timeline" aria-labelledby="timeline-title">
+    <section ref={section} className="np-tl" data-tone="dark" id={id} aria-labelledby={`${id}-title`} style={{ ["--span" as string]: span }}>
       <div className="np-tl__stage">
         <AsciiGrain className="np-tl__grain" />
-        <MonthGlyph month={month} />
-        <p className="np-tl__monthname" aria-hidden="true">{MONTH_NAMES[month]}</p>
+        <MonthGlyph month={month} months={months} />
+        <p className="np-tl__monthname" aria-hidden="true">{months.long[month]}</p>
         <div className="ts-wrap np-tl__head">
-          <h2 className="ts-h2" id="timeline-title">{title}</h2>
+          <h2 className="ts-h2" id={`${id}-title`}>{title}</h2>
           <ol className="np-tl__chips" aria-label="Jump to a step">
             {stops.map((s, i) => (
               <li key={s.title}>
@@ -263,13 +267,13 @@ export default function NpoTimeline({ title, stops }: { title: string; stops: re
         <div ref={viewport} className="np-tl__viewport">
           <div ref={track} className="np-tl__track">
             <div className="np-tl__ruler" aria-hidden="true">
-              {MONTHS.map((m, i) => <span key={m} className="np-tl__tick" style={{ ["--at" as string]: i }} data-past={month >= i || undefined}>{m}</span>)}
+              {months.short.map((m, i) => <span key={m} className="np-tl__tick" style={{ ["--at" as string]: i }} data-past={month >= i || undefined}>{m}</span>)}
             </div>
             <span className="np-tl__line" aria-hidden="true" />
             <span className="np-tl__fill" aria-hidden="true" />
             {build?.until !== undefined && (
               <span className="np-tl__stretch" aria-hidden="true" style={{ ["--at" as string]: build.at, ["--until" as string]: build.until }}>
-                <span className="np-tl__stretch-label">A demo every two weeks</span>
+                <span className="np-tl__stretch-label">{stretchLabel}</span>
               </span>
             )}
             {demoAt.map((m) => (
