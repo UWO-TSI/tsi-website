@@ -267,10 +267,17 @@
 
 .ts { position: relative; }
 /* Laid over the whole page (not the screen), so it scrolls with the content. */
-.ts-ascii-grain { position: absolute; inset: 0; z-index: 55; pointer-events: none; opacity: 0.045; mix-blend-mode: difference; background-repeat: repeat; }
-/* A word surfacing in the grain: one cell per letter on the tile's grid. Black inside the difference blend, so
-   its box clears the noise behind it. */
-.ts-grain-word { position: absolute; display: flex; background: #000; color: #fff; white-space: pre;
+.ts-ascii-grain { position: absolute; inset: 0; z-index: 55; pointer-events: none; mix-blend-mode: difference; overflow: clip; }
+.ts-grain-tile { position: absolute; inset: 0; opacity: 0.016; background-repeat: repeat; }
+/* Around a moving pointer the grain comes up to the GENESIS field background's strength, then fades back. */
+.ts-grain-glow { position: absolute; left: 0; top: 0; width: 560px; height: 560px; opacity: 0; background-repeat: repeat; will-change: transform, opacity;
+  -webkit-mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);
+  transition: opacity 0.9s var(--ease-ui); }
+.ts-ascii-grain[data-glow="on"] .ts-grain-glow { opacity: 0.045; transition-duration: 0.25s; }
+/* A word surfacing in the grain, at the glow's strength: one cell per letter on the tile's grid. Its box is
+   black, which the difference blend leaves alone, so it clears the noise behind it. */
+.ts-grain-word { position: absolute; display: flex; background: #000; color: rgba(255, 255, 255, 0.045); white-space: pre;
   font: 500 10px/12px "Sohne Mono", ui-monospace, monospace; }
 .ts-grain-word > span { width: 7px; height: 12px; text-align: center; }
 
@@ -280,7 +287,7 @@
     radial-gradient(40% 35% at 70% 40%, rgba(29, 155, 240, 0.18), transparent 70%),
     radial-gradient(30% 30% at 82% 62%, rgba(29, 155, 240, 0.12), transparent 70%),
     radial-gradient(28% 26% at 20% 20%, rgba(29, 155, 240, 0.08), transparent 70%);
-  filter: blur(20px); animation: gx-aura 18s ease-in-out infinite alternate; }
+  animation: gx-aura 18s ease-in-out infinite alternate; }
 @keyframes gx-aura { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-3%, 2%, 0) scale(1.08); } }
 @media (prefers-reduced-motion: reduce) { .gx-aura { animation: none; } }
 

@@ -37,7 +37,7 @@ const RING_GAP_S = 0.34;
 const RIPPLE_GREY = 0.3;
 // The pointer's dim is a soft Gaussian falloff, not a hard-edged hole.
 const HOVER_SIGMA = 5.5;
-const FPS = 24;
+const FPS = 10;
 const FPS_ACTIVE = 60;
 
 const hash = (x: number, y: number) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); };
@@ -59,34 +59,61 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
     const ctx = canvas.getContext("2d")!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const bgPhrase = backgroundPhrase ?? phrase;
-    let raf = 0, last = 0, visible = false, started = 0, entranceStart = Infinity;
+    let raf = 0, last = 0, visible = false, started = 0, entranceStart = Infinity, entered = false;
     let cols = 0, rows = 0, cw = 7, ch = 12, dpr = 1;
     let img: { w: number; h: number; data: Uint8ClampedArray } | null = null;
     let region = { x: 0, y: 0, w: 0, h: 0 };
     let atlas: HTMLCanvasElement | null = null;
+    // The background phrase written once across the box, so each row of the faint field is one copy.
+    let strip: HTMLCanvasElement | null = null;
+    // One pixel per cell, opaque where the figure is: clears the faint field under the figure in one copy.
+    let mask: HTMLCanvasElement | null = null;
     let glyphs = "";
     let figureIndex: number[] = [], backgroundIndex: number[] = [];
     let rowOffset: number[] = [];
     let cellB = new Float32Array(0);
+    // The figure's cells, row by row: row r is figStart[r] up to figStart[r + 1].
+    let figStart = new Int32Array(0), figCol = new Int32Array(0), figOpacity = new Float32Array(0), figThreshold = new Float32Array(0);
     const mouse = { x: -1e4, y: -1e4, sx: -1e4, sy: -1e4, influence: 0, target: 0, moved: 0 };
     const ripples: { x: number; y: number; t: number }[] = [];
 
-    /** One row of glyphs at full strength; each cell is drawn with its own alpha. */
+    /** One row of glyphs at full strength, the background strip and the figure mask. */
     const buildAtlas = () => {
       glyphs = Array.from(new Set((phrase + bgPhrase + SCRAMBLE).split(""))).join("");
       figureIndex = Array.from(phrase, (g) => glyphs.indexOf(g));
       backgroundIndex = Array.from(bgPhrase, (g) => glyphs.indexOf(g));
       const sw = Math.ceil(cw * dpr), sh = Math.ceil(ch * dpr);
+      const font = `500 ${Math.round((ch - 2) * dpr)}px "Sohne Mono", ui-monospace, monospace`;
       const a = document.createElement("canvas");
       a.width = sw * glyphs.length;
       a.height = sh;
       const g = a.getContext("2d")!;
-      g.font = `500 ${Math.round((ch - 2) * dpr)}px "Sohne Mono", ui-monospace, monospace`;
+      g.font = font;
       g.textAlign = "center";
       g.textBaseline = "middle";
       g.fillStyle = color;
       for (let i = 0; i < glyphs.length; i++) g.fillText(glyphs[i], i * sw + sw / 2, sh / 2);
       atlas = a;
+
+      const s = document.createElement("canvas");
+      s.width = Math.ceil((cols + bgPhrase.length) * cw * dpr);
+      s.height = sh;
+      const sg = s.getContext("2d")!;
+      sg.font = font;
+      sg.textAlign = "center";
+      sg.textBaseline = "middle";
+      sg.fillStyle = color;
+      for (let i = 0; i < cols + bgPhrase.length; i++) sg.fillText(bgPhrase[i % bgPhrase.length], Math.round(i * cw * dpr) + sw / 2, sh / 2);
+      strip = s;
+
+      const m = document.createElement("canvas");
+      m.width = Math.max(1, cols);
+      m.height = Math.max(1, rows);
+      const mg = m.getContext("2d")!;
+      const px = mg.createImageData(m.width, m.height);
+      for (let i = 0; i < cols * rows; i++) if (cellB[i] > 0.03) px.data[i * 4 + 3] = 255;
+      mg.putImageData(px, 0, 0);
+      mask = m;
     };
 
     const sample = (x: number, y: number) => {
@@ -133,75 +160,183 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
           cellB[r * cols + c] = Math.min(1, (sum / 16) * GAIN);
         }
       }
+      let n = 0;
+      for (let i = 0; i < cellB.length; i++) if (cellB[i] > 0.03) n++;
+      figStart = new Int32Array(rows + 1);
+      figCol = new Int32Array(n);
+      figOpacity = new Float32Array(n);
+      figThreshold = new Float32Array(n);
+      let k = 0;
+      for (let r = 0; r < rows; r++) {
+        figStart[r] = k;
+        for (let c = 0; c < cols; c++) {
+          const b = cellB[r * cols + c];
+          if (b <= 0.03) continue;
+          figCol[k] = c;
+          figOpacity[k] = Math.pow(b, 0.55);
+          figThreshold[k] = hash(c, r + rows * 3.1);
+          k++;
+        }
+      }
+      figStart[rows] = k;
       buildAtlas();
     };
 
+    // The strongest ring at a point, and how far it nudges the cell there.
+    let rv = 0, rox = 0, roy = 0;
+    const rings: { x: number; y: number; R: number; w: number; amp: number; hw: number }[] = [];
+    const rippleAt = (x: number, y: number) => {
+      rv = 0; rox = 0; roy = 0;
+      for (const g of rings) {
+        const dx = x - g.x, dy = y - g.y, d = Math.hypot(dx, dy) || 1;
+        const v = Math.exp(-((d - g.R) ** 2) / (2 * g.w * g.w)) * g.amp;
+        if (v > rv) { rv = v; rox = (dx / d) * v * 2; roy = (dy / d) * v * 2; }
+      }
+    };
+    let seen = new Uint32Array(0), stamp = 0;
+    const spans: number[] = [];
+
+    /**
+     * One frame. The faint field is one copy of the strip per row, with the figure's cells cleared out of
+     * it, the pointer's dim cut out of it and, the first time, the arrival ring masked over it. Then only
+     * the cells that differ from that are drawn one by one: the ring-lifted field cells and the figure.
+     */
     const draw = (now: number) => {
-      raf = 0;
-      if (!atlas || !cols) return;
+      if (!atlas || !strip || !mask || !cols) return;
       const time = (now - started) / 1000;
       mouse.influence += (mouse.target - mouse.influence) * 0.12;
       if (mouse.sx < -1e3) { mouse.sx = mouse.x; mouse.sy = mouse.y; }
       mouse.sx += (mouse.x - mouse.sx) * 0.22;
       mouse.sy += (mouse.y - mouse.sy) * 0.22;
       const sw = Math.ceil(cw * dpr), sh = Math.ceil(ch * dpr);
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const w = canvas.clientWidth, h = canvas.clientHeight;
       const sigma2 = 2 * (HOVER_SIGMA * ch) ** 2;
-      const maxR = Math.min(Math.hypot(canvas.clientWidth, canvas.clientHeight) * 0.6, 1400);
+      const maxR = Math.min(Math.hypot(w, h) * 0.6, 1400);
       const flipFrame = Math.floor(time * FLIP_SWAPS);
       const cx = region.x + region.w / 2, cy = region.y + region.h * 0.3;
       // Only the rows on screen (and a little either side) are drawn.
       const top = canvas.getBoundingClientRect().top;
       const r0 = Math.max(0, Math.floor(-top / ch) - 4), r1 = Math.min(rows, Math.ceil((window.innerHeight - top) / ch) + 4);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (r1 <= r0) return;
+      const y0 = Math.round(r0 * ch * dpr), y1 = Math.round(r1 * ch * dpr);
+
+      // The arrival: a ring out of the figure's centre, cells fading in over ENTRANCE_FADE_S behind it.
+      let arriveIn = Infinity, arriveOut = Infinity;
+      if (entranceStart < Infinity && !entered) {
+        const t = time - entranceStart;
+        if (t > (Math.hypot(w, h) / maxR) * ENTRANCE_S + ENTRANCE_FADE_S) entered = true;
+        else {
+          arriveOut = (t / ENTRANCE_S) * maxR;
+          arriveIn = Math.max(0, ((t - ENTRANCE_FADE_S) / ENTRANCE_S) * maxR);
+          if (arriveOut <= 0) return;
+        }
+      }
+      const arrival = (x: number, y: number) => {
+        if (arriveOut === Infinity) return 1;
+        const d = Math.hypot(x - cx, y - cy);
+        return d <= arriveIn ? 1 : d >= arriveOut ? 0 : (arriveOut - d) / (arriveOut - arriveIn);
+      };
+
+      // The faint field.
+      ctx.globalAlpha = BACKGROUND_ALPHA;
       for (let r = r0; r < r1; r++) {
-        const y = r * ch + ch / 2;
-        for (let c = 0; c < cols; c++) {
-          const x = c * cw + cw / 2;
-          const b = cellB[r * cols + c];
-          const inModel = b > 0.03;
-          let opacity = inModel ? Math.pow(b, 0.55) : BACKGROUND_ALPHA;
-          const threshold = hash(c, r + rows * 3.1);
+        const o = rowOffset[r] % bgPhrase.length;
+        ctx.drawImage(strip, Math.round(o * cw * dpr), 0, Math.round(cols * cw * dpr), sh, 0, Math.round(r * ch * dpr), Math.round(cols * cw * dpr), sh);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(mask, 0, r0, cols, r1 - r0, 0, y0, Math.round(cols * cw * dpr), y1 - y0);
+      ctx.imageSmoothingEnabled = true;
+      if (mouse.influence > 0.01) {
+        const R = HOVER_SIGMA * ch * 3 * dpr, mx = mouse.sx * dpr, my = mouse.sy * dpr;
+        const g = ctx.createRadialGradient(mx, my, 0, mx, my, R);
+        for (let k = 0; k <= 8; k++) { const d = (k / 8) * 3; g.addColorStop(k / 8, `rgba(0,0,0,${(0.92 * mouse.influence * Math.exp((-d * d) / 2)).toFixed(4)})`); }
+        ctx.fillStyle = g;
+        ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+      }
+      if (arriveOut < Infinity) {
+        ctx.globalCompositeOperation = "destination-in";
+        const g = ctx.createRadialGradient(cx * dpr, cy * dpr, arriveIn * dpr, cx * dpr, cy * dpr, Math.max(arriveIn + 0.5, arriveOut) * dpr);
+        g.addColorStop(0, "#000");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, y0, canvas.width, y1 - y0);
+      }
+      ctx.globalCompositeOperation = "source-over";
 
-          let entrance = 1;
-          if (entranceStart < Infinity) {
-            const arrival = (Math.hypot(x - cx, y - cy) / maxR) * ENTRANCE_S;
-            entrance = Math.min(1, Math.max(0, (time - entranceStart - arrival) / ENTRANCE_FADE_S));
-            if (entrance <= 0) continue;
+      // Pond rings: each lifts the cells it passes to a soft grey and nudges them outward a little.
+      rings.length = 0;
+      for (const rp of ripples) {
+        const e = time - rp.t;
+        if (e < 0 || e >= RIPPLE_S) continue;
+        for (let j = 0; j < RINGS; j++) {
+          const ej = e - j * RING_GAP_S;
+          if (ej <= 0) continue;
+          const amp = Math.pow(Math.max(0, 1 - ej / RIPPLE_S), 1.6) * Math.pow(0.6, j);
+          const rw = ch * (1.3 + ej * 1.1);
+          const peak = RIPPLE_GREY * amp;
+          rings.push({ x: rp.x, y: rp.y, R: maxR * (1 - Math.exp(-ej * 0.8)), w: rw, amp, hw: peak > BACKGROUND_ALPHA ? rw * Math.sqrt(2 * Math.log(peak / BACKGROUND_ALPHA)) : -1 });
+        }
+      }
+      // Field cells a ring lifts above the field: only the cells inside each ring's band are visited.
+      if (rings.some((g) => g.hw > 0)) {
+        if (seen.length !== cols) seen = new Uint32Array(cols);
+        for (let r = r0; r < r1; r++) {
+          const y = r * ch + ch / 2;
+          spans.length = 0;
+          for (const g of rings) {
+            if (g.hw <= 0) continue;
+            const dy = Math.abs(y - g.y), outer = g.R + g.hw;
+            if (dy >= outer) continue;
+            const inner = Math.max(0, g.R - g.hw);
+            const xo = Math.sqrt(outer * outer - dy * dy), xi = dy < inner ? Math.sqrt(inner * inner - dy * dy) : 0;
+            spans.push(g.x - xo, g.x - xi, g.x + xi, g.x + xo);
           }
-
-          // Pond rings: each lifts the cells it passes to a soft grey and nudges them outward a little.
-          let ripple = 0, ox = 0, oy = 0;
-          for (const rp of ripples) {
-            const e = time - rp.t;
-            if (e < 0 || e >= RIPPLE_S) continue;
-            const dx = x - rp.x, dy = y - rp.y, d = Math.hypot(dx, dy) || 1;
-            for (let j = 0; j < RINGS; j++) {
-              const ej = e - j * RING_GAP_S;
-              if (ej <= 0) continue;
-              const R = maxR * (1 - Math.exp(-ej * 0.8));
-              const w = ch * (1.3 + ej * 1.1);
-              const amp = Math.pow(Math.max(0, 1 - ej / RIPPLE_S), 1.6) * Math.pow(0.6, j);
-              const v = Math.exp(-((d - R) ** 2) / (2 * w * w)) * amp;
-              if (v > ripple) { ripple = v; ox = (dx / d) * v * 2; oy = (dy / d) * v * 2; }
+          if (!spans.length) continue;
+          stamp++;
+          for (let s = 0; s < spans.length; s += 2) {
+            const c0 = Math.max(0, Math.ceil((spans[s] - cw / 2) / cw)), c1 = Math.min(cols - 1, Math.floor((spans[s + 1] - cw / 2) / cw));
+            for (let c = c0; c <= c1; c++) {
+              if (seen[c] === stamp || cellB[r * cols + c] > 0.03) continue;
+              seen[c] = stamp;
+              const x = c * cw + cw / 2;
+              rippleAt(x, y);
+              const lift = RIPPLE_GREY * rv * arrival(x, y);
+              if (lift <= BACKGROUND_ALPHA) continue;
+              const gi = backgroundIndex[(c + rowOffset[r]) % backgroundIndex.length];
+              ctx.clearRect(Math.round(c * cw * dpr), Math.round(r * ch * dpr), sw, sh);
+              ctx.globalAlpha = Math.min(1, lift);
+              ctx.drawImage(atlas, gi * sw, 0, sw, sh, Math.round((c * cw + rox) * dpr), Math.round((r * ch + roy) * dpr), sw, sh);
             }
           }
+        }
+      }
 
+      // The figure.
+      for (let r = r0; r < r1; r++) {
+        const y = r * ch + ch / 2;
+        for (let k = figStart[r]; k < figStart[r + 1]; k++) {
+          const c = figCol[k];
+          const x = c * cw + cw / 2;
+          const threshold = figThreshold[k];
+          const entrance = arrival(x, y);
+          if (entrance <= 0) continue;
+          let opacity = figOpacity[k];
+          let ox = 0, oy = 0, ripple = 0;
+          if (rings.length) { rippleAt(x, y); ripple = rv; ox = rox; oy = roy; }
           const hover = Math.exp(-((x - mouse.sx) ** 2 + (y - mouse.sy) ** 2) / sigma2) * mouse.influence;
           opacity *= 1 - 0.92 * hover;
-          if (inModel && threshold < hover * hover * 0.5) opacity = 0;
-          opacity = Math.max(opacity, RIPPLE_GREY * ripple);
-          opacity *= entrance;
+          if (threshold < hover * hover * 0.5) opacity = 0;
+          opacity = Math.max(opacity, RIPPLE_GREY * ripple) * entrance;
           if (opacity < 0.012) continue;
-
-          let gi: number;
-          if (inModel) {
-            gi = figureIndex[(c + rowOffset[r]) % figureIndex.length];
-            const flip = !reduce && Math.sin(time * FLIP_HZ * Math.PI * 2 + threshold * 6.283) * 0.5 + 0.5 > FLIP_THRESHOLD;
-            if (flip) gi = Math.floor(hash1(threshold * 17.13 + flipFrame * 1.7) * glyphs.length);
-          } else {
-            gi = backgroundIndex[(c + rowOffset[r]) % backgroundIndex.length];
-          }
+          let gi = figureIndex[(c + rowOffset[r]) % figureIndex.length];
+          const flip = !reduce && Math.sin(time * FLIP_HZ * Math.PI * 2 + threshold * 6.283) * 0.5 + 0.5 > FLIP_THRESHOLD;
+          if (flip) gi = Math.floor(hash1(threshold * 17.13 + flipFrame * 1.7) * glyphs.length);
           ctx.globalAlpha = Math.min(1, opacity);
           ctx.drawImage(atlas, gi * sw, 0, sw, sh, Math.round((c * cw + ox) * dpr), Math.round((r * ch + oy) * dpr), sw, sh);
         }
@@ -211,9 +346,11 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
     };
 
     const loop = (now: number) => {
-      if (!visible) return;
-      // Full frame rate while something moves (a ripple, the pointer, the page), 24 fps at rest.
-      const active = ripples.length > 0 || now - mouse.moved < 600 || Math.abs(mouse.target - mouse.influence) > 0.01;
+      // Clear the handle when the field leaves the screen, so it starts again when it comes back.
+      if (!visible) { raf = 0; return; }
+      // Full frame rate while something moves (a ripple, the pointer, the page, the arrival); at rest the
+      // only change is the twinkle, which steps 2.5 times a second.
+      const active = ripples.length > 0 || now - mouse.moved < 600 || Math.abs(mouse.target - mouse.influence) > 0.01 || (entranceStart < Infinity && !entered);
       if (now - last >= 1000 / (active ? FPS_ACTIVE : FPS) - 1) { last = now; draw(now); }
       raf = requestAnimationFrame(loop);
     };

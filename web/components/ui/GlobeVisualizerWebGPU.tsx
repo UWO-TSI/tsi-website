@@ -42,7 +42,8 @@ let _nodeHoverCount = 0;
  * How far the home page's dive has gone, 0 to 1 (a ref, read every frame, so scrolling never re-renders).
  * `boost` scales the resting globe as it takes the centre; `interactive` says when people may drag it.
  */
-export type DiveRef = { current: number; boost?: number; interactive?: boolean };
+/** `hidden`: nothing of the globe is on screen, so it stops drawing until a `globe-wake` event on window. */
+export type DiveRef = { current: number; boost?: number; interactive?: boolean; hidden?: boolean };
 const DiveContext = createContext<{ dive: DiveRef; base: number }>({ dive: { current: 0 }, base: 1 });
 /** The globe grows to this many times its resting size by the end of the dive, and rolls this far (radians). */
 const DIVE_SCALE = 3.2;
@@ -588,6 +589,12 @@ function SceneContent() {
         gl.toneMappingExposure = CONFIG.light.exposure;
     }, [gl]);
 
+    useEffect(() => {
+        const wake = () => invalidate();
+        window.addEventListener("globe-wake", wake);
+        return () => window.removeEventListener("globe-wake", wake);
+    }, [invalidate]);
+
     useFrame(() => {
         const d = dive.current;
         if (diveGroup.current) {
@@ -599,7 +606,7 @@ function SceneContent() {
             controls.current.enabled = dive.interactive ?? d < 0.02;
             controls.current.autoRotate = !anyNodeHovered && d < 0.6;
         }
-        invalidate();
+        if (!dive.hidden) invalidate();
     });
 
     return (
@@ -638,7 +645,7 @@ export default function GlobeVisualizerWebGPU({ className = "", dive = NO_DIVE, 
         <div className={className} style={{ position: "relative", width: "100%", height: "100%", minHeight: 500 }}>
           <DiveContext.Provider value={{ dive, base }}>
             <Canvas
-                dpr={[1, 1.75]}
+                dpr={[1, 1.5]}
                 camera={{ position: [0, 1, 5.1], fov: 30 }}
                 gl={async (props: any) => {
                     const renderer = new WebGPURenderer({

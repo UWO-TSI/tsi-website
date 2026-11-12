@@ -148,6 +148,10 @@ export default function HeroDive() {
       dive.current = d;
       dive.boost = 1 + 0.3 * t;
       dive.interactive = p < 0.02 || hold;
+      // Under the full paper (and past the hero) nothing of the globe shows, so it stops drawing.
+      const hidden = f >= 1;
+      if (dive.hidden && !hidden) window.dispatchEvent(new Event("globe-wake"));
+      dive.hidden = hidden;
       el.style.setProperty("--t", t.toFixed(4));
       el.style.setProperty("--hold", hold && t >= 1 ? "1" : "0");
       el.style.setProperty("--arrive", (0.55 + 0.45 * (1 - (1 - f) ** 2)).toFixed(4));

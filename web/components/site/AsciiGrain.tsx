@@ -21,19 +21,23 @@ const WORD_HOLD_MS = [1700, 2800] as const;
 const WORD_ASSEMBLE_MS = 650;
 const WORD_BREAK_MS = 450;
 const WORD_TICK_MS = 70;
+// The glow that follows a moving pointer: its box, and how long after the pointer stops it fades.
+const GLOW_SIZE = 560;
+const GLOW_IDLE_MS = 1200;
 // Layers that sit above the page grain; a word isn't placed where one of them covers it.
 const COVERED = ".hd-stage, .hd-reveal, .gn, .gx-hero, .ts-nav";
 
 const between = ([a, b]: readonly [number, number]) => a + Math.random() * (b - a);
 
 /**
- * A faint field of characters over the whole page, as light as the GENESIS field's background (the texture
- * over contentarchitecture.dev). It is a repeating tile laid over the page, so it scrolls with the content
- * instead of sitting still on the screen; three versions of the tile, each with a few percent of cells
- * changed, cycle to make it twinkle. The characters are the page's own letters and a few light symbols,
- * and every few seconds one of the page's words (GRAIN_WORDS) glitches into view and out again. It inverts
- * against whatever is underneath, so it shows on dark and light grounds alike. The hero's sticky stage sits
- * above it and carries its own copy.
+ * A very faint field of characters over the whole page (the texture over contentarchitecture.dev). Around a
+ * moving pointer it glows up to the strength of the GENESIS field's background and fades back when the
+ * pointer rests. It is a repeating tile laid over the page, so it scrolls with the content instead of
+ * sitting still on the screen; three versions of the tile, each with a few percent of cells changed, cycle
+ * to make it twinkle. The characters are the page's own letters and a few light symbols, and every few
+ * seconds one of the page's words (GRAIN_WORDS) glitches into view and out again at the glow's strength.
+ * It inverts against whatever is underneath, so it shows on dark and light grounds alike. The hero's
+ * sticky stage sits above it and carries its own copy.
  */
 export default function AsciiGrain({ className }: { className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -41,6 +45,8 @@ export default function AsciiGrain({ className }: { className?: string }) {
 
   useEffect(() => {
     const el = ref.current!;
+    const tile = el.querySelector<HTMLElement>(".ts-grain-tile")!;
+    const glow = el.querySelector<HTMLElement>(".ts-grain-glow")!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const words = GRAIN_WORDS[path] ?? GRAIN_WORDS["/"];
@@ -74,8 +80,10 @@ export default function AsciiGrain({ className }: { className?: string }) {
         }
         variants.push(render());
       }
-      el.style.backgroundImage = variants[0];
-      el.style.backgroundSize = `${TILE_W}px ${TILE_H}px`;
+      for (const layer of [tile, glow]) {
+        layer.style.backgroundImage = variants[0];
+        layer.style.backgroundSize = `${TILE_W}px ${TILE_H}px`;
+      }
     };
 
     /**
@@ -136,8 +144,31 @@ export default function AsciiGrain({ className }: { className?: string }) {
     const onVisible = () => {
       clearInterval(timer);
       if (reduce || document.visibilityState !== "visible") return;
-      timer = window.setInterval(() => { i = (i + 1) % variants.length; el.style.backgroundImage = variants[i]; }, TICK_MS);
+      timer = window.setInterval(() => { i = (i + 1) % variants.length; tile.style.backgroundImage = glow.style.backgroundImage = variants[i]; }, TICK_MS);
     };
+
+    // The glow sits under the pointer in the grain's own coordinates, its tile lined up with the field's.
+    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    let px = -1e4, py = -1e4, glowFrame = 0, idle = 0;
+    const place = () => {
+      glowFrame = 0;
+      const r = el.getBoundingClientRect();
+      const x = Math.round(px - r.left - GLOW_SIZE / 2), y = Math.round(py - r.top - GLOW_SIZE / 2);
+      glow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      glow.style.backgroundPosition = `${-x}px ${-y}px`;
+    };
+    const onPointer = (e: PointerEvent) => {
+      px = e.clientX; py = e.clientY;
+      if (!glowFrame) glowFrame = requestAnimationFrame(place);
+      el.dataset.glow = "on";
+      clearTimeout(idle);
+      idle = window.setTimeout(() => { el.dataset.glow = "off"; }, GLOW_IDLE_MS);
+    };
+    const onScroll = () => { if (el.dataset.glow === "on" && !glowFrame) glowFrame = requestAnimationFrame(place); };
+    if (fine) {
+      window.addEventListener("pointermove", onPointer, { passive: true });
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
     build();
     document.fonts?.ready.then(build);
     onVisible();
@@ -146,10 +177,19 @@ export default function AsciiGrain({ className }: { className?: string }) {
     return () => {
       clearInterval(timer);
       clearTimeout(wordTimer);
+      clearTimeout(idle);
+      cancelAnimationFrame(glowFrame);
+      window.removeEventListener("pointermove", onPointer);
+      window.removeEventListener("scroll", onScroll);
       live.forEach((w) => { clearInterval(w.timer); w.box.remove(); });
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [path]);
 
-  return <div ref={ref} className={className ? `ts-ascii-grain ${className}` : "ts-ascii-grain"} aria-hidden="true" />;
+  return (
+    <div ref={ref} className={className ? `ts-ascii-grain ${className}` : "ts-ascii-grain"} aria-hidden="true">
+      <div className="ts-grain-tile" />
+      <div className="ts-grain-glow" />
+    </div>
+  );
 }

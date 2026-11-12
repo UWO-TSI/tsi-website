@@ -58,7 +58,7 @@ export const GRAIN_WORDS: Record<string, readonly string[]> = {
 };
 
 export const GENESIS_2026 = [
-  { value: "260+", label: "Attendees" },
+  { value: "350+", label: "Attendees" },
   { value: "7", label: "Project demos" },
   { value: "6", label: "Sponsors" },
 ] as const;
