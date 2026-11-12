@@ -49,9 +49,10 @@ export default function HiringPortal({ open }: { open: boolean }) {
     let sprites = new Map<string, Sprite>();
     let slots: Slot[] = [];
     let labels: { x: number; y: number; text: string }[] = [];
-    // The portal's centre and radii, in px; the box the copy sits in, in cells, kept clear of the swirl.
+    // The portal's centre and radii, in px; the copy's own box (heading, digits, date), which the swirl fades out around.
     let cx = 0, cy = 0, rx = 1, ry = 1;
-    let clear = { c0: 0, c1: 0, r0: 0, r1: 0 };
+    // `hole`: how far in from the rim (in the portal's own units) the swirl is kept off the copy.
+    let hole = 0.6;
 
     const atlas = (color: string) => {
       const sw = Math.ceil(cells.cw * dpr), sh = Math.ceil(cells.ch * dpr);
@@ -97,11 +98,8 @@ export default function HiringPortal({ open }: { open: boolean }) {
       cols = Math.ceil(w / cw); rows = Math.ceil(h / ch);
       white = atlas(WHITE); blue = atlas(BLUE);
 
-      const box = canvas.getBoundingClientRect(), ib = inner.getBoundingClientRect(), kb = clock.getBoundingClientRect();
-      cx = ib.left - box.left + ib.width / 2; cy = ib.top - box.top + ib.height / 2;
-      rx = Math.max(Math.min(w * 0.47, 820), ib.width / 2 / 0.62);
-      ry = Math.max(Math.min(h * 0.44, 430), ib.height / 2 / 0.6);
-      clear = { c0: Math.floor((ib.left - box.left) / cw) - 1, c1: Math.ceil((ib.right - box.left) / cw) + 1, r0: Math.floor((ib.top - box.top) / ch) - 1, r1: Math.ceil((ib.bottom - box.top) / ch) + 1 };
+      const box = canvas.getBoundingClientRect(), kb = clock.getBoundingClientRect();
+
 
       // The clock: four groups in one row, or two rows on a narrow screen; the biggest digits that fit the box.
       const m = document.createElement("canvas").getContext("2d")!;
@@ -143,6 +141,30 @@ export default function HiringPortal({ open }: { open: boolean }) {
         }
         y += DH + (open ? 0 : 3) + 2;
       }
+
+      // The copy's real extent: the heading's and the date's text (not their full-width boxes) and the digits drawn.
+      const textBox = (el: Element | null) => {
+        if (!el) return null;
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return range.getBoundingClientRect();
+      };
+      let l = Infinity, rgt = -Infinity, top = Infinity, bot = -Infinity;
+      for (const b of [textBox(inner.querySelector(".hp__title")), textBox(inner.querySelector(".hp__date, .ts-btn"))]) {
+        if (!b || !b.width) continue;
+        l = Math.min(l, b.left - box.left); rgt = Math.max(rgt, b.right - box.left); top = Math.min(top, b.top - box.top); bot = Math.max(bot, b.bottom - box.top);
+      }
+      for (const s of slots) {
+        l = Math.min(l, s.x * cw); rgt = Math.max(rgt, (s.x + (s.ch === ":" ? SEP : DW)) * cw);
+        top = Math.min(top, s.y * ch); bot = Math.max(bot, (s.y + DH + (open ? 0 : 3)) * ch);
+      }
+      // The portal is an oval around the copy: wide enough that the copy's corners sit well inside the rim, and the
+      // hole kept clear is the same oval shape, so the swirl never ends in a straight line.
+      const hw = (rgt - l) / 2 + 2 * cw, hh = (bot - top) / 2 + ch;
+      cx = (l + rgt) / 2; cy = (top + bot) / 2;
+      rx = Math.max(Math.min(w * 0.47, 820), hw / 0.5);
+      ry = Math.max(Math.min(h * 0.44, 430), hh / 0.45);
+      hole = Math.hypot(hw / rx, hh / ry) + 0.03;
     };
 
     const hash = (a: number, b: number, c: number) => {
@@ -167,17 +189,18 @@ export default function HiringPortal({ open }: { open: boolean }) {
 
       // The portal: log-spiral arms turning on a bright rim, a thin inner ring and a halo that thins outward.
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        if (c >= clear.c0 && c <= clear.c1 && r >= clear.r0 && r <= clear.r1) continue;
         const nx = ((c + 0.5) * cw - cx) / rx, ny = ((r + 0.5) * ch - cy) / ry;
         const d = Math.hypot(nx, ny);
-        if (d < 0.5 || d > 1.9) continue;
+        if (d < hole || d > 1.9) continue;
+        // The swirl fades in over a short stretch outside the hole.
+        const fade = Math.min(1, (d - hole) / 0.1);
         const a = Math.atan2(ny, nx);
         const rim = Math.exp(-(((d - 0.86) / 0.12) ** 2));
         const ring = d < 0.86 ? 0.4 * Math.exp(-(((d - 0.68) / 0.05) ** 2)) : 0.4 * Math.exp(-(d - 0.86) / 0.32);
         const arms = 0.5 + 0.5 * Math.sin(4 * a + 7 * Math.log(d) - t * 1.3);
         const fine = 0.5 + 0.5 * Math.sin(13 * a - t * 2.4 + d * 12);
         const flick = hash(c, r, tick);
-        const I = rim * (0.3 + 0.45 * arms + 0.25 * fine) + ring * arms * (0.55 + 0.45 * flick);
+        const I = (rim * (0.3 + 0.45 * arms + 0.25 * fine) + ring * arms * (0.55 + 0.45 * flick)) * fade;
         if (I < 0.07 || (I < 0.3 && hash(c, r, 0.5) > I * 3.4)) continue;
         const g = RAMP[Math.min(RAMP.length - 1, Math.floor(I * RAMP.length))];
         put(rim > 0.5 && arms > 0.55 ? blue : white, g, c, r, Math.min(1, 0.12 + I * 1.1));

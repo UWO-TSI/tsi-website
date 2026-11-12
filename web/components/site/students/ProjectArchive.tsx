@@ -141,6 +141,9 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
   const yearRef = useRef<HTMLElement>(null);
   const noteRef = useRef<HTMLSpanElement>(null);
   const trigger = useRef<ScrollTrigger | null>(null);
+  const view = useRef<HTMLDivElement>(null);
+  // Set when a press turned into a drag, so letting go over a file doesn't also open it.
+  const dragged = useRef(false);
   const files = useMemo(() => years.flatMap((y, yi) => y.projects.map((p) => ({ ...p, year: y.year, note: y.note, yi }))), [years]);
   const firsts = useMemo(() => years.map((_, yi) => files.findIndex((f) => f.yi === yi)), [years, files]);
   const [active, setActive] = useState(0);
@@ -183,7 +186,52 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
     const onResize = () => apply(trigger.current?.progress ?? last);
     window.addEventListener("resize", onResize);
     wide.addEventListener("change", onResize);
-    return () => { trigger.current?.kill(); window.removeEventListener("resize", onResize); wide.removeEventListener("change", onResize); };
+    // Click and drag turns the ring: the drag moves the page's own scroll position (the ring follows the scroll), so a
+    // drag and the wheel never disagree; letting go settles on the nearest file.
+    const vw = view.current!;
+    const lenis = () => (window as unknown as { __lenis?: { scrollTo: (y: number, o: object) => void } }).__lenis;
+    const scrollToFile = (f: number, immediate: boolean) => {
+      const s = trigger.current;
+      if (!s) return;
+      const y = s.start + (Math.min(n - 1, Math.max(0, f)) / (n - 1)) * (s.end - s.start) + 1;
+      const l = lenis();
+      if (l) l.scrollTo(y, immediate ? { immediate: true } : { duration: 0.6 });
+      else window.scrollTo({ top: y, behavior: immediate ? "auto" : "smooth" });
+    };
+    let drag: { x: number; f0: number } | null = null;
+    const perFile = () => Math.max(70, Math.min(150, window.innerWidth / 13));
+    const down = (e: PointerEvent) => {
+      dragged.current = false;
+      if (!wide.matches || reduce || e.button !== 0 || !trigger.current) return;
+      drag = { x: e.clientX, f0: trigger.current.progress * (n - 1) };
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (!dragged.current && Math.abs(dx) < 5) return;
+      dragged.current = true;
+      vw.dataset.dragging = "true";
+      scrollToFile(drag.f0 - dx / perFile(), true);
+    };
+    const up = () => {
+      if (drag && dragged.current && trigger.current) scrollToFile(Math.round(trigger.current.progress * (n - 1)), false);
+      drag = null;
+      delete vw.dataset.dragging;
+    };
+    vw.addEventListener("pointerdown", down);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+
+    return () => {
+      trigger.current?.kill();
+      window.removeEventListener("resize", onResize);
+      wide.removeEventListener("change", onResize);
+      vw.removeEventListener("pointerdown", down);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
   }, [files]);
 
   // The big year in the corner glitches into the next one.
@@ -204,6 +252,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
 
   /** Brings file i to the front: scrolls the pinned ring there, or the row on narrow screens. */
   const go = (i: number) => {
+    if (dragged.current) return;
     const s = trigger.current;
     if (!s || !window.matchMedia(WIDE).matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       ring.current?.querySelectorAll<HTMLElement>(".st-file")[i]?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
@@ -229,7 +278,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
             ))}
           </div>
         </div>
-        <div className="st-ring__view">
+        <div ref={view} className="st-ring__view">
           <ol ref={ring} className="st-ring__ring">
             {files.map((f, i) => <FileCard key={f.slug} f={f} i={i} n={files.length} onPick={() => go(i)} />)}
           </ol>

@@ -141,7 +141,7 @@ export default async function StudentsPage() {
 
       <GlyphSeam from="light" to="dark" seed={35} />
       <HiringPortal open={open} />
-      <section className="ts-section cl" data-tone="dark" id="chapter" aria-labelledby="chapter-title">
+      <section className="ts-section cl st-chapter-section" data-tone="dark" id="chapter" aria-labelledby="chapter-title">
         <div className="ts-wrap st-chapter">
           <Reveal delay={0.06}><h2 className="cl__title st-chapter__title" id="chapter-title">Start a chapter at your school.</h2></Reveal>
           <Reveal delay={0.12}>
