@@ -171,6 +171,7 @@
 .st-arch__years button[aria-pressed="true"] span { color: var(--ink); }
 .st-ring__view { position: relative; flex: 1; perspective: 1900px; perspective-origin: 50% 30%; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
 .st-ring__view[data-dragging] { cursor: grabbing; }
+.st-ring__view[data-dragging] .st-file { pointer-events: none !important; }
 .st-ring__view img { -webkit-user-drag: none; }
 .st-ring__ring { list-style: none; margin: 0; padding: 0; position: absolute; left: 50%; top: 46%; width: 0; height: 0; transform-style: preserve-3d; }
 /* A file, landscape: one surface, the photo (or the client's initials in characters) behind a dark fade, the year on

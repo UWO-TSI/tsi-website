@@ -203,7 +203,8 @@ function FileOpen({ f, i, n, from, onClose }: { f: File; i: number; n: number; f
  * their files peeking out). On wide screens the section pins and the files stand in a tilted ring, edge on like a
  * rolodex; scrolling turns the ring, and the file at the front swings out to face you, so each scroll step brings up
  * the next project. The year it belongs to stands big in the corner and glitches when it changes; the chips jump to a
- * year. On narrow screens and for reduced motion the files are a row you swipe through.
+ * year. Dragging takes hold of the ring itself: it turns and tips with the pointer, spins on when let go and comes to
+ * rest on a file. On narrow screens and for reduced motion the files are a row you swipe through.
  */
 export default function ProjectArchive({ years }: { years: readonly ArchiveYear[] }) {
   const section = useRef<HTMLElement>(null);
@@ -220,92 +221,144 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
   const activeYear = files[active]?.yi ?? 0;
 
   useEffect(() => {
-    const el = section.current!, list = ring.current!;
+    const el = section.current!, list = ring.current!, vw = view.current!;
     const cards = Array.from(list.querySelectorAll<HTMLElement>(".st-file"));
     const n = cards.length, step = 360 / n;
     const wide = window.matchMedia(WIDE);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let radius = 520, last = 0;
     const ease = (x: number) => x * x * (3 - 2 * x);
+    const wrap = (x: number) => ((x % n) + n) % n;
+    const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+    // The ring as one object: `pos` is the file facing you (any real number, the ring being a full circle), `pitch`
+    // tips the whole ring toward or away from you, and `swing` is how far the front file stands out of it (none while
+    // you hold the ring, so it turns as one piece).
+    const st = { pos: 0, pitch: 0, swing: 1 };
+    let radius = 520;
 
-    const apply = (p: number) => {
+    const render = () => {
       if (!wide.matches || reduce) {
         list.style.transform = "";
         cards.forEach((c) => { c.style.transform = ""; c.style.opacity = ""; c.style.pointerEvents = ""; c.dataset.on = "false"; });
         return;
       }
       radius = Math.max(440, Math.min(window.innerWidth * 0.38, 700));
-      list.style.transform = `translateZ(${-radius}px) rotateX(${TILT}deg)`;
-      const f = p * (n - 1);
+      const tilt = TILT + st.pitch;
+      list.style.transform = `translateZ(${-radius}px) rotateX(${tilt.toFixed(2)}deg)`;
       cards.forEach((c, i) => {
-        const d = i - f;
+        const d = ((((i - st.pos) % n) + n + n / 2) % n) - n / 2;
         // A short swing (within 0.7 of a step), so two neighbours never stand half-turned into each other.
-        const a = ease(Math.max(0, 1 - Math.abs(d) / 0.7));
-        // Edge on in the ring (a quarter turn, each side turned so its front shows); the one at the front turns to
-        // face you, steps out and rises.
-        const ang = ((((d * step + 180) % 360) + 360) % 360) - 180;
+        const a = ease(Math.max(0, 1 - Math.abs(d) / 0.7)) * st.swing;
+        // Part edge on in the ring (each side turned so its front shows); the one at the front turns to face you,
+        // steps out and rises.
+        const ang = d * step;
         const face = FIN * (1 - a) * (ang < 0 ? 1 : -1);
-        c.style.transform = `rotateY(${ang.toFixed(2)}deg) translateZ(${(radius + 150 * a).toFixed(1)}px) rotateY(${face.toFixed(2)}deg) rotateX(${(-TILT * a).toFixed(2)}deg) translateY(${(-24 * a).toFixed(1)}px) scale(${(1 + 0.16 * a).toFixed(3)})`;
+        c.style.transform = `rotateY(${ang.toFixed(2)}deg) translateZ(${(radius + 150 * a).toFixed(1)}px) rotateY(${face.toFixed(2)}deg) rotateX(${(-tilt * a).toFixed(2)}deg) translateY(${(-24 * a).toFixed(1)}px) scale(${(1 + 0.16 * a).toFixed(3)})`;
         c.dataset.on = a > 0.6 ? "true" : "false";
         // The far side of the ring dims away, so it never clutters the files in front.
         const near = Math.min(1, Math.max(0, (Math.cos((ang * Math.PI) / 180) + 0.45) / 0.65));
         c.style.opacity = (0.08 + 0.92 * near).toFixed(3);
         c.style.pointerEvents = near < 0.3 ? "none" : "";
       });
-      setActive(Math.min(n - 1, Math.max(0, Math.round(f))));
-      last = p;
+      setActive(wrap(Math.round(st.pos)));
     };
 
-    // Click and drag turns the ring: the drag moves the page's own scroll position (the ring follows the scroll), so a
-    // drag and the wheel never disagree; letting go settles on the nearest file.
-    const vw = view.current!;
     const lenis = () => (window as unknown as { __lenis?: { scrollTo: (y: number, o: object) => void } }).__lenis;
     const scrollToFile = (f: number, immediate: boolean) => {
       const s = trigger.current;
       if (!s) return;
-      const y = s.start + (Math.min(n - 1, Math.max(0, f)) / (n - 1)) * (s.end - s.start) + 1;
+      const y = s.start + (clamp(f, 0, n - 1) / (n - 1)) * (s.end - s.start) + 1;
       const l = lenis();
       if (l) l.scrollTo(y, immediate ? { immediate: true } : { duration: 0.6 });
       else window.scrollTo({ top: y, behavior: immediate ? "auto" : "smooth" });
     };
-    let drag: { x: number; f0: number } | null = null;
-    // When the scroll comes to rest between two files, the ring settles on the nearer one.
+
+    // Scrolling turns the ring; holding it or letting it spin on takes over until it comes to rest on a file, and
+    // then the page's scroll position is moved to match, so the two never disagree.
+    let mode: "scroll" | "hold" | "coast" = "scroll";
     let settle = 0;
     trigger.current = ScrollTrigger.create({
       trigger: el, start: "top top", end: "bottom bottom",
       onUpdate: (s) => {
-        apply(s.progress);
+        if (mode === "hold") return;
+        mode = "scroll";
+        st.pos = s.progress * (n - 1);
+        render();
         clearTimeout(settle);
-        if (!wide.matches || reduce || drag) return;
+        if (!wide.matches || reduce) return;
+        // When the scroll comes to rest between two files, the ring settles on the nearer one.
         settle = window.setTimeout(() => {
           const t = trigger.current;
-          if (!t || !t.isActive || drag) return;
+          if (!t || !t.isActive || mode !== "scroll") return;
           const f = t.progress * (n - 1);
           if (Math.abs(f - Math.round(f)) > 0.02) scrollToFile(Math.round(f), false);
         }, 220);
       },
     });
-    apply(trigger.current.progress);
-    const onResize = () => apply(trigger.current?.progress ?? last);
+    st.pos = trigger.current.progress * (n - 1);
+    render();
+    const onResize = () => render();
     window.addEventListener("resize", onResize);
     wide.addEventListener("change", onResize);
+
+    // Holding and spinning: the ring follows the pointer (sideways turns it, up and down tips it), keeps spinning
+    // when let go, then eases onto the nearest file and levels out.
+    let raf = 0, last = 0, vel = 0;
+    const samples: { t: number; pos: number }[] = [];
+    const k = (rate: number, dt: number) => 1 - Math.exp(-rate * dt);
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000 || 1 / 60);
+      last = now;
+      if (mode === "hold") {
+        st.swing += (0 - st.swing) * k(10, dt);
+      } else if (mode === "coast") {
+        st.pos += vel * dt;
+        vel *= Math.exp(-2.6 * dt);
+        const target = Math.round(st.pos);
+        if (Math.abs(vel) < 1.5) { vel *= Math.exp(-8 * dt); st.pos += (target - st.pos) * k(9, dt); }
+        st.pitch += (0 - st.pitch) * k(6, dt);
+        st.swing += (1 - st.swing) * k(5, dt);
+        if (Math.abs(vel) < 0.05 && Math.abs(target - st.pos) < 0.002 && Math.abs(st.pitch) < 0.05 && st.swing > 0.995) {
+          st.pos = target; st.pitch = 0; st.swing = 1;
+          render();
+          mode = "scroll";
+          raf = 0;
+          scrollToFile(wrap(target), true);
+          return;
+        }
+      }
+      render();
+      raf = mode === "scroll" ? 0 : requestAnimationFrame(loop);
+    };
+    const run = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); } };
+
+    let press: { x: number; y: number; pos0: number; pitch0: number } | null = null;
     const perFile = () => Math.max(70, Math.min(150, window.innerWidth / 13));
     const down = (e: PointerEvent) => {
       dragged.current = false;
-      if (!wide.matches || reduce || e.button !== 0 || !trigger.current) return;
-      drag = { x: e.clientX, f0: trigger.current.progress * (n - 1) };
+      if (!wide.matches || reduce || e.button !== 0) return;
+      press = { x: e.clientX, y: e.clientY, pos0: st.pos, pitch0: st.pitch };
+      if (mode === "coast") { mode = "hold"; vel = 0; }
     };
     const move = (e: PointerEvent) => {
-      if (!drag) return;
-      const dx = e.clientX - drag.x;
-      if (!dragged.current && Math.abs(dx) < 5) return;
-      dragged.current = true;
-      vw.dataset.dragging = "true";
-      scrollToFile(drag.f0 - dx / perFile(), true);
+      if (!press) return;
+      const dx = e.clientX - press.x, dy = e.clientY - press.y;
+      if (!dragged.current && Math.hypot(dx, dy) < 5) return;
+      if (!dragged.current) { dragged.current = true; mode = "hold"; vw.dataset.dragging = "true"; clearTimeout(settle); run(); }
+      st.pos = press.pos0 - dx / perFile();
+      st.pitch = clamp(press.pitch0 - dy * 0.12, -32, 18);
+      const t = performance.now();
+      samples.push({ t, pos: st.pos });
+      while (samples.length > 2 && t - samples[0].t > 90) samples.shift();
     };
     const up = () => {
-      if (drag && dragged.current && trigger.current) scrollToFile(Math.round(trigger.current.progress * (n - 1)), false);
-      drag = null;
+      if (press && dragged.current) {
+        const a = samples[0], b = samples[samples.length - 1];
+        vel = a && b && b.t > a.t ? clamp(((b.pos - a.pos) / (b.t - a.t)) * 1000, -18, 18) : 0;
+        mode = "coast";
+        run();
+      }
+      press = null;
+      samples.length = 0;
       delete vw.dataset.dragging;
     };
     vw.addEventListener("pointerdown", down);
@@ -315,6 +368,7 @@ export default function ProjectArchive({ years }: { years: readonly ArchiveYear[
 
     return () => {
       clearTimeout(settle);
+      cancelAnimationFrame(raf);
       trigger.current?.kill();
       window.removeEventListener("resize", onResize);
       wide.removeEventListener("change", onResize);
