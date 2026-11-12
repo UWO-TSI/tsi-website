@@ -178,6 +178,10 @@
 .cl { padding-block: clamp(140px, 24vh, 240px); }
 .cl__inner { display: grid; justify-items: center; gap: 24px; text-align: center; }
 .cl__title { font-size: clamp(3rem, 9vw, 8rem); line-height: 0.95; letter-spacing: -0.045em; font-weight: 500; }
+.cl__paths { display: grid; grid-template-columns: repeat(3, auto); gap: 16px 40px; margin-top: 16px; }
+.cl__path { display: grid; justify-items: center; gap: 12px; }
+.cl__who { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-light-3); }
+@media (max-width: 640px) { .cl__paths { grid-template-columns: 1fr; gap: 28px; } }
 
 @media (prefers-reduced-motion: reduce) {
   .hd-track { height: auto; }
