@@ -11,9 +11,14 @@ const NOISE = "#%&*+=01<>/";
 const LABELS = ["DAYS", "HOURS", "MINUTES", "SECONDS"];
 const WHITE = "#f1ffff";
 const BLUE = "#1d9bf0";
-// The swirl turns slowly, so 15 frames a second reads smooth; a low-power machine draws 10.
-const FPS = 15;
-const FPS_LOW = 10;
+const PALE = "#9ad7ff";
+// The current's characters, laid along the spiral: flat, falling right, upright, rising right.
+const FLOW = "-\\|/";
+// 20 frames a second keeps the streams moving smoothly; a low-power machine draws 12.
+const FPS = 20;
+const FPS_LOW = 12;
+// The pointer's pull: how far it reaches, in px.
+const PULL = 180;
 const GLITCH_MS = 260;
 
 type Cells = { cw: number; ch: number; font: number };
@@ -28,8 +33,9 @@ function groups(target: number, now: number): string[] {
 }
 
 /**
- * Near the end of the Students page: a portal written in characters, swirling around a countdown to the day the
- * application portal opens (Sep 10, Toronto time). The digits are big numbers drawn in small ones, on the same grid as
+ * Near the end of the Students page: a portal written in characters, a vortex swirling around a countdown to the day
+ * the application portal opens (Sep 10, Toronto time). Characters lie along its spiral arms like a current, comets
+ * of them stream in toward the opening, its edge glows like a horizon, and the pointer pulls on it. The digits are big numbers drawn in small ones, on the same grid as
  * the swirl, and each one flickers through noise when it changes. While a round is open it says so instead. Draws only
  * on screen; for reduced motion the swirl holds still and only the digits change.
  */
@@ -44,21 +50,25 @@ export default function HiringPortal({ open }: { open: boolean }) {
     const canvas = canvasRef.current!, inner = innerRef.current!, clock = clockRef.current!;
     const ctx = canvas.getContext("2d")!;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const glyphs = Array.from(new Set((RAMP + NOISE + "0123456789:OPEN" + LABELS.join("")).split(""))).join("");
+    const glyphs = Array.from(new Set((RAMP + NOISE + FLOW + "0123456789:OPEN" + LABELS.join("")).split(""))).join("");
     const index = new Map(Array.from(glyphs, (g, i) => [g, i]));
     let cells: Cells = { cw: 8, ch: 14, font: 12 };
     let dpr = 1, cols = 0, rows = 0, raf = 0, last = 0, visible = false;
-    let white: HTMLCanvasElement | null = null, blue: HTMLCanvasElement | null = null;
+    let white: HTMLCanvasElement | null = null, blue: HTMLCanvasElement | null = null, pale: HTMLCanvasElement | null = null;
     let sprites = new Map<string, Sprite>();
     let slots: Slot[] = [];
     let labels: { x: number; y: number; text: string }[] = [];
     // The portal's centre and radii, in px; the copy's own box (heading, digits, date), which the swirl fades out around.
     let cx = 0, cy = 0, rx = 1, ry = 1;
+    // The vortex's own clocks (they speed up while the pointer is over the section) and the pointer, in canvas px.
+    let spin = 0, twist = 0, stream = 0, hover = 0, lastDraw = performance.now();
+    const pointer = { x: 0, y: 0, on: false };
     // `hole`: how far in from the rim (in the portal's own units) the swirl is kept off the copy.
     let hole = 0.6;
     // The swirl's cells, worked out once per layout: everything about a cell that doesn't change frame to frame, so a
     // frame only turns the arms (two sines per cell) and draws. Cells that could never show are left out.
-    let ring = { n: 0, c: new Int16Array(0), r: new Int16Array(0), armP: new Float32Array(0), fineP: new Float32Array(0), rim: new Float32Array(0), halo: new Float32Array(0), keep: new Float32Array(0) };
+    const empty = () => ({ n: 0, c: new Int16Array(0), r: new Int16Array(0), armP: new Float32Array(0), fineP: new Float32Array(0), lnd: new Float32Array(0), rim: new Float32Array(0), halo: new Float32Array(0), edge: new Float32Array(0), flow: new Float32Array(0), keep: new Float32Array(0), dir: new Uint8Array(0), edir: new Uint8Array(0), px: new Float32Array(0), py: new Float32Array(0) });
+    let ring = empty();
 
     const atlas = (color: string) => {
       const sw = Math.ceil(cells.cw * dpr), sh = Math.ceil(cells.ch * dpr);
@@ -102,7 +112,7 @@ export default function HiringPortal({ open }: { open: boolean }) {
       const { cw, ch } = cells;
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       cols = Math.ceil(w / cw); rows = Math.ceil(h / ch);
-      white = atlas(WHITE); blue = atlas(BLUE);
+      white = atlas(WHITE); blue = atlas(BLUE); pale = atlas(PALE);
 
       const box = canvas.getBoundingClientRect(), kb = clock.getBoundingClientRect();
 
@@ -172,22 +182,41 @@ export default function HiringPortal({ open }: { open: boolean }) {
       ry = Math.max(Math.min(h * 0.34, 420), hh / 0.45);
       hole = Math.hypot(hw / rx, hh / ry) + 0.03;
 
+      // Each cell of the vortex, worked out once: where it sits on the spiral arms, how strong the rim, halo, horizon
+      // and inward current are there, and which way the current runs through it (so its character can lie along it).
       const list: number[][] = [];
+      const mid = (hole + 0.86) / 2;
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        const nx = ((c + 0.5) * cw - cx) / rx, ny = ((r + 0.5) * ch - cy) / ry;
+        const x = (c + 0.5) * cw, y = (r + 0.5) * ch;
+        const nx = (x - cx) / rx, ny = (y - cy) / ry;
         const d = Math.hypot(nx, ny);
         if (d < hole || d > 1.9) continue;
+        const edges = Math.min(1, r / 10, (rows - 1 - r) / 10, c / 8, (cols - 1 - c) / 8);
         // The swirl fades in over a short stretch outside the hole, and toward the section's edges.
-        const fade = Math.min(1, (d - hole) / 0.1, r / 10, (rows - 1 - r) / 10, c / 8, (cols - 1 - c) / 8);
+        const fade = Math.min(edges, (d - hole) / 0.1);
         const rimV = Math.exp(-(((d - 0.86) / 0.12) ** 2)) * fade;
         const haloV = (d < 0.86 ? 0.4 * Math.exp(-(((d - 0.68) / 0.05) ** 2)) : 0.4 * Math.exp(-(d - 0.86) / 0.32)) * fade;
-        if (rimV + haloV < 0.07) continue;
-        const a = Math.atan2(ny, nx);
-        list.push([c, r, 4 * a + 7 * Math.log(d), 13 * a + d * 12, rimV, haloV, hash(c, r, 0.5)]);
+        // The event horizon: a thin bright edge right at the opening.
+        const edgeV = Math.exp(-(((d - hole) / 0.035) ** 2)) * edges;
+        // The current: streams running in along the arms, strongest between the rim and the opening.
+        const flowV = Math.exp(-(((d - mid) / 0.32) ** 2)) * Math.min(edges, (d - hole) / 0.05 + 0.2);
+        if (rimV + haloV + edgeV + flowV < 0.07) continue;
+        const a = Math.atan2(ny, nx), d2 = d * d;
+        // The arm's direction through this cell, on screen: along the spiral, at right angles to its phase gradient.
+        const gx = (-4 * ny + 7 * nx) / d2 / rx, gy = (4 * nx + 7 * ny) / d2 / ry;
+        const th = ((Math.atan2(gx, -gy) % Math.PI) + Math.PI) % Math.PI;
+        const dir = Math.round(th / (Math.PI / 4)) % 4;
+        // The horizon's direction: round the opening, at right angles to the way out.
+        const eth = ((Math.atan2(nx / rx, -ny / ry) % Math.PI) + Math.PI) % Math.PI;
+        const edir = Math.round(eth / (Math.PI / 4)) % 4;
+        list.push([c, r, 4 * a + 7 * Math.log(d), 13 * a + d * 12, Math.log(d), rimV, haloV, edgeV, flowV, hash(c, r, 0.5), dir, x, y, edir]);
       }
       const n = list.length;
-      ring = { n, c: new Int16Array(n), r: new Int16Array(n), armP: new Float32Array(n), fineP: new Float32Array(n), rim: new Float32Array(n), halo: new Float32Array(n), keep: new Float32Array(n) };
-      list.forEach(([c, r, ap, fp, rimV, haloV, k], i) => { ring.c[i] = c; ring.r[i] = r; ring.armP[i] = ap; ring.fineP[i] = fp; ring.rim[i] = rimV; ring.halo[i] = haloV; ring.keep[i] = k; });
+      ring = { n, c: new Int16Array(n), r: new Int16Array(n), armP: new Float32Array(n), fineP: new Float32Array(n), lnd: new Float32Array(n), rim: new Float32Array(n), halo: new Float32Array(n), edge: new Float32Array(n), flow: new Float32Array(n), keep: new Float32Array(n), dir: new Uint8Array(n), edir: new Uint8Array(n), px: new Float32Array(n), py: new Float32Array(n) };
+      list.forEach(([c, r, ap, fp, ld, rimV, haloV, edgeV, flowV, k, dir, x, y, edir], i) => {
+        ring.c[i] = c; ring.r[i] = r; ring.armP[i] = ap; ring.fineP[i] = fp; ring.lnd[i] = ld; ring.rim[i] = rimV; ring.halo[i] = haloV;
+        ring.edge[i] = edgeV; ring.flow[i] = flowV; ring.keep[i] = k; ring.dir[i] = dir; ring.edir[i] = edir; ring.px[i] = x; ring.py[i] = y;
+      });
     };
 
     const hash = (a: number, b: number, c: number) => {
@@ -210,19 +239,47 @@ export default function HiringPortal({ open }: { open: boolean }) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const { cw, ch } = cells, tick = Math.floor(t * 6);
 
-      // The portal: log-spiral arms turning on a bright rim, a thin inner ring and a halo that thins outward.
-      const sw = Math.ceil(cw * dpr), sh = Math.ceil(ch * dpr), ta = t * 1.3, tf = t * 2.4;
+      // The vortex: log-spiral arms turning on a bright rim, comets of characters streaming in along them toward the
+      // opening, a glowing horizon round the opening and a halo thinning outward. The pointer pulls on it: the arms
+      // near it brighten and the whole thing turns faster while it is over the section.
+      const dt = reduce ? 0 : Math.min(0.1, (now - lastDraw) / 1000);
+      lastDraw = now;
+      hover += ((pointer.on ? 1 : 0) - hover) * Math.min(1, dt * 3);
+      spin += dt * (1.3 + 1.6 * hover); twist += dt * 2.4; stream += dt * (0.85 + 0.9 * hover);
+      const sw = Math.ceil(cw * dpr), sh = Math.ceil(ch * dpr);
+      const flowIdx = Array.from(FLOW, (g) => index.get(g)!);
+      const dense = [index.get("#")!, index.get("@")!, index.get("%")!], soft = [index.get(".")!, index.get(":")!];
       for (let i = 0; i < ring.n; i++) {
         const c = ring.c[i], r = ring.r[i], rimV = ring.rim[i];
-        const arms = 0.5 + 0.5 * Math.sin(ring.armP[i] - ta);
-        const fine = 0.5 + 0.5 * Math.sin(ring.fineP[i] - tf);
+        const arms = 0.5 + 0.5 * Math.sin(ring.armP[i] - spin);
+        // Sharper crests, with dark lanes between the arms.
+        const crest = arms * arms;
+        const fine = 0.5 + 0.5 * Math.sin(ring.fineP[i] - twist);
         // A cheap integer hash for the flicker, new six times a second.
         const flick = (Math.imul(c * 73856093 ^ r * 19349663 ^ tick * 83492791, 2654435761) >>> 0) / 4294967296;
-        const I = rimV * (0.3 + 0.45 * arms + 0.25 * fine) + ring.halo[i] * arms * (0.55 + 0.45 * flick);
-        if (I < 0.07 || (I < 0.3 && ring.keep[i] > I * 3.4)) continue;
-        const gi = index.get(RAMP[Math.min(RAMP.length - 1, Math.floor(I * RAMP.length))])!;
-        ctx.globalAlpha = Math.min(1, 0.12 + I * 1.1);
-        ctx.drawImage(rimV > 0.5 && arms > 0.55 ? blue : white, gi * sw, 0, sw, sh, Math.round(c * cw * dpr), Math.round(r * ch * dpr), sw, sh);
+        // A comet: its bright head leads inward, its tail trails out behind it, only on an arm's crest.
+        let comet = 0;
+        if (ring.flow[i] > 0.05 && arms > 0.6) {
+          const f = ring.lnd[i] * 5 + stream + 0.25 * Math.sin(ring.armP[i] * 0.5);
+          const pf = f - Math.floor(f);
+          if (pf < 0.16) comet = (1 - pf / 0.16) * Math.min(1, (arms - 0.6) / 0.25) * ring.flow[i];
+        }
+        let pull = 0;
+        if (pointer.on) {
+          const dx = ring.px[i] - pointer.x, dy = ring.py[i] - pointer.y;
+          if (dx > -PULL && dx < PULL && dy > -PULL && dy < PULL) pull = Math.max(0, 1 - Math.hypot(dx, dy) / PULL);
+        }
+        const edgeV = ring.edge[i] * (0.6 + 0.4 * flick) * (0.6 + 0.4 * fine);
+        const body = rimV * (0.12 + 0.68 * crest + 0.14 * fine) + ring.halo[i] * crest * (0.5 + 0.5 * flick) + pull * pull * 0.6 * (0.3 + crest);
+        const I = body + comet * 1.2 + edgeV;
+        if (I < 0.1 || (I < 0.3 && ring.keep[i] > I * 3)) continue;
+        // The opening's edge is traced round it; otherwise faint cells are dots, the body of the current lies along the
+        // spiral and the brightest are dense.
+        const horizon = edgeV > 0.32 && edgeV > body;
+        const gi = horizon ? flowIdx[ring.edir[i]] : I >= 0.85 ? dense[(c + r + tick) % 3] : I >= 0.4 ? flowIdx[ring.dir[i]] : soft[I >= 0.24 ? 1 : 0];
+        const src = horizon ? (flick > 0.7 ? pale! : blue) : comet > 0.45 || pull > 0.35 ? pale! : rimV > 0.5 && crest > 0.45 ? blue : white;
+        ctx.globalAlpha = Math.min(1, 0.1 + I * 1.05);
+        ctx.drawImage(src, gi * sw, 0, sw, sh, Math.round(c * cw * dpr), Math.round(r * ch * dpr), sw, sh);
       }
 
       // The clock, each big digit written in its own small character; a changed digit flickers through noise.
@@ -266,7 +323,20 @@ export default function HiringPortal({ open }: { open: boolean }) {
     io.observe(canvas);
     const ro = new ResizeObserver(() => { layout(); draw(performance.now()); });
     ro.observe(canvas);
-    return () => { io.disconnect(); ro.disconnect(); if (raf) cancelAnimationFrame(raf); };
+    const section = canvas.parentElement!;
+    const onMove = (e: PointerEvent) => {
+      if (reduce || e.pointerType !== "mouse") return;
+      const b = canvas.getBoundingClientRect();
+      pointer.x = e.clientX - b.left; pointer.y = e.clientY - b.top; pointer.on = true;
+    };
+    const onLeave = () => { pointer.on = false; };
+    section.addEventListener("pointermove", onMove);
+    section.addEventListener("pointerleave", onLeave);
+    return () => {
+      io.disconnect(); ro.disconnect(); if (raf) cancelAnimationFrame(raf);
+      section.removeEventListener("pointermove", onMove);
+      section.removeEventListener("pointerleave", onLeave);
+    };
   }, [open, target]);
 
   return (
