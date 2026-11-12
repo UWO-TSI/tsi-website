@@ -39,7 +39,16 @@ const GLANCE = [
   { src: "/images/site/genesis-redcross.webp", line: "The Canadian Red Cross project table.", alt: "A project team at their Canadian Red Cross table at GENESIS 2026" },
 ];
 
-const THANKS = ["Plan Catalyst", "McGregor Allsop", "Entrepreneurship at Western", "uBit Foundation", "Plaza Sushi", "Frank and Furters"];
+/** GENESIS 2026's sponsors, in the strip as their logos (public/logos/sponsors, from each sponsor's own site). */
+/** `scale` evens out how big each mark looks: wide wordmarks sit smaller, compact badges larger. */
+const THANKS: { name: string; logo?: string; scale?: number }[] = [
+  { name: "Plan Catalyst", logo: "/logos/sponsors/plan-catalyst.png", scale: 0.62 },
+  { name: "McGregor Allsop", logo: "/logos/sponsors/mcgregor-allsop.png", scale: 0.8 },
+  { name: "Entrepreneurship at Western", logo: "/logos/sponsors/entrepreneurship-western.svg" },
+  { name: "uBit Foundation", logo: "/logos/sponsors/ubit.png" },
+  { name: "Plaza Sushi", logo: "/logos/sponsors/plaza-sushi.png", scale: 1.1 },
+  { name: "Frank and Furters", logo: "/logos/sponsors/frank-and-furters.png", scale: 0.9 },
+];
 
 const SECTIONS = [
   { id: "genesis-hero", label: "GENESIS" },
@@ -140,7 +149,12 @@ export default function GenesisPage() {
         </div>
         <div className="gx-thanks__strip">
           <div className="gx-thanks__track">
-            {[...THANKS, ...THANKS].map((n, i) => <span key={i} aria-hidden={i >= THANKS.length}>{n}</span>)}
+            {[...THANKS, ...THANKS].map((t, i) => (
+              <span key={i} className="gx-thanks__item" style={t.scale ? ({ "--s": t.scale } as React.CSSProperties) : undefined} aria-hidden={i >= THANKS.length || undefined}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {t.logo ? <img src={t.logo} alt={t.name} title={t.name} loading="lazy" /> : t.name}
+              </span>
+            ))}
           </div>
         </div>
       </section>

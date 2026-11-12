@@ -204,7 +204,7 @@ export default function HeroDive() {
           <div className="hd-actions">
             <Link href="/npo" className="ts-btn ts-btn--primary">For nonprofits <span className="ts-btn__arrow">→</span></Link>
             <Link href="/genesis" className="ts-btn ts-btn--ghost">For sponsors</Link>
-            <Link href="/student/apply" className="ts-btn ts-btn--ghost">For students</Link>
+            <Link href="/students" className="ts-btn ts-btn--ghost">For students</Link>
           </div>
         </div>
 

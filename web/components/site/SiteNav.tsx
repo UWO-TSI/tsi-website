@@ -11,7 +11,7 @@ import type { SeasonCta } from "@/lib/site/season";
 const LINKS = [
   { label: "Nonprofits", href: "/npo", Icon: HeartIcon },
   { label: "GENESIS", href: "/genesis", Icon: SparkIcon },
-  { label: "Students", href: "/student/apply", Icon: PersonIcon },
+  { label: "Students", href: "/students", Icon: PersonIcon },
 ];
 
 /** The button takes the icon of whoever the season is calling. */
