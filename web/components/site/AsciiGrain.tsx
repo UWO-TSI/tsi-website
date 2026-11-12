@@ -8,9 +8,11 @@ import { GRAIN_WORDS } from "@/lib/site/config";
 const SYMBOLS = ".:-=+*01";
 const CELL_W = 7;
 const CELL_H = 12;
-// 73 x 42 cells: big enough that the repeat doesn't read as a pattern.
-const TILE_W = CELL_W * 73;
-const TILE_H = CELL_H * 42;
+// 146 x 84 cells (about 1020 x 1010 px): big enough that the repeat, and the words hidden in it, don't read as a pattern.
+const TILE_W = CELL_W * 146;
+const TILE_H = CELL_H * 84;
+// The page's words hidden in every tile, at the noise's own strength: you find them by looking, or under the glow.
+const HIDDEN_WORDS = 8;
 const DENSITY = 0.42;
 const VARIANTS = 3;
 const SWAP_FRACTION = 0.06;
@@ -34,7 +36,8 @@ const between = ([a, b]: readonly [number, number]) => a + Math.random() * (b - 
  * moving pointer it glows up to the strength of the GENESIS field's background and fades back when the
  * pointer rests. It is a repeating tile laid over the page, so it scrolls with the content instead of
  * sitting still on the screen; three versions of the tile, each with a few percent of cells changed, cycle
- * to make it twinkle. The characters are the page's own letters and a few light symbols, and every few
+ * to make it twinkle. The characters are the page's own letters and a few light symbols; eight of the page's words
+ * sit hidden in every tile at the noise's own strength (they show under the glow), and every few
  * seconds one of the page's words (GRAIN_WORDS) glitches into view and out again at the glow's strength.
  * It inverts against whatever is underneath, so it shows on dark and light grounds alike. The hero's
  * sticky stage sits above it and carries its own copy.
@@ -54,6 +57,17 @@ export default function AsciiGrain({ className }: { className?: string }) {
     const pick = () => chars[Math.floor(Math.random() * chars.length)];
     const cols = TILE_W / CELL_W, rows = TILE_H / CELL_H;
     const cells: (string | null)[] = Array.from({ length: cols * rows }, () => (Math.random() < DENSITY ? pick() : null));
+    // Hidden words: each with a blank cell either side so it reads as a word, never overlapping another, and kept
+    // out of the cells the twinkle swaps.
+    const fixed = new Set<number>();
+    for (let k = 0, tries = 0; k < HIDDEN_WORDS && tries < 200; tries++) {
+      const text = ` ${words[k % words.length]} `;
+      const r = Math.floor(Math.random() * rows), c = Math.floor(Math.random() * (cols - text.length));
+      const span = Array.from(text, (_, i) => r * cols + c + i);
+      if (span.some((i) => fixed.has(i) || fixed.has(i - cols) || fixed.has(i + cols))) continue;
+      span.forEach((i, j) => { cells[i] = text[j] === " " ? null : text[j]; fixed.add(i); });
+      k++;
+    }
 
     const render = () => {
       const c = document.createElement("canvas");
@@ -76,7 +90,10 @@ export default function AsciiGrain({ className }: { className?: string }) {
       for (let v = 0; v < (reduce ? 1 : VARIANTS); v++) {
         if (v > 0) {
           const n = Math.floor(cells.length * SWAP_FRACTION);
-          for (let k = 0; k < n; k++) cells[Math.floor(Math.random() * cells.length)] = Math.random() < DENSITY ? pick() : null;
+          for (let k = 0; k < n; k++) {
+            const i = Math.floor(Math.random() * cells.length);
+            if (!fixed.has(i)) cells[i] = Math.random() < DENSITY ? pick() : null;
+          }
         }
         variants.push(render());
       }

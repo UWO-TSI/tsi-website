@@ -268,16 +268,16 @@
 .ts { position: relative; }
 /* Laid over the whole page (not the screen), so it scrolls with the content. */
 .ts-ascii-grain { position: absolute; inset: 0; z-index: 55; pointer-events: none; mix-blend-mode: difference; overflow: clip; }
-.ts-grain-tile { position: absolute; inset: 0; opacity: 0.016; background-repeat: repeat; }
+.ts-grain-tile { position: absolute; inset: 0; opacity: 0.013; background-repeat: repeat; }
 /* Around a moving pointer the grain comes up to the GENESIS field background's strength, then fades back. */
 .ts-grain-glow { position: absolute; left: 0; top: 0; width: 560px; height: 560px; opacity: 0; background-repeat: repeat; will-change: transform, opacity;
   -webkit-mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);
   mask-image: radial-gradient(closest-side, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);
   transition: opacity 0.9s var(--ease-ui); }
-.ts-ascii-grain[data-glow="on"] .ts-grain-glow { opacity: 0.045; transition-duration: 0.25s; }
+.ts-ascii-grain[data-glow="on"] .ts-grain-glow { opacity: 0.04; transition-duration: 0.25s; }
 /* A word surfacing in the grain, at the glow's strength: one cell per letter on the tile's grid. Its box is
    black, which the difference blend leaves alone, so it clears the noise behind it. */
-.ts-grain-word { position: absolute; display: flex; background: #000; color: rgba(255, 255, 255, 0.045); white-space: pre;
+.ts-grain-word { position: absolute; display: flex; background: #000; color: rgba(255, 255, 255, 0.04); white-space: pre;
   font: 500 10px/12px "Sohne Mono", ui-monospace, monospace; }
 .ts-grain-word > span { width: 7px; height: 12px; text-align: center; }
 
