@@ -41,7 +41,7 @@
 
 @media (max-width: 820px) {
   .hd-stage { --gx: 0px; --gy: 24svh; }
-  .hd-copy { justify-content: flex-start; padding-top: 110px; gap: 18px; }
+  .hd-copy { justify-content: flex-start; gap: 18px; }
   .hd-copy > * { max-width: 100%; }
   .hd-globe { pointer-events: none; }
   .hd-hint { display: none; }

@@ -91,9 +91,12 @@
 .gx-stats .ts-label { color: var(--on-dark-3); }
 .gx-stats__note { margin-top: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
 @media (max-width: 820px) {
-  .gx-hero__grid { grid-template-columns: 1fr; min-height: 0; }
-  .gx-hero__field { position: relative; height: 60svh; margin-top: -40px; }
+  /* Stacked: the copy first, the art under it at full width. */
+  .gx-hero { flex-direction: column; align-items: stretch; }
+  .gx-hero__grid { order: -1; grid-template-columns: 1fr; min-height: 0; }
+  .gx-hero__field { position: relative; inset: auto; height: 56svh; min-height: 320px; margin: 8px calc(-1 * var(--gutter)) 0; }
   .gx-stats { gap: 24px; }
+  .gx-stats dd { white-space: nowrap; font-size: clamp(1.75rem, 8vw, 2.5rem); }
 }
 
 .gx-projects { list-style: none; margin: 56px 0 0; padding: 0; border-top: 1px solid var(--line-dark); }
