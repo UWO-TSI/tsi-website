@@ -4,6 +4,35 @@ Worktree `.claude/worktrees/analytics`, branch `game/analytics`, cut from origin
 
 **Read first:** `specs/lanes/README.md`, `specs/lane-rules.md`, `STATE.md` (prod, migrations), `CODEMAP.md` (the game's server routes and stores), `web/lib/server/adminContext.ts` (T1/T2 admins), the arrival, progression, quests, wallet, catches and collections code and tables. Recruitment owns `web/app/admin/recruit`, `web/components/admin/` and its migrations: don't touch them. `middleware.ts` and `web/lib/supabase/*` belong to the play.tethos.ca session: don't edit them; ask the coordinator if you need a change there.
 
+## Round 2: David's Player Analytics 1 review (2026-11-13, verbatim; https://claude.ai/artifact/MAk7U5tczG8P6CPmkLBTwA)
+
+Approved: none.
+- an1-features (redo)
+- an1-history (redo)
+- an1-phone (redo)
+- an1-players (redo): "use the new ui, add important analytics, use graphs and a summerize section taht analyses and produceces a summary for the data on the admin side"
+- an1-private (redo)
+- an1-questions (redo)
+- an1-quit (redo)
+- an1-tracking (redo)
+
+All eight cards are redo; the one note covers the page.
+
+**Main moved:** merge `origin/main` first (59 commits; the site revamp).
+
+Build (coordinator):
+1. **The new UI.** Rebuild the page in the newest admin look on origin/main. Check `git log origin/main -- web/app/student/dashboard web/components/portal` for the latest dashboard restyle and match it; if the game's flat kit (row 320) is the better fit, say so. Name which look you used on the questions card.
+2. **Graphs, not tables:** players over time (new, active day/week), the funnel as a bar chart with drop-off between steps, retention cohorts as a heatmap, where people quit ranked, session length distribution, feature use. Read `~/.claude/skills/dataviz` guidance if present; one palette, light and dark, works on a phone.
+3. **Important analytics he hasn't got yet:** daily, weekly and monthly actives and their ratio (stickiness), day 1, 7 and 30 retention, median session length and sessions per player, time to first catch, first sale and first quest, the share who finish the tutorial, the share who come back the next day. Leave room for the new systems (the markets, the login calendar, gem purchases), which will log events later: a section that lists any event kind it sees.
+4. **A summary section** at the top that reads the data and says what it means in plain sentences: the biggest changes against the previous period, the worst drop-off step, retention moving up or down, where people quit most, anything unusual. Compute it on the server from the numbers, no LLM call and no cost. Note on the questions card that a Claude-written summary is possible later if he wants one.
+5. Rename the "Village" screen label to Island (from round 1).
+6. Privacy and the unapplied migration as in round 1. If the migration changes, edit it in place (it is still unapplied).
+7. **The page, "Player Analytics 2":** the dashboard on made-up data, desktop and phone, one card per section, the summary card, a questions card.
+
+Evidence `an2-*` in `specs/evidence/analytics/r2/`.
+
+**Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, the SQL smoke chain, headless shots.
+
 ## Round 1: David's ask (2026-11-06, verbatim)
 
 "make a backened analytics dashboard to see players and like funnel for each major step and gauge engagement so that i can see whats wrong and what gts peopel to log out and never  come back and similar analytics"
