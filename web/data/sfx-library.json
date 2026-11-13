@@ -1,6 +1,6 @@
 {
  "name": "SFX library",
- "round": 1,
+ "round": 2,
  "spec": "specs/sfx-library.md",
  "targets": {
   "lufs": {
@@ -10,6 +10,7 @@
    "actions": -18,
    "ambience": -26
   },
+  "footsteps": -26,
   "truePeakDb": -3.0,
   "measure": "one-shots: the loudest 400 ms (K-weighted); ambience: integrated (EBU R128)"
  },
@@ -20,7 +21,13 @@
    "category": "ui",
    "use": "a button or card pressed (varies)",
    "slot": 2,
-   "pick": null,
+   "mark": "approve",
+   "note": "i like b and c, c for more muted items",
+   "pick": "b",
+   "uses": {
+    "b": "taps",
+    "c": "taps on muted items"
+   },
    "candidates": [
     {
      "label": "Soft tick (ours)",
@@ -93,7 +100,9 @@
    "category": "ui",
    "use": "a sheet or menu opens",
    "slot": 2,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Pop up (ours)",
@@ -167,7 +176,9 @@
    "category": "ui",
    "use": "a sheet or menu closes",
    "slot": 2,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Pop down (ours)",
@@ -240,8 +251,9 @@
    "label": "Toggle",
    "category": "ui",
    "use": "a switch flipped",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Two clicks (ours)",
@@ -313,8 +325,9 @@
    "label": "Tab",
    "category": "ui",
    "use": "a tab or page changed",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Paper flick (ours)",
@@ -387,8 +400,9 @@
    "label": "Confirm",
    "category": "ui",
    "use": "a choice confirmed",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Two marimba notes (ours)",
@@ -461,7 +475,9 @@
    "category": "ui",
    "use": "can't do that: not enough coins, bag full, too far, locked",
    "slot": 2,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Bonk-bonk (ours)",
@@ -533,8 +549,13 @@
    "label": "Coin",
    "category": "rewards",
    "use": "a coin arriving in the wallet",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "both, a is the rewards sound, b is more realist like coin rattling, b is not for rewards, for when coins are visualized and stuff",
+   "pick": "a",
+   "uses": {
+    "a": "the reward sound: a coin arriving in the wallet",
+    "b": "coins shown moving (a rattle); never a reward"
+   },
    "candidates": [
     {
      "label": "Today's coin (ours)",
@@ -586,7 +607,13 @@
    "category": "rewards",
    "use": "one coin leaving the purse (varies, rising)",
    "slot": 1,
-   "pick": null,
+   "mark": "redo",
+   "note": "i dont like any",
+   "compare": [
+    "a",
+    "b",
+    "c"
+   ],
    "candidates": [
     {
      "label": "Dry clink (ours)",
@@ -652,6 +679,64 @@
       "src": "k:casino-audio/Audio/chip-lay-1.ogg",
       "dur": 0.12
      }
+    },
+    {
+     "label": "A coin set on the counter (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-coin-out-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-coin-out-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "coin-counter"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.128,
+     "lufs": -16.3,
+     "truePeak": -4.0,
+     "alt": {
+      "label": "a run of 5",
+      "file": "specs/evidence/sfx-library/r2/sfx2-coin-out-d-run.ogg",
+      "waveform": "specs/evidence/sfx-library/r2/sfx2-coin-out-d-run.png",
+      "seconds": 0.576
+     },
+     "recipe": {
+      "src": "ours:coin-counter",
+      "run": 5
+     }
+    },
+    {
+     "label": "A soft musical pip (ours)",
+     "round": 2,
+     "key": "e",
+     "file": "specs/evidence/sfx-library/r2/sfx2-coin-out-e.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-coin-out-e.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "coin-pip"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.149,
+     "lufs": -16.2,
+     "truePeak": -4.1,
+     "alt": {
+      "label": "a run of 5",
+      "file": "specs/evidence/sfx-library/r2/sfx2-coin-out-e-run.ogg",
+      "waveform": "specs/evidence/sfx-library/r2/sfx2-coin-out-e-run.png",
+      "seconds": 0.597
+     },
+     "recipe": {
+      "src": "ours:coin-pip",
+      "run": 5
+     }
     }
    ]
   },
@@ -661,7 +746,13 @@
    "category": "rewards",
    "use": "a gem landing in the wallet (varies)",
    "slot": 1,
-   "pick": null,
+   "mark": "redo",
+   "note": "this should be more epic cuz its gems, i dont like any",
+   "compare": [
+    "a",
+    "b",
+    "c"
+   ],
    "candidates": [
     {
      "label": "Glass gem (ours)",
@@ -726,6 +817,50 @@
       "src": "fs:659677",
       "dur": 0.4
      }
+    },
+    {
+     "label": "Crystal run into a glass chord (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-gem-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-gem-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "gem-crystal"
+      }
+     ],
+     "ours": true,
+     "seconds": 1.584,
+     "lufs": -16.0,
+     "truePeak": -5.7,
+     "recipe": {
+      "src": "ours:gem-crystal"
+     }
+    },
+    {
+     "label": "Sparkle swell onto a big bell (ours)",
+     "round": 2,
+     "key": "e",
+     "file": "specs/evidence/sfx-library/r2/sfx2-gem-e.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-gem-e.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "gem-flash"
+      }
+     ],
+     "ours": true,
+     "seconds": 1.577,
+     "lufs": -16.0,
+     "truePeak": -4.1,
+     "recipe": {
+      "src": "ours:gem-flash"
+     }
     }
    ]
   },
@@ -735,7 +870,12 @@
    "category": "rewards",
    "use": "a purchase goes through: the till",
    "slot": 1,
-   "pick": null,
+   "mark": "approve",
+   "note": "a, but edit so theres more before the ching, more ka",
+   "pick": "d",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Ka-ching (ours)",
@@ -821,6 +961,28 @@
        ]
       ]
      }
+    },
+    {
+     "label": "Ka-ka-ka, ching (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-buy-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-buy-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "buy-ka"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.853,
+     "lufs": -16.0,
+     "truePeak": -5.6,
+     "recipe": {
+      "src": "ours:buy-ka"
+     }
     }
    ]
   },
@@ -830,7 +992,11 @@
    "category": "rewards",
    "use": "a sale at the counter: the till drawer slides open",
    "slot": 2,
-   "pick": null,
+   "mark": "redo",
+   "note": "make the hua befroe the ding longer and ring out, make ding ring out too naturally for a lil bit",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Drawer slide (ours)",
@@ -898,6 +1064,28 @@
       "start": 2.1,
       "dur": 0.5
      }
+    },
+    {
+     "label": "A long drawer slide that rings, then the ding ringing out (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-sell-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-sell-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "sell-ring"
+      }
+     ],
+     "ours": true,
+     "seconds": 1.565,
+     "lufs": -16.0,
+     "truePeak": -7.3,
+     "recipe": {
+      "src": "ours:sell-ring"
+     }
     }
    ]
   },
@@ -907,7 +1095,11 @@
    "category": "rewards",
    "use": "a bought or received item dropping into the bag (varies)",
    "slot": 1,
-   "pick": null,
+   "mark": "redo",
+   "note": "a but make a wind up sound effect before the thud",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Cloth bag thump (ours)",
@@ -973,6 +1165,28 @@
       "src": "fs:399243",
       "dur": 0.25
      }
+    },
+    {
+     "label": "Swish in, then the cloth thump (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-bag-thunk-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-bag-thunk-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "bag-windup"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.405,
+     "lufs": -16.2,
+     "truePeak": -4.0,
+     "recipe": {
+      "src": "ours:bag-windup"
+     }
     }
    ]
   },
@@ -982,7 +1196,11 @@
    "category": "rewards",
    "use": "a tool, tackle or rod moves up a tier",
    "slot": 1,
-   "pick": null,
+   "mark": "redo",
+   "note": "a but should me a lil more epic and sustained and longer and spaced out",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Shing and four notes up (ours)",
@@ -1064,6 +1282,28 @@
        ]
       ]
      }
+    },
+    {
+     "label": "Shing, four notes spaced out over a held chord (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-upgrade-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-upgrade-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "upgrade-long"
+      }
+     ],
+     "ours": true,
+     "seconds": 2.519,
+     "lufs": -16.0,
+     "truePeak": -5.8,
+     "recipe": {
+      "src": "ours:upgrade-long"
+     }
     }
    ]
   },
@@ -1073,7 +1313,11 @@
    "category": "rewards",
    "use": "a task or quest step checked off: the stamp lands",
    "slot": 1,
-   "pick": null,
+   "mark": "redo",
+   "note": "should be a lighter version of b and a confrim happy chime",
+   "compare": [
+    "b"
+   ],
    "candidates": [
     {
      "label": "Stamp thunk (ours)",
@@ -1139,6 +1383,34 @@
       "src": "fs:683031",
       "dur": 0.22
      }
+    },
+    {
+     "label": "b lighter, with a happy chime (I.fekry + ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-stamp-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-stamp-d.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/I.fekry/sounds/470710/",
+       "author": "I.fekry",
+       "licence": "CC0 1.0",
+       "origin": "traditional stamp.wav"
+      },
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "stamp"
+      }
+     ],
+     "ours": false,
+     "seconds": 0.661,
+     "lufs": -16.3,
+     "truePeak": -4.0,
+     "recipe": {
+      "src": "edit:stamp-light"
+     }
     }
    ]
   },
@@ -1148,7 +1420,9 @@
    "category": "rewards",
    "use": "a daily or fishing task finished (after the stamp)",
    "slot": 1,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Three marimba notes (ours)",
@@ -1221,7 +1495,11 @@
    "category": "rewards",
    "use": "a quest finished: the bigger fanfare",
    "slot": 1,
-   "pick": null,
+   "mark": "redo",
+   "note": "a make the chime ding sound louder and appegio",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Fanfare to a held chord (ours)",
@@ -1286,6 +1564,28 @@
       "src": "fs:609028",
       "dur": 2.5
      }
+    },
+    {
+     "label": "Fanfare, the bells louder and as an arpeggio (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-quest-complete-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-quest-complete-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "quest-complete-bells"
+      }
+     ],
+     "ours": true,
+     "seconds": 2.48,
+     "lufs": -16.0,
+     "truePeak": -6.4,
+     "recipe": {
+      "src": "ours:quest-complete-bells"
+     }
     }
    ]
   },
@@ -1295,7 +1595,9 @@
    "category": "rewards",
    "use": "a reward leaving its card and flying to its slot (varies)",
    "slot": 1,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Swish and sparkle (ours)",
@@ -1370,7 +1672,11 @@
    "category": "rewards",
    "use": "any pickup or forage into the hand (varies)",
    "slot": 2,
-   "pick": null,
+   "mark": "redo",
+   "note": "a but should be more poppy sound like a minecraft pop sound effect",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Round pop (ours)",
@@ -1436,6 +1742,28 @@
       "src": "fs:622150",
       "dur": 0.2
      }
+    },
+    {
+     "label": "Pop (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-item-get-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-item-get-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "item-pop"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.107,
+     "lufs": -16.3,
+     "truePeak": -3.9,
+     "recipe": {
+      "src": "ours:item-pop"
+     }
     }
    ]
   },
@@ -1445,7 +1773,11 @@
    "category": "rewards",
    "use": "the XP ring fills and the level goes up",
    "slot": 2,
-   "pick": null,
+   "mark": "redo",
+   "note": "a but more epic",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Arpeggio to a bright chord (ours)",
@@ -1510,6 +1842,28 @@
       "src": "fs:266454",
       "dur": 2.5
      }
+    },
+    {
+     "label": "Run up into a full chord, a boom and shimmer (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-level-up-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-level-up-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "level-up-epic"
+      }
+     ],
+     "ours": true,
+     "seconds": 2.912,
+     "lufs": -16.1,
+     "truePeak": -5.5,
+     "recipe": {
+      "src": "ours:level-up-epic"
+     }
     }
    ]
   },
@@ -1519,7 +1873,12 @@
    "category": "rewards",
    "use": "an item comes off the workbench",
    "slot": 3,
-   "pick": null,
+   "mark": "approve",
+   "note": "should have hammer sound like tik tik tik and on the third tik a chime, the tik is light",
+   "pick": "d",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Tool jingle and ta-da (ours)",
@@ -1601,6 +1960,28 @@
        ]
       ]
      }
+    },
+    {
+     "label": "Tik, tik, tik, and a chime on the third (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-craft-done-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-craft-done-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "craft-tik"
+      }
+     ],
+     "ours": true,
+     "seconds": 1.351,
+     "lufs": -16.0,
+     "truePeak": -4.3,
+     "recipe": {
+      "src": "ours:craft-tik"
+     }
     }
    ]
   },
@@ -1610,7 +1991,9 @@
    "category": "rewards",
    "use": "a specimen settles into its museum case",
    "slot": 3,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Glass chime in a hall (ours)",
@@ -1684,7 +2067,11 @@
    "category": "actions",
    "use": "the player lands from a jump or a glide (varies)",
    "slot": 3,
-   "pick": null,
+   "mark": "redo",
+   "note": "a but should be lighter and more soft and rounder",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Grass thud (ours)",
@@ -1749,6 +2136,28 @@
       "src": "k:impact-sounds/Audio/footstep_grass_000.ogg",
       "dur": 0.2
      }
+    },
+    {
+     "label": "Soft round thud (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-land-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-land-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "land-soft"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.171,
+     "lufs": -18.2,
+     "truePeak": -4.0,
+     "recipe": {
+      "src": "ours:land-soft"
+     }
     }
    ]
   },
@@ -1758,7 +2167,11 @@
    "category": "actions",
    "use": "a bush or tree shaken, tall grass walked through (varies)",
    "slot": 3,
-   "pick": null,
+   "mark": "redo",
+   "note": "the rustling sound doesnt sound right, i need it redone or look online for refrernce or find like pre exisitng, i downloaded a reference to use its in my downloads",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Leaf rustle (ours)",
@@ -1825,6 +2238,50 @@
       "start": 5.55,
       "dur": 0.6
      }
+    },
+    {
+     "label": "A bush shaken: David's dry leaves (dragon-studio)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-rustle-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-rustle-d.png",
+     "sources": [
+      {
+       "url": "https://pixabay.com/sound-effects/",
+       "author": "dragon-studio",
+       "licence": "Pixabay Content License",
+       "origin": "dragon-studio-dry-leaves-rustling-482874.mp3"
+      }
+     ],
+     "ours": false,
+     "seconds": 0.661,
+     "lufs": -18.0,
+     "truePeak": -4.7,
+     "recipe": {
+      "src": "edit:rustle-shake"
+     }
+    },
+    {
+     "label": "Brushing through: David's dry leaves, softer (dragon-studio)",
+     "round": 2,
+     "key": "e",
+     "file": "specs/evidence/sfx-library/r2/sfx2-rustle-e.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-rustle-e.png",
+     "sources": [
+      {
+       "url": "https://pixabay.com/sound-effects/",
+       "author": "dragon-studio",
+       "licence": "Pixabay Content License",
+       "origin": "dragon-studio-dry-leaves-rustling-482874.mp3"
+      }
+     ],
+     "ours": false,
+     "seconds": 0.619,
+     "lufs": -18.0,
+     "truePeak": -4.9,
+     "recipe": {
+      "src": "edit:rustle-brush"
+     }
     }
    ]
   },
@@ -1834,7 +2291,13 @@
    "category": "actions",
    "use": "the lure or bobber hits the water; a fish breaks the surface",
    "slot": 3,
-   "pick": null,
+   "mark": "redo",
+   "note": "downloaded 3 seperate splash sound effects, for you to either reference or use straight up",
+   "compare": [
+    "a",
+    "b",
+    "c"
+   ],
    "candidates": [
     {
      "label": "Plop and splash (ours)",
@@ -1898,6 +2361,78 @@
      "recipe": {
       "src": "fs:530359"
      }
+    },
+    {
+     "label": "Splash (universfield 229315)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-splash-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-splash-d.png",
+     "sources": [
+      {
+       "url": "https://pixabay.com/sound-effects/",
+       "author": "universfield",
+       "licence": "Pixabay Content License",
+       "origin": "universfield-water-splash-229315.mp3"
+      }
+     ],
+     "ours": false,
+     "seconds": 1.2,
+     "lufs": -18.1,
+     "truePeak": -3.8,
+     "recipe": {
+      "src": "ref:universfield-water-splash-229315.mp3",
+      "start": 0.1,
+      "dur": 1.2
+     }
+    },
+    {
+     "label": "Big splash (universfield 199583)",
+     "round": 2,
+     "key": "e",
+     "file": "specs/evidence/sfx-library/r2/sfx2-splash-e.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-splash-e.png",
+     "sources": [
+      {
+       "url": "https://pixabay.com/sound-effects/",
+       "author": "universfield",
+       "licence": "Pixabay Content License",
+       "origin": "universfield-water-splash-199583.mp3"
+      }
+     ],
+     "ours": false,
+     "seconds": 1.5,
+     "lufs": -18.0,
+     "truePeak": -5.0,
+     "recipe": {
+      "src": "ref:universfield-water-splash-199583.mp3",
+      "start": 0.1,
+      "dur": 1.5
+     }
+    },
+    {
+     "label": "Splash 02 (universfield 352021)",
+     "round": 2,
+     "key": "f",
+     "file": "specs/evidence/sfx-library/r2/sfx2-splash-f.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-splash-f.png",
+     "sources": [
+      {
+       "url": "https://pixabay.com/sound-effects/",
+       "author": "universfield",
+       "licence": "Pixabay Content License",
+       "origin": "universfield-water-splash-02-352021.mp3"
+      }
+     ],
+     "ours": false,
+     "seconds": 1.0,
+     "lufs": -18.2,
+     "truePeak": -3.9,
+     "recipe": {
+      "src": "ref:universfield-water-splash-02-352021.mp3",
+      "start": 0.1,
+      "dur": 1.0
+     }
     }
    ]
   },
@@ -1907,7 +2442,11 @@
    "category": "actions",
    "use": "a furniture piece set down when decorating",
    "slot": 3,
-   "pick": null,
+   "mark": "redo",
+   "note": "a is good but make the tone a proper note",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Wood knock (ours)",
@@ -1973,6 +2512,28 @@
       "src": "k:rpg-audio/Audio/bookPlace1.ogg",
       "dur": 0.22
      }
+    },
+    {
+     "label": "Wood knock tuned to an A (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-place-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-place-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "place-note"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.235,
+     "lufs": -18.1,
+     "truePeak": -4.0,
+     "recipe": {
+      "src": "ours:place-note"
+     }
     }
    ]
   },
@@ -1982,7 +2543,9 @@
    "category": "actions",
    "use": "sitting down on a seat or bench",
    "slot": 3,
-   "pick": null,
+   "mark": "approve",
+   "note": "b",
+   "pick": "b",
    "candidates": [
     {
      "label": "Cushion and creak (ours)",
@@ -2075,8 +2638,11 @@
    "label": "Forage",
    "category": "actions",
    "use": "a plant pulled or a fruit picked",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "use the leaf sound effect for the rustle and the A. for the pop",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Snap, rustle, pop (ours)",
@@ -2140,6 +2706,34 @@
      "recipe": {
       "src": "k:interface-sounds/Audio/pluck_001.ogg"
      }
+    },
+    {
+     "label": "Snap, David's dry leaves, a's pop (ours + dragon-studio)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-forage-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-forage-d.png",
+     "sources": [
+      {
+       "url": "https://pixabay.com/sound-effects/",
+       "author": "dragon-studio",
+       "licence": "Pixabay Content License",
+       "origin": "dragon-studio-dry-leaves-rustling-482874.mp3"
+      },
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "forage"
+      }
+     ],
+     "ours": false,
+     "seconds": 0.299,
+     "lufs": -18.2,
+     "truePeak": -4.1,
+     "recipe": {
+      "src": "edit:forage-leaves"
+     }
     }
    ]
   },
@@ -2148,8 +2742,12 @@
    "label": "Dig",
    "category": "actions",
    "use": "the spade into the ground",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "redo in a style but with the sound of b, keep a as well i want variety",
+   "compare": [
+    "a",
+    "b"
+   ],
    "candidates": [
     {
      "label": "Spade crunch (ours)",
@@ -2216,6 +2814,34 @@
       "start": 0.25,
       "dur": 0.6
      }
+    },
+    {
+     "label": "a's spade, b's wet sand (ours + f3bbbo)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-dig-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-dig-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "dig"
+      },
+      {
+       "url": "https://freesound.org/people/f3bbbo/sounds/651293/",
+       "author": "f3bbbo",
+       "licence": "CC0 1.0",
+       "origin": "Digging in wet course sand (2)"
+      }
+     ],
+     "ours": false,
+     "seconds": 0.469,
+     "lufs": -18.1,
+     "truePeak": -4.1,
+     "recipe": {
+      "src": "edit:dig-wet"
+     }
     }
    ]
   },
@@ -2224,8 +2850,12 @@
    "label": "Cast",
    "category": "actions",
    "use": "the rod's cast: the whoosh and the line running out",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "i want the woosh of a but the line creek of c",
+   "compare": [
+    "a",
+    "c"
+   ],
    "candidates": [
     {
      "label": "Whoosh and line (ours)",
@@ -2290,6 +2920,48 @@
       "src": "fs:853287",
       "dur": 1.2
      }
+    },
+    {
+     "label": "Our whoosh, el_boss's line running out (ours + el_boss)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-cast-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-cast-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "cast-whoosh"
+      },
+      {
+       "url": "https://freesound.org/people/el_boss/sounds/853287/",
+       "author": "el_boss",
+       "licence": "CC0 1.0",
+       "origin": "Casting Fishing Rod for Game Fishing SFX"
+      }
+     ],
+     "ours": false,
+     "seconds": 1.42,
+     "lufs": -18.0,
+     "truePeak": -4.4,
+     "recipe": {
+      "src": "mix",
+      "parts": [
+       [
+        "ours:cast-whoosh",
+        0,
+        1.0
+       ],
+       [
+        "fs:853287",
+        0.17,
+        0.8,
+        0.28,
+        1.25
+       ]
+      ]
+     }
     }
    ]
   },
@@ -2299,7 +2971,11 @@
    "category": "actions",
    "use": "a fish gets off the line",
    "slot": 3,
-   "pick": null,
+   "mark": "redo",
+   "note": "the splash needs to be a plop and sad splash and the aw sound needs to be redone so theres a slight gap between spash and aw",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Splash and a soft \"aw\" (ours)",
@@ -2399,6 +3075,28 @@
        ]
       ]
      }
+    },
+    {
+     "label": "Plop, a sad small splash, a pause, \"aw\" (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-fish-escape-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-fish-escape-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "fish-escape-aw"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.917,
+     "lufs": -18.0,
+     "truePeak": -4.3,
+     "recipe": {
+      "src": "ours:fish-escape-aw"
+     }
     }
    ]
   },
@@ -2408,7 +3106,11 @@
    "category": "actions",
    "use": "fitting tackle on the rod (lower for taking it off; varies)",
    "slot": 2,
-   "pick": null,
+   "mark": "redo",
+   "note": "a redo to be softer and less crinkly and neutral",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Clip and ping (ours)",
@@ -2474,6 +3176,28 @@
       "src": "k:rpg-audio/Audio/metalLatch.ogg",
       "dur": 0.3
      }
+    },
+    {
+     "label": "Soft clip, no ring (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-equip-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-equip-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "equip-soft"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.171,
+     "lufs": -18.2,
+     "truePeak": -4.1,
+     "recipe": {
+      "src": "ours:equip-soft"
+     }
     }
    ]
   },
@@ -2482,8 +3206,9 @@
    "label": "Bite",
    "category": "actions",
    "use": "the bite's \"!\"",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "a",
+   "pick": "a",
    "candidates": [
     {
      "label": "Today's bite (ours)",
@@ -2555,8 +3280,12 @@
    "label": "Reel",
    "category": "actions",
    "use": "reeling in: the ratchet",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "in the style of a make it sound like b but less harsh on the ear",
+   "compare": [
+    "a",
+    "b"
+   ],
    "candidates": [
     {
      "label": "Ratchet (ours)",
@@ -2623,6 +3352,28 @@
       "start": 0.45,
       "dur": 1.0
      }
+    },
+    {
+     "label": "Ratchet wound like b, soft on the ear (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-reel-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-reel-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "reel-soft"
+      }
+     ],
+     "ours": true,
+     "seconds": 1.0,
+     "lufs": -18.1,
+     "truePeak": -4.0,
+     "recipe": {
+      "src": "ours:reel-soft"
+     }
     }
    ]
   },
@@ -2631,8 +3382,12 @@
    "label": "Catch",
    "category": "actions",
    "use": "the fish pulled out of the water",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "the splash part learn from c but the chine use a",
+   "compare": [
+    "a",
+    "c"
+   ],
    "candidates": [
     {
      "label": "Splash out and two notes (ours)",
@@ -2714,6 +3469,46 @@
        ]
       ]
      }
+    },
+    {
+     "label": "swordofkings128's splash, our two notes",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-catch-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-catch-d.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/swordofkings128/sounds/398032/",
+       "author": "swordofkings128",
+       "licence": "CC0 1.0",
+       "origin": "Splash"
+      },
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "catch-chime"
+      }
+     ],
+     "ours": false,
+     "seconds": 1.309,
+     "lufs": -18.3,
+     "truePeak": -3.8,
+     "recipe": {
+      "src": "mix",
+      "parts": [
+       [
+        "fs:398032",
+        0,
+        1.0
+       ],
+       [
+        "ours:catch-chime",
+        0.18,
+        0.7
+       ]
+      ]
+     }
     }
    ]
   },
@@ -2722,8 +3517,11 @@
    "label": "Jump",
    "category": "actions",
    "use": "the player jumps",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "the whoosh up is too harsh, redo to be smoother more satisfying for the ear",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Whoosh up (ours)",
@@ -2788,6 +3586,28 @@
      "recipe": {
       "src": "game:sfx/blip2.ogg"
      }
+    },
+    {
+     "label": "Soft whoosh up (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-jump-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-jump-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "jump-soft"
+      }
+     ],
+     "ours": true,
+     "seconds": 0.277,
+     "lufs": -18.1,
+     "truePeak": -4.0,
+     "recipe": {
+      "src": "ours:jump-soft"
+     }
     }
    ]
   },
@@ -2796,8 +3616,11 @@
    "label": "Footsteps: grass",
    "category": "actions",
    "use": "walking on grass (four steps, the game picks one per step)",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "should be a but more bassy earthy feel and overall more rounded so its easy on the ears. and it should also be able to match speed, so faster the sound goes faster",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Grass (ours)",
@@ -2891,6 +3714,38 @@
        "game:sfx/footstep.ogg"
       ]
      }
+    },
+    {
+     "label": "Grass, earthier and rounder (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-footstep-grass-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-grass-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "footstep-grass"
+      }
+     ],
+     "ours": true,
+     "seconds": 3.017,
+     "lufs": -24.1,
+     "truePeak": -6.0,
+     "alt": {
+      "label": "fast walk",
+      "file": "specs/evidence/sfx-library/r2/sfx2-footstep-grass-d-fast.ogg",
+      "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-grass-d-fast.png",
+      "seconds": 2.321
+     },
+     "walkLufs": -26.0,
+     "walkRmsDb": -24.3,
+     "target": -26,
+     "recipe": {
+      "src": "edit:steps-grass",
+      "walk": true
+     }
     }
    ]
   },
@@ -2899,8 +3754,11 @@
    "label": "Footsteps: wood",
    "category": "actions",
    "use": "walking on boards and floors",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "b, but more deepness to it and overall rounded",
+   "compare": [
+    "b"
+   ],
    "candidates": [
     {
      "label": "Wood (ours)",
@@ -3012,6 +3870,56 @@
        "k:impact-sounds/Audio/footstep_carpet_003.ogg"
       ]
      }
+    },
+    {
+     "label": "Kenney wood, deeper and rounder",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-footstep-wood-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-wood-d.png",
+     "sources": [
+      {
+       "url": "https://kenney.nl/assets/impact-sounds",
+       "author": "Kenney",
+       "licence": "CC0 1.0",
+       "origin": "footstep_wood_000.ogg"
+      },
+      {
+       "url": "https://kenney.nl/assets/impact-sounds",
+       "author": "Kenney",
+       "licence": "CC0 1.0",
+       "origin": "footstep_wood_001.ogg"
+      },
+      {
+       "url": "https://kenney.nl/assets/impact-sounds",
+       "author": "Kenney",
+       "licence": "CC0 1.0",
+       "origin": "footstep_wood_002.ogg"
+      },
+      {
+       "url": "https://kenney.nl/assets/impact-sounds",
+       "author": "Kenney",
+       "licence": "CC0 1.0",
+       "origin": "footstep_wood_003.ogg"
+      }
+     ],
+     "ours": false,
+     "seconds": 3.147,
+     "lufs": -25.1,
+     "truePeak": -4.1,
+     "alt": {
+      "label": "fast walk",
+      "file": "specs/evidence/sfx-library/r2/sfx2-footstep-wood-d-fast.ogg",
+      "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-wood-d-fast.png",
+      "seconds": 2.412
+     },
+     "walkLufs": -26.2,
+     "walkRmsDb": -24.9,
+     "target": -26,
+     "recipe": {
+      "src": "edit:steps-wood",
+      "walk": true
+     }
     }
    ]
   },
@@ -3020,8 +3928,12 @@
    "label": "Footsteps: stone",
    "category": "actions",
    "use": "walking on stone, paths and tile",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "it should be a rounded light sound on like boot i added reference you can use",
+   "compare": [
+    "a",
+    "b"
+   ],
    "candidates": [
     {
      "label": "Stone (ours)",
@@ -3088,6 +4000,70 @@
        "k:impact-sounds/Audio/footstep_concrete_003.ogg"
       ]
      }
+    },
+    {
+     "label": "Boots on stone from David's reference (cleaned, rounded)",
+     "round": 2,
+     "key": "c",
+     "file": "specs/evidence/sfx-library/r2/sfx2-footstep-stone-c.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-stone-c.png",
+     "sources": [
+      {
+       "url": "https://pixabay.com/sound-effects/",
+       "author": "freesound_community",
+       "licence": "Pixabay Content License",
+       "origin": "freesound_community-walking-96582.mp3"
+      }
+     ],
+     "ours": false,
+     "seconds": 3.077,
+     "lufs": -23.1,
+     "truePeak": -3.9,
+     "alt": {
+      "label": "fast walk",
+      "file": "specs/evidence/sfx-library/r2/sfx2-footstep-stone-c-fast.ogg",
+      "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-stone-c-fast.png",
+      "seconds": 2.369
+     },
+     "walkLufs": -26.2,
+     "walkRmsDb": -25.5,
+     "target": -26,
+     "recipe": {
+      "src": "edit:steps-stone-ref",
+      "walk": true
+     }
+    },
+    {
+     "label": "Boots on stone, rounded (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-footstep-stone-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-stone-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "footstep-stone"
+      }
+     ],
+     "ours": true,
+     "seconds": 2.976,
+     "lufs": -25.3,
+     "truePeak": -4.3,
+     "alt": {
+      "label": "fast walk",
+      "file": "specs/evidence/sfx-library/r2/sfx2-footstep-stone-d-fast.ogg",
+      "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-stone-d-fast.png",
+      "seconds": 2.287
+     },
+     "walkLufs": -26.0,
+     "walkRmsDb": -25.6,
+     "target": -26,
+     "recipe": {
+      "src": "edit:steps-stone",
+      "walk": true
+     }
     }
    ]
   },
@@ -3096,8 +4072,11 @@
    "label": "Footsteps: sand",
    "category": "actions",
    "use": "walking on the beach",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "needs to be softer and pleasing to the ear, i want you to redo the sound effect make it more quiet, test the db of all ambient wlaking and they should be the same after",
+   "compare": [
+    "a"
+   ],
    "candidates": [
     {
      "label": "Sand (ours)",
@@ -3187,6 +4166,38 @@
        "k:impact-sounds/Audio/footstep_snow_003.ogg"
       ]
      }
+    },
+    {
+     "label": "Sand, soft and quiet (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-footstep-sand-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-sand-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "footstep-sand"
+      }
+     ],
+     "ours": true,
+     "seconds": 3.048,
+     "lufs": -24.4,
+     "truePeak": -8.5,
+     "alt": {
+      "label": "fast walk",
+      "file": "specs/evidence/sfx-library/r2/sfx2-footstep-sand-d-fast.ogg",
+      "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-sand-d-fast.png",
+      "seconds": 2.348
+     },
+     "walkLufs": -26.0,
+     "walkRmsDb": -26.7,
+     "target": -26,
+     "recipe": {
+      "src": "edit:steps-sand",
+      "walk": true
+     }
     }
    ]
   },
@@ -3195,8 +4206,12 @@
    "label": "Footsteps: shallow water",
    "category": "actions",
    "use": "wading through shallows and puddles",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "ours is not accurate at all, use b as reference, they shouldnt be all the same tone, mix it up feel the splash linger between each step",
+   "compare": [
+    "a",
+    "b"
+   ],
    "candidates": [
     {
      "label": "Shallows (ours)",
@@ -3245,6 +4260,44 @@
        "fs:841834"
       ]
      }
+    },
+    {
+     "label": "Shallows from b: each step its own tone, the water lingering (Robo9418 + ours)",
+     "round": 2,
+     "key": "c",
+     "file": "specs/evidence/sfx-library/r2/sfx2-footstep-water-c.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-water-c.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/Robo9418/sounds/841834/",
+       "author": "Robo9418",
+       "licence": "CC0 1.0",
+       "origin": "Small Puddle Splash"
+      },
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "footstep-water"
+      }
+     ],
+     "ours": false,
+     "seconds": 3.591,
+     "lufs": -24.4,
+     "truePeak": -4.1,
+     "alt": {
+      "label": "fast walk",
+      "file": "specs/evidence/sfx-library/r2/sfx2-footstep-water-c-fast.ogg",
+      "waveform": "specs/evidence/sfx-library/r2/sfx2-footstep-water-c-fast.png",
+      "seconds": 2.783
+     },
+     "walkLufs": -26.1,
+     "walkRmsDb": -26.9,
+     "target": -26,
+     "recipe": {
+      "src": "edit:steps-water",
+      "walk": true
+     }
     }
    ]
   },
@@ -3253,8 +4306,13 @@
    "label": "Talk blips",
    "category": "voice",
    "use": "an NPC's line of dialogue, one blip per letter group",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "i dont like any of these, use the davidliu.work sound for the head character in my project folder",
+   "compare": [
+    "a",
+    "b",
+    "c"
+   ],
    "candidates": [
     {
      "label": "Today's blips (Ninja Adventure)",
@@ -3353,6 +4411,28 @@
      "recipe": {
       "src": "ours:voice-kalimba"
      }
+    },
+    {
+     "label": "davidliu.work's talk blips (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-voice-blip-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-voice-blip-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "voice-davidliu"
+      }
+     ],
+     "ours": true,
+     "seconds": 2.452,
+     "lufs": -20.3,
+     "truePeak": -4.1,
+     "recipe": {
+      "src": "ours:voice-davidliu"
+     }
     }
    ]
   },
@@ -3361,8 +4441,13 @@
    "label": "Open sea",
    "category": "ambience",
    "use": "the sea all round the island",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "a, but should have wave crashing with that ambient sound, like swells in and out more to mimic it, look at b and c",
+   "compare": [
+    "a",
+    "b",
+    "c"
+   ],
    "candidates": [
     {
      "label": "Sea swell (ours)",
@@ -3446,6 +4531,68 @@
       "src": "fs:636552",
       "start": 20
      }
+    },
+    {
+     "label": "Swell with waves cresting and crashing (ours)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-amb-sea-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-amb-sea-d.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "amb-sea-crash"
+      }
+     ],
+     "ours": true,
+     "seconds": 24.0,
+     "lufs": -26.0,
+     "truePeak": -8.6,
+     "seam": {
+      "step": 0.84,
+      "levelDb": 1.44,
+      "bedStep95": 7.83,
+      "bedLevelDb95": 4.11
+     },
+     "recipe": {
+      "src": "ours:amb-sea-crash"
+     }
+    },
+    {
+     "label": "Our swell moving with a real coast's waves (ours + YevgVerh)",
+     "round": 2,
+     "key": "e",
+     "file": "specs/evidence/sfx-library/r2/sfx2-amb-sea-e.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-amb-sea-e.png",
+     "sources": [
+      {
+       "url": "art/audio/synth_sfxlib.py",
+       "author": "Tethos (game/sfx-library)",
+       "licence": "CC0 1.0",
+       "origin": "amb-sea"
+      },
+      {
+       "url": "https://freesound.org/people/YevgVerh/sounds/827530/",
+       "author": "YevgVerh",
+       "licence": "CC0 1.0",
+       "origin": "Ocean_coast_04_092025_0659AM"
+      }
+     ],
+     "ours": false,
+     "seconds": 24.0,
+     "lufs": -26.1,
+     "truePeak": -10.3,
+     "seam": {
+      "step": 8.09,
+      "levelDb": 0.18,
+      "bedStep95": 7.53,
+      "bedLevelDb95": 2.62
+     },
+     "recipe": {
+      "src": "edit:sea-coast"
+     }
     }
    ]
   },
@@ -3454,8 +4601,11 @@
    "label": "Shore waves",
    "category": "ambience",
    "use": "waves breaking on the beach",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "b for deep ocean, c for beach, but make it lighter",
+   "compare": [
+    "c"
+   ],
    "candidates": [
     {
      "label": "Breaking waves (ours)",
@@ -3539,6 +4689,89 @@
       "src": "fs:852826",
       "start": 0
      }
+    },
+    {
+     "label": "Beach waves, lighter (kkenny101)",
+     "round": 2,
+     "target": -30,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-amb-shore-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-amb-shore-d.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/kkenny101/sounds/852826/",
+       "author": "kkenny101",
+       "licence": "CC0 1.0",
+       "origin": "Gentle Ocean Waves Loop"
+      }
+     ],
+     "ours": false,
+     "seconds": 19.771,
+     "lufs": -30.0,
+     "truePeak": -8.9,
+     "seam": {
+      "step": 3.01,
+      "levelDb": 1.54,
+      "bedStep95": 4.01,
+      "bedLevelDb95": 7.13
+     },
+     "recipe": {
+      "src": "fs:852826",
+      "start": 0,
+      "fx": [
+       [
+        "lp",
+        7000
+       ]
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "amb-shore-deep",
+   "label": "Deep ocean",
+   "category": "ambience",
+   "use": "the deep water off the island (David: shore b, as deep ocean)",
+   "compare": [
+    "amb-shore:b"
+   ],
+   "candidates": [
+    {
+     "label": "Deep ocean, lighter (helenicglauc)",
+     "round": 2,
+     "target": -30,
+     "key": "a",
+     "file": "specs/evidence/sfx-library/r2/sfx2-amb-shore-deep-a.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-amb-shore-deep-a.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/helenicglauc/sounds/727834/",
+       "author": "helenicglauc",
+       "licence": "CC0 1.0",
+       "origin": "Onades, waves, Mediterranian sea, lonely beach, soft waves"
+      }
+     ],
+     "ours": false,
+     "seconds": 24.0,
+     "lufs": -30.0,
+     "truePeak": -5.9,
+     "seam": {
+      "step": 5.87,
+      "levelDb": 3.81,
+      "bedStep95": 8.72,
+      "bedLevelDb95": 7.58
+     },
+     "recipe": {
+      "src": "fs:727834",
+      "start": 10,
+      "fx": [
+       [
+        "lp",
+        5000
+       ]
+      ]
+     }
     }
    ]
   },
@@ -3547,8 +4780,12 @@
    "label": "Wind",
    "category": "ambience",
    "use": "a breeze over the island; gusts on the hills",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "b but make it very light",
+   "pick": "d",
+   "compare": [
+    "b"
+   ],
    "candidates": [
     {
      "label": "Wind and leaves (ours)",
@@ -3632,6 +4869,46 @@
       "src": "fs:640219",
       "start": 20
      }
+    },
+    {
+     "label": "A gentle breeze, very light (mario1298)",
+     "round": 2,
+     "target": -33,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-amb-wind-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-amb-wind-d.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/mario1298/sounds/181252/",
+       "author": "mario1298",
+       "licence": "CC0 1.0",
+       "origin": "a gentle breeze, wind 3"
+      }
+     ],
+     "ours": false,
+     "seconds": 24.0,
+     "lufs": -33.0,
+     "truePeak": -14.9,
+     "seam": {
+      "step": 0.61,
+      "levelDb": 2.68,
+      "bedStep95": 3.59,
+      "bedLevelDb95": 3.86
+     },
+     "recipe": {
+      "src": "fs:181252",
+      "start": 15,
+      "fx": [
+       [
+        "hp",
+        120
+       ],
+       [
+        "lp",
+        6000
+       ]
+      ]
+     }
     }
    ]
   },
@@ -3640,8 +4917,9 @@
    "label": "Birds: dawn",
    "category": "ambience",
    "use": "the dawn chorus",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "b",
+   "pick": "b",
    "candidates": [
     {
      "label": "Dawn chorus (ours)",
@@ -3733,8 +5011,11 @@
    "label": "Birds: day",
    "category": "ambience",
    "use": "birds through the day",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "c, remove the static background sound isolate the bird sound effect",
+   "compare": [
+    "c"
+   ],
    "candidates": [
     {
      "label": "Day birds (ours)",
@@ -3818,6 +5099,43 @@
       "src": "fs:788118",
       "start": 10
      }
+    },
+    {
+     "label": "Day birds, the hiss taken out (RealSquink, cleaned)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-amb-birds-day-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-amb-birds-day-d.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/RealSquink/sounds/788118/",
+       "author": "RealSquink",
+       "licence": "CC0 1.0",
+       "origin": "Forest Day - Bird Chirps, Insects"
+      }
+     ],
+     "ours": false,
+     "seconds": 24.0,
+     "lufs": -26.0,
+     "truePeak": -7.2,
+     "seam": {
+      "step": 0.51,
+      "levelDb": 3.6,
+      "bedStep95": 20.94,
+      "bedLevelDb95": 24.22
+     },
+     "recipe": {
+      "src": "fs:788118",
+      "start": 10,
+      "fx": [
+       [
+        "denoise",
+        30,
+        2.0,
+        0.03
+       ]
+      ]
+     }
     }
    ]
   },
@@ -3826,8 +5144,11 @@
    "label": "Crickets",
    "category": "ambience",
    "use": "crickets in the grass at dusk and night",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "b, remove the static background sound isolate the sound effect",
+   "compare": [
+    "b"
+   ],
    "candidates": [
     {
      "label": "Crickets (ours)",
@@ -3911,6 +5232,49 @@
       "src": "fs:479041",
       "start": 60
      }
+    },
+    {
+     "label": "Crickets alone, the beach taken out (felix.blume, cleaned)",
+     "round": 2,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-amb-crickets-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-amb-crickets-d.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/felix.blume/sounds/479041/",
+       "author": "felix.blume",
+       "licence": "CC0 1.0",
+       "origin": "Crickets during the night, close to the beach in Mexico"
+      }
+     ],
+     "ours": false,
+     "seconds": 24.0,
+     "lufs": -26.0,
+     "truePeak": -14.6,
+     "seam": {
+      "step": 0.44,
+      "levelDb": 0.42,
+      "bedStep95": 2.18,
+      "bedLevelDb95": 3.03
+     },
+     "recipe": {
+      "src": "fs:479041",
+      "start": 60,
+      "fx": [
+       [
+        "keep",
+        3800,
+        8500,
+        0.02
+       ],
+       [
+        "denoise",
+        15,
+        1.5,
+        0.1
+       ]
+      ]
+     }
     }
    ]
   },
@@ -3919,8 +5283,11 @@
    "label": "Rain",
    "category": "ambience",
    "use": "rain on the island",
-   "slot": null,
-   "pick": null,
+   "mark": "redo",
+   "note": "b, make it light",
+   "compare": [
+    "b"
+   ],
    "candidates": [
     {
      "label": "Rain (ours)",
@@ -4004,6 +5371,48 @@
       "src": "fs:96729",
       "start": 5
      }
+    },
+    {
+     "label": "Light rain, thinner and quieter (jmbphilmes)",
+     "round": 2,
+     "target": -31,
+     "key": "d",
+     "file": "specs/evidence/sfx-library/r2/sfx2-amb-rain-d.ogg",
+     "waveform": "specs/evidence/sfx-library/r2/sfx2-amb-rain-d.png",
+     "sources": [
+      {
+       "url": "https://freesound.org/people/jmbphilmes/sounds/200273/",
+       "author": "jmbphilmes",
+       "licence": "CC0 1.0",
+       "origin": "Rain light 2 (rural)"
+      }
+     ],
+     "ours": false,
+     "seconds": 24.0,
+     "lufs": -31.0,
+     "truePeak": -11.2,
+     "seam": {
+      "step": 0.2,
+      "levelDb": 3.74,
+      "bedStep95": 2.64,
+      "bedLevelDb95": 7.41
+     },
+     "recipe": {
+      "src": "fs:200273",
+      "start": 10,
+      "fx": [
+       [
+        "denoise",
+        40,
+        1.3,
+        0.3
+       ],
+       [
+        "hp",
+        300
+       ]
+      ]
+     }
     }
    ]
   },
@@ -4012,8 +5421,9 @@
    "label": "River",
    "category": "ambience",
    "use": "the river and the brook",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "c",
+   "pick": "c",
    "candidates": [
     {
      "label": "Brook (ours)",
@@ -4105,8 +5515,9 @@
    "label": "Fire",
    "category": "ambience",
    "use": "the campfire and the hearth",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "b",
+   "pick": "b",
    "candidates": [
     {
      "label": "Campfire (ours)",
@@ -4198,8 +5609,12 @@
    "label": "Town murmur",
    "category": "ambience",
    "use": "people about in town and at the market",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "a, but we will not use this for our town plaza, just keep it in your back pocket if we need it",
+   "pick": "a",
+   "uses": {
+    "a": "kept in the back pocket; not the town plaza's sound"
+   },
    "candidates": [
     {
      "label": "London market (ilmari_freesound)",
@@ -4292,8 +5707,9 @@
    "label": "Cave",
    "category": "ambience",
    "use": "the ruins and caves",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "c",
+   "pick": "c",
    "candidates": [
     {
      "label": "Drips and drone (ours)",
@@ -4385,8 +5801,9 @@
    "label": "Night",
    "category": "ambience",
    "use": "the island at night",
-   "slot": null,
-   "pick": null,
+   "mark": "approve",
+   "note": "b",
+   "pick": "b",
    "candidates": [
     {
      "label": "Night: crickets, wind, an owl (ours)",

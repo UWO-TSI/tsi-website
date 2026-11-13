@@ -99,24 +99,27 @@ Also: the effects library on game/rod-gear is renamed the **VFX library** (rod-g
 
 ## Status
 
-Round 1 built (head: see `git log -1` on game/sfx-library; the commit "[build] sfx-library round 1"). Not yet reviewed by David.
+Round 2 built (head: see `git log -1` on game/sfx-library, "[build] sfx-library round 2"), origin/main merged first. Not yet reviewed by David.
 
-- **54 sounds, 159 candidates** (2 or 3 each), all CC0: UI 7 sounds / 21 candidates, rewards 15 / 44, actions 19 / 55, voice 1 / 3, ambience 12 / 36. Of them 53 are ours (`art/audio/synth_sfxlib.py`), the rest Kenney packs (7, each page "Creative Commons CC0" plus the License.txt in its zip) and Freesound sounds whose own page shows "Creative Commons 0" (checked by the fetch, logged in `art/audio/staging/freesound/records.tsv`), and today's game files (CREDITS.md).
-- Covers all 25 of game-feel's "Sound slots" (`specs/game-feel.md` on game/game-feel, 23 committed at 485d7215b plus `equip` and `fish-escape` in its working copy), by the same names, plus the lane file's extra categories.
-- The standard: `specs/sfx-library.md`. The manifest: `web/data/sfx-library.json` (gitignore exception added). The build: `art/audio/sfxlib.py` (SOUNDS table, levels, loops, encode, waveform, `--check`).
-- Candidates for the review page: `specs/evidence/sfx-library/r1/sfxlib1-<id>-<a|b|c>.ogg` + `.png`. The pngs are committed; the oggs are gitignored (18 MB; the build remakes them from staging + synth).
-- `--check` passes: every file there, every source CC0 with a url, one-shots within 1 LU of target unless the -3 dBTP ceiling held them back, every bed's seam no bigger than the bed's own 95th-percentile change.
-- Nothing is in `web/public/audio/` and `audio.ts` is unchanged: that waits for David's picks.
+- **Picks locked** in `web/data/sfx-library.json` (`pick`, plus `uses` where a sound has two jobs): 22 approvals. Untouched (19, not re-shown): ui-tap b (c for muted items), ui-open a, ui-close a, ui-toggle a, ui-tab a, ui-confirm a, error a, coin a (b the rattle for coins shown moving, never a reward), task-complete a, reward-fly a, donate a, sit b, bite a, amb-birds-dawn b, amb-river c, amb-fire b, amb-town a (back pocket, not the plaza), amb-cave c, amb-night b. Approved with a change, the change is the pick and is shown again: buy d (more "ka"), craft-done d (tik tik tik, chime on the third), amb-wind d (b very light).
+- **Redone** (33 sounds, 40 new candidates, keys continuing after round 1's): each per David's note; see the manifest's `mark`, `note`, `compare` and the round-2 candidates. New sound `amb-shore-deep` (shore b as deep ocean); `amb-shore` is now the beach (c).
+- **Footsteps as a set:** every slow walk at -26.0 to -26.2 LUFS integrated (grass -26.0, wood -26.2, stone ref -26.2, stone ours -26.0, sand -26.0, water -26.1; RMS -24.3 to -26.9 dB). Each has a fast-walk alt (`-fast`). The rate rule is `footstepRate()` in `web/lib/game/audio.ts` (tested), not yet called by the game.
+- **Voice blip:** ported from davidliu.work `talk/talk.js` `sound.blip` (square, VOWEL formants, Q 4 band-passes, the site's 45 ms typing and 50 ms gap), rendered as a line.
+- David's references used edited only (Pixabay Content License, credited per candidate): the three universfield splashes (splash d, e, f), the stone walk (footstep-stone c), the dry leaves (rustle d, e; forage d). `walking-on-leaves` unused.
+- Nothing in `web/public/audio/` yet: copying, CREDITS/SOURCES lines and `audio.ts` wiring wait for the round-2 picks, in one batch.
+- Evidence: `specs/evidence/sfx-library/r2/sfx2-<id>-<key>.png` committed, `.ogg` gitignored (the build remakes them); round 1's compare files stay in `r1/`.
 
 ## Next
 
-1. The coordinator publishes the SFX Library page from the manifest (one card per sound, its candidates playable, approve/redo).
-2. On David's picks: copy each pick to `web/public/audio/sfx/<id>.ogg` (beds to `ambient/<id>.ogg`), set `pick` in the manifest, credit them in CREDITS.md / SOURCES.md, wire them in `audio.ts` (SFXName, file map) so game-feel can swap its placeholders by name. Redo marks: change the SOUNDS row or the synth function, `python3 -I art/audio/sfxlib.py <id>`, bump to r2.
-3. If game-feel's slot list grows, add rows with the same ids.
+1. The coordinator publishes "SFX Library 2" from the manifest: a card per sound with a round-2 candidate (its new candidates, its `compare` keys from r1 to play beside them, his r1 note), the footstep set card (slow and fast walks, the loudness numbers above), one card listing the 19 untouched approvals, and a questions card (gem and coin-out: two fresh directions each; is the voice blip baked as files or synthesized live in audio.ts; "light rain" is quieter and thinner, not sparser).
+2. On David's round-2 picks, in one batch: copy each pick to `web/public/audio/sfx/<id>.ogg` (beds to `ambient/<id>.ogg`; not amb-town), credit in CREDITS.md / SOURCES.md (Pixabay files: file, site, licence), wire one-shots in `audio.ts` (SFXName, file map) so game-feel swaps placeholders by name, and have game-feel call `footstepRate` for steps.
+3. Redo marks: add `R(...)` candidates in `NEW` (sfxlib.py) with `round=3`, bump `ROUND`, `python3 -I art/audio/sfxlib.py <ids>`.
 
 ## Tools and gotchas
 
-- `python3 -I art/audio/sfxlib.py [ids]` (about 90 s for all), `--check`. In zsh split an id list with `${=ids}`.
+- `python3 -I art/audio/sfxlib.py [ids]` (about 25 s for round 2's), `--check`. In zsh split an id list with `${=ids}`. It builds only the current ROUND's candidates; earlier rounds keep their files and numbers from the manifest, so never delete `r1/` oggs before David's last compare.
+- Round 2 sources: `ref:<file>` (David's references, untracked), `edit:<name>` (EDITS in sfxlib.py: cuts, `denoise` spectral gate, filters, layering), candidate `fx` (denoise, keep a band, hp, lp), `target` (a lighter bed), `walk=True` (four steps laid as slow and fast walks), `run=n` (a coin run).
+- This worktree's `web/node_modules` is a symlink to the club worktree's (same lockfile); delete it before any `npm install`.
 - Kenney zips need the page as referer: `curl -A Mozilla/5.0 -e https://kenney.nl/assets/<pack> https://kenney.nl/download-link/<hex of "assets/<pack>">` returns a signed url.
 - Freesound: search `https://freesound.org/search/?q=..&f=license:"Creative Commons 0"`; a sound page's licence link must be publicdomain/zero; the hq preview is `...-hq.ogg` (lossy, about 192 kbps). Downloads are slow (a 5 min field recording takes minutes). Originals need an API login, which we don't have: the previews are what's here.
 - ffmpeg's vorbis encoder takes stereo only, and it overshoots a limiter on sharp transients by up to 2.5 dB: the build re-limits and re-encodes until the true peak is under -3.

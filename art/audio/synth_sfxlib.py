@@ -615,6 +615,311 @@ def amb_night():
     return reverb(y, 1.0, 0.2)[:n_(D)]
 
 
+# ---- round 2 (David's SFX Library 1 review, 2026-11-13) ----------------------------------------------------------
+
+
+def ui_pop(f0, f1, d=0.09, over=0.012, k=0.022):
+    """A short pitched pop: a fast glide up and a quick fall (Minecraft's pickup pop is this shape)."""
+    f = glide(f0, f1, d, over)
+    return (osc(f, d) + 0.12 * osc(2 * f, d)) * ev(d, 0.0012, k)
+
+
+def buy_ka():
+    """buy a with more "ka" before the ching: three heavier register clacks, the drawer, then the bell."""
+    d = 0.85
+    clack = lambda g: g * add(0.6 * band(0.04, 700, 3800, 0.0005, 0.009), 0.5 * partials(620, 0.05, ((1, 1, 1), (2.3, 0.5, 0.6)), 0.0005, 0.012))
+    drawer = 0.6 * thump(170, 95, 0.12, 0.03) + 0.35 * band(0.12, 300, 2500, 0.002, 0.025)
+    coins = [(0.25 + 0.022 * i, 0.15 * partials(2400 + 400 * i, 0.08, ((1, 1, 1), (2.32, 0.4, 0.5)), 0.0005, 0.02)) for i in range(3)]
+    return mix(d, (0, clack(1.4)), (0.075, clack(1.5)), (0.15, clack(1.7)), (0.2, drawer), (0.225, 0.7 * partials(2350, 0.6, BELL, 0.001, 0.26)), *coins)
+
+
+def bag_windup():
+    """bag-thunk a with a wind-up before the thud: the item swishes in, then drops."""
+    d = 0.45
+    swish = sweep(0.2, 350, 1900, 1.6, np.sin(np.pi * np.minimum(tt(0.2) / 0.2, 1)) ** 2)
+    return mix(d, (0, 0.35 * flt(swish, "lowpass", 3000)), (0.19, bag_thunk()))
+
+
+def craft_tik():
+    """Three light hammer tiks, the third with a chime."""
+    d = 1.35
+    tik = lambda f, g: g * add(partials(f, 0.08, METAL, 0.0005, 0.025), 0.25 * band(0.01, 3000, 9000, 0.0002, 0.0015))
+    chime = add(partials(note("C7"), 1.0, GLOCK, 0.001, 0.45), 0.6 * partials(note("G6"), 1.0, GLOCK, 0.001, 0.5), 0.35 * partials(note("E7"), 0.8, GLASS, 0.002, 0.3))
+    y = mix(d, (0, tik(2600, 0.32)), (0.19, tik(2700, 0.34)), (0.38, tik(2900, 0.4)), (0.385, 0.55 * chime))
+    y = reverb(y, 0.8, 0.15)[:n_(d)]
+    fade_end(y, 0.15)
+    return y
+
+
+def equip_soft():
+    """A soft, neutral clip: a muted click and a small low knock, no metal ring or glint."""
+    d = 0.16
+    click = flt(partials(1500, 0.05, ((1, 1, 1), (2.4, 0.35, 0.5)), 0.0008, 0.012), "lowpass", 3500)
+    return mix(d, (0, 0.6 * click), (0.045, 0.7 * partials(520, 0.1, ((1, 1, 1), (2.6, 0.3, 0.4)), 0.001, 0.022)), (0.045, 0.4 * thump(160, 100, 0.08, 0.025)))
+
+
+def aw(f0=430, d=0.5):
+    """A soft cartoon "aw": a voiced buzz through the vowel's two formants, the pitch sinking."""
+    t = tt(d)
+    f = f0 * (1 + 0.05 * np.minimum(t / 0.08, 1)) * 0.72 ** (np.maximum(t - 0.08, 0) / (d - 0.08))
+    f = f * (1 + 0.012 * np.sin(2 * np.pi * 5.5 * t) * np.minimum(t / 0.2, 1))
+    buzz = signal.sawtooth(2 * np.pi * np.cumsum(f) / SR)
+    v = flt(buzz, "bandpass", (600, 900)) + 0.55 * flt(buzz, "bandpass", (950, 1300)) + 0.12 * flt(buzz, "bandpass", (2400, 2900))
+    return flt(v, "lowpass", 3200) * np.minimum(1, t / 0.04) * np.exp(-np.maximum(t - 0.18, 0) / 0.16)
+
+
+def plop(f0=170, f1=520):
+    """A small round plop: the bubble's pitch rising fast, a little low water under it."""
+    return mix(0.2, (0, osc(glide(f0, f1, 0.05, 0.03), 0.05) * ev(0.05, 0.002, 0.016)), (0, 0.25 * flt(noise(0.2), "lowpass", 900) * ev(0.2, 0.003, 0.04)),
+               *[(t, 0.07 * osc(glide(f, f * 1.4, 0.03), 0.03) * ev(0.03, 0.001, 0.008)) for t, f in zip((0.07, 0.12), (700, 560))])
+
+
+def fish_escape_aw():
+    """A plop, a sad small splash, a gap, then the "aw"."""
+    d = 1.2
+    sad = sweep(0.25, 1500, 700, 1.2, ev(0.25, 0.01, 0.06))
+    return mix(d, (0, plop()), (0.03, 0.3 * sad), (0.4, 0.75 * aw()))
+
+
+def footstep2(surface, v):
+    """Round 2 steps: rounder, softer, lower (David: "more bassy earthy feel", "easy on the ears")."""
+    d = 0.24
+    g = 0.88 + 0.12 * rng.random()
+    if surface == "grass":
+        body = thump(78 * (1 + 0.05 * v), 46, 0.12, 0.04, 0.05)
+        crush = flt(grains(0.18, 1800, 250, 2600, 0.005), "lowpass", 2200) * ev(0.18, 0.012, 0.05)
+        y = mix(d, (0, 0.65 * body), (0.004, 0.5 * crush), (0, 0.2 * flt(noise(0.12), "lowpass", 500) * ev(0.12, 0.006, 0.035)))
+    elif surface == "sand":
+        crush = flt(grains(0.22, 2600, 250, 2200, 0.006), "lowpass", 1800) * np.sin(np.pi * np.minimum(tt(0.22) / 0.22, 1)) ** 1.5
+        y = mix(d, (0, 0.55 * crush), (0.01, 0.18 * thump(70, 48, 0.09, 0.035)))
+    else:  # stone: a rounded boot heel then toe, light
+        knock = lambda f, gg: gg * flt(add(partials(f, 0.09, ((1, 1, 1), (2.1, 0.35, 0.45), (3.4, 0.12, 0.25)), 0.0012, 0.018), 0.15 * band(0.02, 1500, 5000, 0.0005, 0.004)), "lowpass", 3800)
+        y = mix(d, (0, knock(300 * (1 + 0.04 * v), 0.7)), (0, 0.35 * thump(120, 80, 0.05, 0.015)), (0.055, knock(360 * (1 + 0.03 * v), 0.3)))
+    return g * flt(y, "lowpass", 5000)
+
+
+def item_pop():
+    return mix(0.1, (0, ui_pop(260, 1050)), (0, 0.15 * flt(noise(0.01), "lowpass", 3000) * ev(0.01, 0.0003, 0.002)))
+
+
+def jump_soft():
+    """A smooth whoosh up: low and round, a bell-shaped swell, no hiss on top."""
+    d = 0.3
+    env = np.sin(np.pi * np.minimum(tt(0.26) / 0.26, 1)) ** 2
+    whoosh = flt(sweep(0.26, 320, 1100, 1.4, env), "lowpass", 1600)
+    lift = osc(glide(180, 330, 0.2), 0.2) * np.sin(np.pi * tt(0.2) / 0.2) ** 2
+    return mix(d, (0, 0.8 * whoosh), (0.02, 0.12 * lift), (0, 0.2 * thump(85, 60, 0.06, 0.02)))
+
+
+def land_soft():
+    d = 0.16
+    return mix(d, (0, thump(90, 48, d, 0.045, 0.05) * np.minimum(1, tt(d) / 0.004)), (0, 0.25 * flt(noise(d), "lowpass", 450) * ev(d, 0.005, 0.03)),
+               (0.002, 0.12 * flt(grains(0.08, 800, 300, 1800, 0.004), "lowpass", 1600) * ev(0.08, 0.004, 0.02)))
+
+
+def level_up_epic():
+    d = 3.0
+    run = [(0.055 * i, add(0.45 * partials(note(n), 0.6, GLOCK, 0.001, 0.22), 0.35 * mallet(note(n), 0.4, 0.14)))
+           for i, n in enumerate(("C5", "E5", "G5", "C6", "E6", "G6", "C7"))]
+    at = 0.42
+    swell = flt(noise(at), "highpass", 4000) * (tt(at) / at) ** 3
+    chord = [(at, g * brass(note(n), 2.2, 0.03, 1.1, 5)) for n, g in (("C3", 0.3), ("C4", 0.28), ("G4", 0.24), ("C5", 0.22), ("E5", 0.2), ("G5", 0.18), ("C6", 0.14))]
+    boom = add(0.55 * thump(95, 48, 0.6, 0.22, 0.15), 0.25 * flt(noise(0.5), "lowpass", 300) * ev(0.5, 0.004, 0.12))
+    cym = flt(noise(1.8), "highpass", 5000) * ev(1.8, 0.004, 0.5) * 0.12
+    sparkles = [(t, 0.12 * osc(f, 0.18) * ev(0.18, 0.0008, 0.06)) for t, f in zip(np.sort(rng.uniform(at, 2.4, 34)), rng.uniform(3500, 9500, 34))]
+    bells = [(at + 0.07 * i, 0.4 * partials(note(n), 1.8, GLOCK, 0.001, 0.6)) for i, n in enumerate(("C7", "E7", "G7"))]
+    y = mix(d, *run, (0, 0.5 * swell), *chord, (at, boom), (at, cym), *sparkles, *bells)
+    y = reverb(y, 1.8, 0.25)[:n_(d)]
+    fade_end(y, 0.4)
+    return y
+
+
+def place_note():
+    """place a with a proper note: the knock tuned to A3, its overtones in tune."""
+    d = 0.22
+    f = note("A3")
+    return mix(d, (0, partials(f, d, ((1, 1, 1), (2, 0.3, 0.6), (4, 0.15, 0.3)), 0.0005, 0.08)), (0, 0.5 * thump(110, 70, d, 0.03)),
+               (0, 0.25 * band(0.015, 2000, 8000, 0.0002, 0.002)))
+
+
+def quest_complete_bells():
+    """quest-complete a with the chime louder and played as an arpeggio."""
+    d = 2.5
+    line = (("G4", 0), ("C5", 0.12), ("E5", 0.24), ("G5", 0.36), ("E5", 0.52), ("G5", 0.64))
+    lead = [(at, add(0.5 * brass(note(n), 0.2, 0.012, 0.1, 6), 0.4 * mallet(note(n), 0.3, 0.12))) for n, at in line]
+    chord = [(0.82, 0.28 * brass(note(n), 1.6, 0.02, 0.75, 5)) for n in ("C5", "E5", "G5", "C6")]
+    arp = [(0.82 + 0.075 * i, 0.62 * partials(note(n), 1.5 - 0.075 * i, GLOCK, 0.001, 0.55)) for i, n in enumerate(("C6", "E6", "G6", "C7", "E7"))]
+    y = mix(d, *lead, *chord, *arp, (0.82, 0.4 * thump(110, 70, 0.4, 0.15, 0.1)))
+    y = reverb(y, 1.1, 0.2)[:n_(d)]
+    fade_end(y, 0.3)
+    return y
+
+
+def reel_soft():
+    """reel a's ratchet, wound like a real reel (about 60 clicks a second, the handle's turn in it) but soft on the ear."""
+    d = 1.0
+    ts, t = [], 0.0
+    while t < d - 0.02:
+        ts.append(t)
+        t += 1 / 58 * rng.uniform(0.85, 1.15)
+    turn = lambda t: 0.65 + 0.35 * np.sin(2 * np.pi * 3.2 * t) ** 2
+    click = lambda: partials(2100 * rng.uniform(0.95, 1.05), 0.02, ((1, 1, 1), (1.6, 0.5, 0.6), (2.7, 0.2, 0.4)), 0.0004, 0.0035)
+    whirr = flt(noise(d), "bandpass", (300, 1200)) * (0.5 + 0.5 * np.sin(2 * np.pi * 3.2 * tt(d)) ** 2) * 0.12
+    y = mix(d, (0, whirr), *[(t, turn(t) * rng.uniform(0.6, 0.9) * click()) for t in ts])
+    y = flt(y, "lowpass", 4500)
+    y[:n_(0.03)] *= np.linspace(0, 1, n_(0.03))
+    return y
+
+
+def sell_ring():
+    """sell a with a longer slide ("hua") that rings out, then the ding ringing out naturally."""
+    d = 1.6
+    roll = grains(0.55, 45, 800, 3500, 0.002) * 0.5
+    slide = sweep(0.55, 450, 1900, 2.5, np.minimum(tt(0.55) / 0.3, 1) * np.exp(-np.maximum(tt(0.55) - 0.35, 0) / 0.18))
+    ring = 0.12 * partials(1320, 0.7, ((1, 1, 1), (2.76, 0.3, 0.5)), 0.08, 0.25)
+    stop = 0.5 * thump(150, 85, 0.12, 0.035) + 0.25 * partials(380, 0.12, ((1, 1, 1), (2.6, 0.4, 0.5)), 0.001, 0.03)
+    y = mix(d, (0, 0.6 * slide + roll), (0.25, ring), (0.5, stop), (0.52, 0.55 * partials(2350, 1.05, BELL, 0.001, 0.5)))
+    y = reverb(y, 0.9, 0.12)[:n_(d)]
+    fade_end(y, 0.2)
+    return y
+
+
+def stamp_chime():
+    """The happy confirm chime laid over the lighter stamp."""
+    return mix(0.6, (0, mallet(note("C6"), 0.3, 0.12)), (0.08, mallet(note("G6"), 0.5, 0.2)), (0.08, 0.3 * partials(note("G7"), 0.4, GLOCK, 0.001, 0.15)))
+
+
+def catch_chime():
+    """catch a's two glockenspiel notes, alone (the splash comes from c)."""
+    return mix(0.6, (0, 0.45 * partials(note("E6"), 0.3, GLOCK, 0.001, 0.12)), (0.11, 0.5 * partials(note("A6"), 0.48, GLOCK, 0.001, 0.25)))
+
+
+def cast_whoosh():
+    """cast a's whoosh alone (the line comes from c)."""
+    env = np.sin(np.pi * np.minimum(tt(0.42) / 0.42, 1)) ** 2
+    return sweep(0.42, np.concatenate([glide(300, 1600, n_(0.2) / SR), glide(1600, 600, n_(0.22) / SR)]), None, 1.8, env)
+
+
+def forage_pop():
+    """forage a's snap and pop, without its rustle (the rustle comes from David's leaves)."""
+    snap = 0.5 * band(0.02, 2000, 7000, 0.0002, 0.004) + 0.4 * partials(1300, 0.02, ((1, 1, 1),), 0.0002, 0.004)
+    return mix(0.28, (0, snap), (0.11, 0.5 * item_get()))
+
+
+def upgrade_long():
+    """upgrade a, more epic: the same shing, the four notes spaced out, a held chord under them."""
+    d = 2.6
+    swish = sweep(0.12, 1500, 6500, 2, ev(0.12, 0.07, 0.03))
+    shing = add(partials(2900, 1.0, METAL, 0.002, 0.35), 0.4 * band(0.4, 5000, 14000, 0.002, 0.08))
+    notes = [(0.3 + 0.17 * i, 0.55 * partials(note(n), 1.6 - 0.17 * i, GLOCK, 0.001, 0.35 if i < 3 else 0.8)) for i, n in enumerate(("C6", "E6", "G6", "C7"))]
+    pad = [(0.3, g * brass(note(n), 2.1, 0.25, 1.0, 4)) for n, g in (("C4", 0.16), ("G4", 0.15), ("C5", 0.15), ("E5", 0.13), ("G5", 0.1))]
+    sparkles = [(t, 0.1 * osc(f, 0.15) * ev(0.15, 0.0008, 0.05)) for t, f in zip(np.sort(rng.uniform(0.85, 1.9, 14)), rng.uniform(4000, 9000, 14))]
+    y = mix(d, (0, 0.5 * swish), (0.07, 0.6 * shing), *pad, *notes, *sparkles)
+    y = reverb(y, 1.4, 0.22)[:n_(d)]
+    fade_end(y, 0.35)
+    return y
+
+
+def gem_crystal():
+    """Gem, direction 1: a fast crystal run up into a shimmering glass chord, a low bloom under it."""
+    d = 1.6
+    run = [(0.035 * i, 0.35 * partials(note(n), 0.5, GLASS, 0.001, 0.12)) for i, n in enumerate(("E6", "G#6", "B6", "E7", "G#7"))]
+    chord = [(0.2, g * partials(note(n), 1.35, GLASS, 0.002, 0.55)) for n, g in (("E6", 0.5), ("B6", 0.4), ("E7", 0.35), ("G#7", 0.2))]
+    bloom = 0.3 * brass(note("E4"), 1.2, 0.08, 0.5, 3) + 0.2 * brass(note("B4"), 1.2, 0.08, 0.5, 3)
+    shimmer = [(t, 0.09 * osc(f, 0.2) * ev(0.2, 0.001, 0.07)) for t, f in zip(np.sort(rng.uniform(0.2, 1.1, 18)), rng.uniform(5000, 10000, 18))]
+    y = mix(d, *run, *chord, (0.18, bloom), *shimmer)
+    y = reverb(y, 1.5, 0.3)[:n_(d)]
+    fade_end(y, 0.3)
+    return y
+
+
+def gem_flash():
+    """Gem, direction 2: a rising sparkle swell that lands on one big bright bell, ringing on."""
+    d = 1.7
+    rise = 0.35
+    swell = sweep(rise, 2500, 9000, 2, (tt(rise) / rise) ** 2)
+    hit = add(partials(note("A6"), 1.3, BELL, 0.001, 0.45), 0.5 * partials(note("E7"), 1.2, GLASS, 0.001, 0.4), 0.35 * partials(note("A5"), 1.3, GLOCK, 0.001, 0.5))
+    low = 0.35 * thump(220, 110, 0.4, 0.12, 0.08)
+    glints = [(rise + 0.06 + 0.05 * i, 0.12 * osc(f, 0.15) * ev(0.15, 0.0008, 0.05)) for i, f in enumerate((7040, 8372, 6272, 9397, 7902, 10548))]
+    y = mix(d, (0, 0.35 * swell), (rise, 0.65 * hit), (rise, low), *glints)
+    y = reverb(y, 1.3, 0.28)[:n_(d)]
+    fade_end(y, 0.3)
+    return y
+
+
+def coin_counter():
+    """Coin out, direction 1: one coin set down on the counter: a short clink on wood, a tiny settle."""
+    d = 0.16
+    clink = partials(3150, 0.1, ((1, 1, 1), (1.53, 0.5, 0.6), (2.41, 0.3, 0.4)), 0.0005, 0.02)
+    return mix(d, (0, 0.6 * clink), (0, 0.45 * partials(700, 0.05, ((1, 1, 1), (2.5, 0.3, 0.4)), 0.0004, 0.01)), (0.045, 0.18 * clink[:n_(0.06)]))
+
+
+def coin_pip():
+    """Coin out, direction 2: a soft musical pip, a tiny marimba note with a coin's glint on top (it rises as coins go)."""
+    return mix(0.14, (0, 0.8 * mallet(note("E6"), 0.14, 0.04)), (0, 0.18 * partials(note("E7") * 1.5, 0.06, ((1, 1, 1),), 0.0005, 0.012)))
+
+
+def voice_davidliu():
+    """The floating head's talk blips from davidliu.work (talk/talk.js, sound.blip): a band-limited square from
+    230 Hz moved by the letter, gliding down from 1.12x over 40 ms, through two band-passes (Q 4) at the vowel's
+    formants (the second at half weight), gain up to 0.22 in 8 ms and down by 75 ms. One blip per typed letter, a
+    letter every 45 ms, never two blips within 50 ms, exactly as the site types."""
+    vowel = {"a": (800, 1200), "e": (450, 1900), "i": (320, 2300), "o": (480, 850), "u": (340, 750), "y": (320, 2100)}
+
+    def bp(x, f, q=4):  # Web Audio's band-pass (RBJ, 0 dB peak)
+        w = 2 * np.pi * f / SR
+        al = np.sin(w) / (2 * q)
+        return signal.lfilter([al, 0, -al], [1 + al, -2 * np.cos(w), 1 - al], x)
+
+    def blip(c):
+        code = ord(c)
+        f = 230 * 2 ** ((((code * 7) % 11) - 5 + rng.uniform(-0.6, 0.6)) / 12)
+        d, t = 0.09, tt(0.09)
+        fr = f * 1.12 * (1 / 1.12) ** np.minimum(t / 0.04, 1)
+        ph = 2 * np.pi * np.cumsum(fr) / SR
+        sq = 4 / np.pi * sum(np.sin(k * ph) / k for k in range(1, 200, 2) if k * f * 1.12 < 20000)
+        f1, f2 = vowel.get(c, (500 + (code % 5) * 140, 1400 + (code % 7) * 180))
+        g = np.where(t < 0.008, 0.0001 * (0.22 / 0.0001) ** (t / 0.008), 0.22 * (0.0001 / 0.22) ** np.minimum((t - 0.008) / 0.067, 1))
+        return (1.8 * bp(sq, f1) + bp(sq, f2)) * g
+
+    parts, last = [], -1.0
+    for i, ch in enumerate("hello there! welcome to the island. want to go fishing?"):
+        t = 0.02 + 0.045 * i
+        if not ch.isalnum() or t - last < 0.05:
+            continue
+        last = t
+        parts.append((t, blip(ch)))
+    return mix(parts[-1][0] + 0.15, *parts)
+
+
+def amb_sea_crash():
+    """amb-sea a's swell, but swelling in and out more, with a wave cresting and crashing on each swell (three to
+    the loop, so the wrap keeps the rhythm), learnt from the YevgVerh and L.Finck recordings."""
+    t = tt(D)
+    waves = (1.0, 8.6, 16.3)  # the loop is 24 s: the same three again from 24 s
+    swell = np.zeros(len(t))
+    y = np.zeros((len(t), 2))
+    for w0 in [w + k * LOOP for k in (-1, 0, 1) for w in waves]:
+        rise = np.exp(-((t - (w0 + 2.6)) / 1.6) ** 2)  # the swell builds to its crest
+        swell += rise
+        at, w = w0 + 2.4, 5.0
+        if at >= D or at + w <= 0:
+            continue
+        tw = tt(w)
+        crest = np.minimum(tw / 0.5, 1) ** 2 * np.exp(-np.maximum(tw - 0.5, 0) / 0.7)
+        roar = flt(sweep(w, glide(500, 1600, w, 0.5), None, 0.7, crest), "lowpass", 3500)
+        wash = np.exp(-np.maximum(tw - 0.6, 0) / 1.4) * np.minimum(np.maximum(tw - 0.4, 0) / 0.3, 1)
+        fizz = flt(flt(noise(w), "highpass", 1800) * 0.2 + 0.6 * grains(w, 700, 2500, 9000, 0.002), "lowpass", 7000) * wash
+        x = pan(0.75 * roar + 0.45 * fizz, rng.uniform(-0.35, 0.35))
+        i0 = n_(at)
+        lo, hi = max(i0, 0), min(i0 + len(x), len(t))
+        y[lo:hi] += x[lo - i0:hi - i0]
+    swell = 0.3 + 0.7 * swell / swell.max()
+    lo = flt(pink(D), "lowpass", 500) * swell[:, None]
+    hi = flt(pink(D), "bandpass", (600, 3000)) * (swell ** 2)[:, None] * 0.3
+    return lo + hi + 0.9 * y
+
+
 # ---- registry ---------------------------------------------------------------------------------------------------
 
 SOUNDS = {
@@ -630,6 +935,17 @@ SOUNDS = {
     "amb-crickets": amb_crickets, "amb-rain": amb_rain, "amb-river": amb_river, "amb-fire": amb_fire, "amb-cave": amb_cave,
     "amb-night": amb_night,
 }
+
+
+SOUNDS.update({
+    "buy-ka": buy_ka, "bag-windup": bag_windup, "craft-tik": craft_tik, "equip-soft": equip_soft, "fish-escape-aw": fish_escape_aw,
+    "item-pop": item_pop, "jump-soft": jump_soft, "land-soft": land_soft, "level-up-epic": level_up_epic, "place-note": place_note,
+    "quest-complete-bells": quest_complete_bells, "reel-soft": reel_soft, "sell-ring": sell_ring, "stamp-chime": stamp_chime,
+    "catch-chime": catch_chime, "cast-whoosh": cast_whoosh, "forage-pop": forage_pop, "upgrade-long": upgrade_long,
+    "gem-crystal": gem_crystal, "gem-flash": gem_flash, "coin-counter": coin_counter, "coin-pip": coin_pip,
+    "voice-davidliu": voice_davidliu, "amb-sea-crash": amb_sea_crash, "plop": plop,
+    **{f"step2-{s}-{v}": (lambda s=s, v=v: footstep2(s, v)) for s in ("grass", "sand", "stone") for v in range(4)},
+})
 
 
 def make(name):

@@ -1,19 +1,21 @@
 """The SFX library's build (specs/sfx-library.md): every sound's candidates, cut, levelled, looped and encoded, plus
 the manifest the game and the review page read.
 
-  python3 -I art/audio/sfxlib.py            build every candidate into specs/evidence/sfx-library/r1/ and write the manifest
-  python3 -I art/audio/sfxlib.py <id> ...   only these sounds (the manifest keeps the others as they were)
+  python3 -I art/audio/sfxlib.py            build this round's candidates into specs/evidence/sfx-library/r<ROUND>/ and write the manifest
+  python3 -I art/audio/sfxlib.py <id> ...   only these sounds (earlier rounds' candidates keep their files and numbers)
   python3 -I art/audio/sfxlib.py --check    validate the manifest: every file there, every licence CC0, levels on target
 
 Sources: `ours:<name>` (art/audio/synth_sfxlib.py), `k:<pack>/<file>` (a Kenney pack in art/audio/staging/kenney),
 `fs:<id>` (a Freesound preview in art/audio/staging/freesound, its licence checked on its page by the fetch and logged
-in records.tsv), `game:<file>` (a file already in web/public/audio, credited in CREDITS.md / SOURCES.md).
+in records.tsv), `game:<file>` (a file already in web/public/audio, credited in CREDITS.md / SOURCES.md), `ref:<file>` (one of
+David's references in specs/references/sfx: Pixabay files, used only edited or layered into our own sound, never
+committed), `edit:<name>` (an EDITS function below: found or reference files cut, filtered and layered with ours).
 Downloads are data: they are only decoded by ffmpeg here, never run.
 """
 import json, os, subprocess, sys
 import numpy as np
 from scipy import signal
-from scipy.ndimage import minimum_filter1d
+from scipy.ndimage import minimum_filter1d, uniform_filter
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,11 +23,18 @@ import synth_sfxlib as synth  # noqa: E402
 
 SR = 48000
 STAGE = os.path.join(ROOT, "art/audio/staging")
-OUT = os.path.join(ROOT, "specs/evidence/sfx-library/r1")
+ROUND = 2
+OUT = os.path.join(ROOT, f"specs/evidence/sfx-library/r{ROUND}")
+REFS = os.path.join(ROOT, "specs/references/sfx")
+PIXABAY = "Pixabay Content License"
 MANIFEST = os.path.join(ROOT, "web/data/sfx-library.json")
 CC0 = "CC0 1.0"
 CEILING = -3.0  # true peak, dBFS
 TARGET = {"ui": -20, "voice": -20, "rewards": -16, "actions": -18, "ambience": -26}  # LUFS (one-shots: loudest 400 ms; beds: integrated)
+FOOTSTEPS = -26  # every footstep set's slow walk, integrated: all the same (David, r1: "test the db of all ambient walking and they should be the same after")
+# Steps follow walking speed: the game plays each step at footstepRate(speed / walk speed) (web/lib/game/audio.ts), and
+# the page shows a slow and a fast walk: (step interval s, playback rate, steps).
+WALKS = {"slow": (0.55, 0.97, 6), "fast": (0.3, 1.2, 8)}
 LOOP, XF = synth.LOOP, synth.XF
 
 GAME_CREDIT = {  # web/public/audio/CREDITS.md and sfx/SOURCES.md
@@ -173,6 +182,129 @@ SOUNDS = [
       C("Night crickets and waves, Madeira (Profispiesser)", "fs:583251", start=30), C("Deep wind at night (eniru)", "fs:640219", start=90)),
 ]
 
+# ---- round 2: David's SFX Library 1 review (2026-11-13, https://claude.ai/artifact/ACLhH8idW4KJzayiDgpoE9) ---------
+
+REVIEW = {  # his mark and note per sound, verbatim
+    "amb-birds-dawn": ("approve", "b"),
+    "amb-birds-day": ("redo", "c, remove the static background sound isolate the bird sound effect"),
+    "amb-cave": ("approve", "c"),
+    "amb-crickets": ("redo", "b, remove the static background sound isolate the sound effect"),
+    "amb-fire": ("approve", "b"),
+    "amb-night": ("approve", "b"),
+    "amb-rain": ("redo", "b, make it light"),
+    "amb-river": ("approve", "c"),
+    "amb-sea": ("redo", "a, but should have wave crashing with that ambient sound, like swells in and out more to mimic it, look at b and c"),
+    "amb-shore": ("redo", "b for deep ocean, c for beach, but make it lighter"),
+    "amb-town": ("approve", "a, but we will not use this for our town plaza, just keep it in your back pocket if we need it"),
+    "amb-wind": ("approve", "b but make it very light"),
+    "bag-thunk": ("redo", "a but make a wind up sound effect before the thud"),
+    "bite": ("approve", "a"),
+    "buy": ("approve", "a, but edit so theres more before the ching, more ka"),
+    "cast": ("redo", "i want the woosh of a but the line creek of c"),
+    "catch": ("redo", "the splash part learn from c but the chine use a"),
+    "coin-out": ("redo", "i dont like any"),
+    "coin": ("approve", "both, a is the rewards sound, b is more realist like coin rattling, b is not for rewards, for when coins are visualized and stuff"),
+    "craft-done": ("approve", "should have hammer sound like tik tik tik and on the third tik a chime, the tik is light"),
+    "dig": ("redo", "redo in a style but with the sound of b, keep a as well i want variety"),
+    "donate": ("approve", "a"),
+    "equip": ("redo", "a redo to be softer and less crinkly and neutral"),
+    "error": ("approve", "a"),
+    "fish-escape": ("redo", "the splash needs to be a plop and sad splash and the aw sound needs to be redone so theres a slight gap between spash and aw"),
+    "footstep-grass": ("redo", "should be a but more bassy earthy feel and overall more rounded so its easy on the ears. and it should also be able to match speed, so faster the sound goes faster"),
+    "footstep-sand": ("redo", "needs to be softer and pleasing to the ear, i want you to redo the sound effect make it more quiet, test the db of all ambient wlaking and they should be the same after"),
+    "footstep-stone": ("redo", "it should be a rounded light sound on like boot i added reference you can use"),
+    "footstep-water": ("redo", "ours is not accurate at all, use b as reference, they shouldnt be all the same tone, mix it up feel the splash linger between each step"),
+    "footstep-wood": ("redo", "b, but more deepness to it and overall rounded"),
+    "forage": ("redo", "use the leaf sound effect for the rustle and the A. for the pop"),
+    "gem": ("redo", "this should be more epic cuz its gems, i dont like any"),
+    "item-get": ("redo", "a but should be more poppy sound like a minecraft pop sound effect"),
+    "jump": ("redo", "the whoosh up is too harsh, redo to be smoother more satisfying for the ear"),
+    "land": ("redo", "a but should be lighter and more soft and rounder"),
+    "level-up": ("redo", "a but more epic"),
+    "place": ("redo", "a is good but make the tone a proper note"),
+    "quest-complete": ("redo", "a make the chime ding sound louder and appegio"),
+    "reel": ("redo", "in the style of a make it sound like b but less harsh on the ear"),
+    "reward-fly": ("approve", "a"),
+    "rustle": ("redo", "the rustling sound doesnt sound right, i need it redone or look online for refrernce or find like pre exisitng, i downloaded a reference to use its in my downloads"),
+    "sell": ("redo", "make the hua befroe the ding longer and ring out, make ding ring out too naturally for a lil bit"),
+    "sit": ("approve", "b"),
+    "splash": ("redo", "downloaded 3 seperate splash sound effects, for you to either reference or use straight up"),
+    "stamp": ("redo", "should be a lighter version of b and a confrim happy chime"),
+    "task-complete": ("approve", "a"),
+    "ui-close": ("approve", "a"),
+    "ui-confirm": ("approve", "a"),
+    "ui-open": ("approve", "a"),
+    "ui-tab": ("approve", "a"),
+    "ui-tap": ("approve", "i like b and c, c for more muted items"),
+    "ui-toggle": ("approve", "a"),
+    "upgrade": ("redo", "a but should me a lil more epic and sustained and longer and spaced out"),
+    "voice-blip": ("redo", "i dont like any of these, use the davidliu.work sound for the head character in my project folder"),
+}
+PICKS = {  # locked; where he approved with a change, the pick is the changed candidate (shown again to confirm)
+    "amb-birds-dawn": "b", "amb-cave": "c", "amb-fire": "b", "amb-night": "b", "amb-river": "c", "amb-town": "a", "amb-wind": "d",
+    "bite": "a", "buy": "d", "coin": "a", "craft-done": "d", "donate": "a", "error": "a", "reward-fly": "a", "sit": "b",
+    "task-complete": "a", "ui-close": "a", "ui-confirm": "a", "ui-open": "a", "ui-tab": "a", "ui-tap": "b", "ui-toggle": "a",
+}
+USES = {  # a sound whose picks have more than one job
+    "coin": {"a": "the reward sound: a coin arriving in the wallet", "b": "coins shown moving (a rattle); never a reward"},
+    "ui-tap": {"b": "taps", "c": "taps on muted items"},
+    "amb-town": {"a": "kept in the back pocket; not the town plaza's sound"},
+}
+R = lambda label, src, **o: C(label, src, round=2, **o)
+NEW = {  # round 2 candidates: id -> (the r1 candidates his note points at, to compare; the new ones)
+    "amb-birds-day": ("c", [R("Day birds, the hiss taken out (RealSquink, cleaned)", "fs:788118", start=10, fx=[("denoise", 30, 2.0, 0.03)])]),
+    "amb-crickets": ("b", [R("Crickets alone, the beach taken out (felix.blume, cleaned)", "fs:479041", start=60, fx=[("keep", 3800, 8500, 0.02), ("denoise", 15, 1.5, 0.1)])]),
+    "amb-rain": ("b", [R("Light rain, thinner and quieter (jmbphilmes)", "fs:200273", start=10, fx=[("denoise", 40, 1.3, 0.3), ("hp", 300)], target=-31)]),
+    "amb-sea": ("abc", [R("Swell with waves cresting and crashing (ours)", "ours:amb-sea-crash"),
+                        R("Our swell moving with a real coast's waves (ours + YevgVerh)", "edit:sea-coast")]),
+    "amb-shore": ("c", [R("Beach waves, lighter (kkenny101)", "fs:852826", start=0, fx=[("lp", 7000)], target=-30)]),
+    "amb-wind": ("b", [R("A gentle breeze, very light (mario1298)", "fs:181252", start=15, fx=[("hp", 120), ("lp", 6000)], target=-33)]),
+    "bag-thunk": ("a", [R("Swish in, then the cloth thump (ours)", "ours:bag-windup")]),
+    "buy": ("a", [R("Ka-ka-ka, ching (ours)", "ours:buy-ka")]),
+    "cast": ("ac", [R("Our whoosh, el_boss's line running out (ours + el_boss)", "mix", parts=[("ours:cast-whoosh", 0, 1.0), ("fs:853287", 0.17, 0.8, 0.28, 1.25)])]),
+    "catch": ("ac", [R("swordofkings128's splash, our two notes", "mix", parts=[("fs:398032", 0, 1.0), ("ours:catch-chime", 0.18, 0.7)])]),
+    "coin-out": ("abc", [R("A coin set on the counter (ours)", "ours:coin-counter", run=5), R("A soft musical pip (ours)", "ours:coin-pip", run=5)]),
+    "craft-done": ("a", [R("Tik, tik, tik, and a chime on the third (ours)", "ours:craft-tik")]),
+    "dig": ("ab", [R("a's spade, b's wet sand (ours + f3bbbo)", "edit:dig-wet")]),
+    "equip": ("a", [R("Soft clip, no ring (ours)", "ours:equip-soft")]),
+    "fish-escape": ("a", [R("Plop, a sad small splash, a pause, \"aw\" (ours)", "ours:fish-escape-aw")]),
+    "footstep-grass": ("a", [R("Grass, earthier and rounder (ours)", "edit:steps-grass", walk=True)]),
+    "footstep-sand": ("a", [R("Sand, soft and quiet (ours)", "edit:steps-sand", walk=True)]),
+    "footstep-stone": ("ab", [R("Boots on stone from David's reference (cleaned, rounded)", "edit:steps-stone-ref", walk=True),
+                              R("Boots on stone, rounded (ours)", "edit:steps-stone", walk=True)]),
+    "footstep-water": ("ab", [R("Shallows from b: each step its own tone, the water lingering (Robo9418 + ours)", "edit:steps-water", walk=True)]),
+    "footstep-wood": ("b", [R("Kenney wood, deeper and rounder", "edit:steps-wood", walk=True)]),
+    "forage": ("a", [R("Snap, David's dry leaves, a's pop (ours + dragon-studio)", "edit:forage-leaves")]),
+    "gem": ("abc", [R("Crystal run into a glass chord (ours)", "ours:gem-crystal"), R("Sparkle swell onto a big bell (ours)", "ours:gem-flash")]),
+    "item-get": ("a", [R("Pop (ours)", "ours:item-pop")]),
+    "jump": ("a", [R("Soft whoosh up (ours)", "ours:jump-soft")]),
+    "land": ("a", [R("Soft round thud (ours)", "ours:land-soft")]),
+    "level-up": ("a", [R("Run up into a full chord, a boom and shimmer (ours)", "ours:level-up-epic")]),
+    "place": ("a", [R("Wood knock tuned to an A (ours)", "ours:place-note")]),
+    "quest-complete": ("a", [R("Fanfare, the bells louder and as an arpeggio (ours)", "ours:quest-complete-bells")]),
+    "reel": ("ab", [R("Ratchet wound like b, soft on the ear (ours)", "ours:reel-soft")]),
+    "rustle": ("a", [R("A bush shaken: David's dry leaves (dragon-studio)", "edit:rustle-shake"), R("Brushing through: David's dry leaves, softer (dragon-studio)", "edit:rustle-brush")]),
+    "sell": ("a", [R("A long drawer slide that rings, then the ding ringing out (ours)", "ours:sell-ring")]),
+    "splash": ("abc", [R("Splash (universfield 229315)", "ref:universfield-water-splash-229315.mp3", start=0.1, dur=1.2),
+                       R("Big splash (universfield 199583)", "ref:universfield-water-splash-199583.mp3", start=0.1, dur=1.5),
+                       R("Splash 02 (universfield 352021)", "ref:universfield-water-splash-02-352021.mp3", start=0.1, dur=1.0)]),
+    "stamp": ("b", [R("b lighter, with a happy chime (I.fekry + ours)", "edit:stamp-light")]),
+    "upgrade": ("a", [R("Shing, four notes spaced out over a held chord (ours)", "ours:upgrade-long")]),
+    "voice-blip": ("abc", [R("davidliu.work's talk blips (ours)", "ours:voice-davidliu")]),
+}
+SOUNDS.insert(next(i for i, x in enumerate(SOUNDS) if x["id"] == "amb-shore") + 1,
+              S("amb-shore-deep", "Deep ocean", "ambience", "the deep water off the island (David: shore b, as deep ocean)",
+                R("Deep ocean, lighter (helenicglauc)", "fs:727834", start=10, fx=[("lp", 5000)], target=-30)))
+NEW["amb-shore-deep"] = ("amb-shore:b", [])
+for x in SOUNDS:
+    if x["id"] in REVIEW:
+        x["mark"], x["note"] = REVIEW[x["id"]]
+    x["pick"], x["uses"] = PICKS.get(x["id"]), USES.get(x["id"])
+    if x["id"] in NEW:
+        cmp, cands = NEW[x["id"]]
+        x["compare"] = [cmp] if ":" in cmp else list(cmp)
+        x["candidates"] += cands
+
 # ---- sources ----------------------------------------------------------------------------------------------------
 
 
@@ -198,6 +330,8 @@ def credit(src):
     if kind == "fs":
         r = FS[ref]
         return r["url"], r["author"], r["licence"], r["title"]
+    if kind == "ref":
+        return "https://pixabay.com/sound-effects/", next(a for a in ("dragon-studio", "freesound_community", "musicholder", "universfield") if ref.startswith(a)), PIXABAY, ref
     url, author = GAME_CREDIT[ref]
     return url, author, CC0, f"web/public/audio/{ref}"
 
@@ -208,7 +342,7 @@ def decode(src, ch):
         y = synth.make(ref)
         return y if (y.ndim == 2) == (ch == 2) else (y.mean(1) if y.ndim == 2 else np.stack([y, y], 1))
     path = {"k": lambda: os.path.join(STAGE, "kenney", ref), "fs": lambda: os.path.join(STAGE, "freesound", FS[ref]["file"]),
-            "game": lambda: os.path.join(ROOT, "web/public/audio", ref)}[kind]()
+            "game": lambda: os.path.join(ROOT, "web/public/audio", ref), "ref": lambda: os.path.join(REFS, ref)}[kind]()
     raw = subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", path, "-ac", str(ch), "-ar", str(SR), "-f", "f32le", "-"],
                          capture_output=True, check=True).stdout
     y = np.frombuffer(raw, np.float32).astype(np.float64)
@@ -235,6 +369,10 @@ def cut(y, start=0.0, dur=None, trim=True):
 
 
 def render(c, ch):
+    if c["src"].startswith("edit:"):
+        synth.rng = np.random.default_rng(sum(map(ord, c["src"])) * 7919)
+        y, srcs = EDITS[c["src"][5:]](ch)
+        return y, srcs
     if c["src"] == "mix":  # parts: (src, at, gain[, start, dur])
         xs = [(p[1], p[2] * cut(decode(p[0], ch), *(p[3:5] if len(p) > 3 else (0, None)))) for p in c["parts"]]
         return synth.mix(max(at + len(x) / SR for at, x in xs), *xs), [p[0] for p in c["parts"]]
@@ -251,6 +389,140 @@ def render(c, ch):
     if ch == 2:
         return y, [c["src"]]
     return cut(y, c.get("start", 0), c.get("dur"), trim=True), [c["src"]]
+
+
+# ---- edits (round 2): found and reference files cut, filtered and layered with ours -------------------------------
+
+
+def resample(x, rate):
+    """Played `rate` times faster (higher and shorter), as the game's playbackRate does."""
+    return signal.resample(x, int(len(x) / rate)) if rate != 1 else x
+
+
+def grab(y, t, dur, pre=0.012):
+    """One hit from a recording: its peak near t, from `pre` before it, `dur` long, faded."""
+    w = y[int((t - 0.06) * SR):int((t + 0.08) * SR)]
+    i = int((t - 0.06) * SR) + int(np.argmax(np.abs(w)))
+    x = y[i - int(pre * SR):i + int(dur * SR)].copy()
+    m = int(0.003 * SR)
+    x[:m] *= np.linspace(0, 1, m)
+    synth.fade_end(x, 0.04)
+    return x
+
+
+def denoise(y, pct=25, over=2.0, floor=0.05):
+    """Spectral gate: each frequency's floor is its `pct` percentile over the clip; what sits less than `over` times
+    above it is turned down to `floor`. Takes the steady hiss and hum out from under birds, crickets and steps."""
+    def one(x):
+        _, _, Z = signal.stft(x, SR, nperseg=2048, noverlap=1536)
+        A = np.abs(Z)
+        m = uniform_filter(np.clip(1 - over * np.percentile(A, pct, axis=1, keepdims=True) / (A + 1e-12), 0, 1), (3, 5))
+        return signal.istft(Z * (floor + (1 - floor) * m), SR, nperseg=2048, noverlap=1536)[1][:len(x)]
+    return one(y) if y.ndim == 1 else np.stack([one(y[:, i]) for i in (0, 1)], 1)
+
+
+def apply_fx(y, ops):
+    for op, *a in ops:
+        if op == "denoise":
+            y = denoise(y, *a)
+        elif op == "keep":  # keep a band, the rest down to a[2]
+            y = synth.flt(y, "bandpass", (a[0], a[1]), 4) + a[2] * y
+        else:
+            y = synth.flt(y, {"hp": "highpass", "lp": "lowpass"}[op], a[0])
+    return y
+
+
+def steps_ours(surface):
+    return lambda ch: ([synth.make(f"step2-{surface}-{v}") for v in range(4)], [f"ours:footstep-{surface}"])
+
+
+def steps_stone_ref(ch):
+    """David's boot reference: four of its steps, the room hiss gated out, rounded off."""
+    y = denoise(decode("ref:freesound_community-walking-96582.mp3", 1), 30, 2.0, 0.05)
+    return [synth.flt(grab(y, t, 0.24), "lowpass", 5000) for t in (0.36, 1.0, 1.44, 2.52)], ["ref:freesound_community-walking-96582.mp3"]
+
+
+def steps_water(ch):
+    """Robo9418's puddle splash (r1 b), each step at its own pitch and brightness, the water lingering after it."""
+    b = cut(decode("fs:841834", 1))
+    out = []
+    for r, lp, f in ((1.0, 6000, 820), (0.86, 3800, 640), (1.13, 7000, 950), (0.93, 3000, 720)):
+        x = synth.flt(resample(b, r), "lowpass", lp)
+        swirl = synth.flt(synth.sweep(0.7, synth.glide(f, f * 0.6, 0.7), None, 1.0, synth.ev(0.7, 0.06, 0.22)), "lowpass", 2200)
+        drips = [(t, 0.05 * synth.osc(synth.glide(g, g * 1.5, 0.03), 0.03) * synth.ev(0.03, 0.001, 0.008))
+                 for t, g in zip(synth.rng.uniform(0.12, 0.5, 3), synth.rng.uniform(900, 2200, 3))]
+        x = x / np.abs(x).max()
+        out.append(synth.mix(0.75, (0, x), (0.04, 0.22 * swirl / np.abs(swirl).max()), *drips))
+    return out, ["fs:841834", "ours:footstep-water"]
+
+
+def steps_wood(ch):
+    """Kenney's wood steps (r1 b), played lower and rounded: slower, the top rolled off, the low end lifted."""
+    out = []
+    for f in steps("footstep_wood"):
+        x = resample(cut(decode(KM + f, 1)), 0.82)
+        x = synth.flt(x, "lowpass", 2600) + 1.2 * synth.flt(x, "lowpass", 300)
+        m = int(0.004 * SR)
+        x[:m] *= np.linspace(0, 1, m)
+        out.append(x)
+    return out, [KM + f for f in steps("footstep_wood")]
+
+
+LEAVES = "ref:dragon-studio-dry-leaves-rustling-482874.mp3"
+
+
+def rustle_shake(ch):
+    """A bush shaken: David's dry leaves, three shakes."""
+    y = synth.flt(decode(LEAVES, 1)[int(2.75 * SR):int(3.4 * SR)], "bandpass", (250, 9000))
+    shake = synth.mix(0.65, *[(at, g * synth.ev(0.3, 0.03, 0.08)) for at, g in ((0, 1), (0.14, 0.85), (0.29, 0.6))])
+    return y * shake[:len(y)], [LEAVES]
+
+
+def rustle_brush(ch):
+    """Brushing through: David's dry leaves, one soft swell, the top rolled off."""
+    y = synth.flt(decode(LEAVES, 1)[int(4.35 * SR):int(4.95 * SR)], "bandpass", (200, 6000))
+    return y * np.sin(np.pi * np.arange(len(y)) / len(y)) ** 1.5, [LEAVES]
+
+
+def forage_leaves(ch):
+    """forage a's snap and pop, its rustle from David's dry leaves."""
+    lv = synth.flt(decode(LEAVES, 1)[int(2.85 * SR):int(3.15 * SR)], "bandpass", (250, 9000))
+    lv = lv / np.abs(lv).max() * np.linspace(1, 0.15, len(lv))
+    pop = synth.make("forage-pop")
+    return synth.mix(0.32, (0, pop[:int(0.02 * SR)]), (0.01, 0.45 * lv), (0.11, pop[int(0.11 * SR):])), [LEAVES, "ours:forage"]
+
+
+def dig_wet(ch):
+    """dig a's shape (the spade's thump, the bite, the spill after) with f3bbbo's wet sand (r1 b) as the sound."""
+    b = decode("fs:651293", 1)
+    bite = cut(b, 0, 0.28)
+    bite = bite / np.abs(bite).max() * synth.ev(len(bite) / SR, 0.006, 0.1)[:len(bite)]
+    spill = cut(b, 0.3, 0.2)
+    return synth.mix(0.45, (0, 0.55 * synth.thump(120, 60, 0.1, 0.04)), (0, bite), (0.2, 0.4 * spill / np.abs(spill).max())), ["ours:dig", "fs:651293"]
+
+
+def stamp_light(ch):
+    """I.fekry's stamp (r1 b) made lighter (its low weight taken off), with a happy confirm chime."""
+    b = synth.flt(cut(decode("fs:470710", 1), 0, 0.22), "highpass", 320)
+    b = b / np.abs(b).max()
+    return synth.mix(0.65, (0, 0.8 * b), (0.05, 0.55 * synth.make("stamp-chime"))), ["fs:470710", "ours:stamp"]
+
+
+def sea_coast(ch):
+    """amb-sea a's swell, moved by a real coast's waves (YevgVerh, r1 b) and laid over them."""
+    a = synth.make("amb-sea")
+    b = decode("fs:827530", 2)[int(20 * SR):][:len(a)]
+    e = synth.flt(np.sqrt(synth.flt((b ** 2).mean(1), "lowpass", 0.6, 1).clip(0)), "lowpass", 0.6, 1)
+    e = (e - e.min()) / (e.max() - e.min())
+    rms = lambda x: np.sqrt(np.mean(x ** 2))
+    return a / rms(a) * (0.25 + 0.75 * e ** 1.5)[:, None] + 0.8 * b / rms(b), ["ours:amb-sea", "fs:827530"]
+
+
+EDITS = {
+    "steps-grass": steps_ours("grass"), "steps-sand": steps_ours("sand"), "steps-stone": steps_ours("stone"), "steps-stone-ref": steps_stone_ref,
+    "steps-water": steps_water, "steps-wood": steps_wood, "rustle-shake": rustle_shake, "rustle-brush": rustle_brush,
+    "forage-leaves": forage_leaves, "dig-wet": dig_wet, "stamp-light": stamp_light, "sea-coast": sea_coast,
+}
 
 
 # ---- loop, loudness, limiter ------------------------------------------------------------------------------------
@@ -354,43 +626,85 @@ def measure(path, integrated):
     return y if integrated else y.mean(1)
 
 
-def build(sound):
+def out(y, name, amb, gain=None, target=None, integrated=None):
+    """Level (or apply `gain`), limit, encode `name`.ogg and its waveform; returns (measured audio, gain applied)."""
+    ogg, png = os.path.join(OUT, name + ".ogg"), os.path.join(OUT, name + ".png")
+    integrated = amb if integrated is None else integrated
+    if gain is None:
+        y0 = y
+        y = level(y, target, integrated)
+        gain = lufs(y, integrated) - lufs(y0, integrated)
+    else:
+        y = limit(y * 10 ** (gain / 20), CEILING - 1.2)
+    for _ in range(3):  # the encoder can overshoot the limiter on sharp transients: pull the peak down and redo
+        encode(y, ogg, 4 if amb else 5)
+        z = measure(ogg, amb)
+        over = true_peak(z) - (CEILING - 0.1)
+        if over <= 0:
+            break
+        y = limit(y, CEILING - 1.2 - over - 0.3)
+    waveform(ogg, png, len(z) / SR)
+    return z, gain, os.path.relpath(ogg, ROOT), os.path.relpath(png, ROOT)
+
+
+def walk(xs, interval, rate, n):
+    """Steps laid as a walk: the four in turn, each played at `rate`, `interval` apart (a hair of human unevenness)."""
+    order = [0, 1, 2, 3, 1, 0, 3, 2]
+    j = np.random.default_rng(5).uniform(-0.012, 0.012, n)
+    parts = [(0.02 + interval * i + j[i], resample(xs[order[i % 8]], rate)) for i in range(n)]
+    return synth.mix(max(at + len(x) / SR for at, x in parts) + 0.05, *parts)
+
+
+def build(sound, key, c):
     amb = sound["category"] == "ambience"
     ch = 2 if amb else 1
-    keys = "abc"
-    for key, c in zip(keys, sound["candidates"]):
-        y, srcs = render(c, ch)
+    target = c.get("target") or (FOOTSTEPS if c.get("walk") else TARGET[sound["category"]])
+    y, srcs = render(c, ch)
+    name = f"sfx{ROUND}-{sound['id']}-{key}"
+    extra = {}
+    if c.get("walk"):  # four steps: the slow walk is the candidate, the fast walk its alt at the same gain
+        xs = [apply_fx(cut(x), c.get("fx", [])) for x in y]
+        y = walk(xs, *WALKS["slow"])
+        z, gain, ogg, png = out(y, name, False, target=target, integrated=True)
+        fz, _, fogg, fpng = out(walk(xs, *WALKS["fast"]), name + "-fast", False, gain=gain)
+        extra = {"alt": {"label": "fast walk", "file": fogg, "waveform": fpng, "seconds": round(len(fz) / SR, 3)},
+                 "walk": {k: {"interval": v[0], "rate": v[1], "steps": v[2]} for k, v in WALKS.items()},
+                 "walkLufs": round(float(lufs(z, True)), 1), "walkRmsDb": round(float(20 * np.log10(np.sqrt(np.mean(z ** 2)))), 1)}
+    else:
+        y = apply_fx(y, c.get("fx", []))
         if amb:
             y = loop(y)
-        y = level(y, TARGET[sound["category"]], amb)
-        name = f"sfxlib1-{sound['id']}-{key}"
-        ogg, png = os.path.join(OUT, name + ".ogg"), os.path.join(OUT, name + ".png")
-        for _ in range(3):  # the encoder can overshoot the limiter on sharp transients: pull the peak down and redo
-            encode(y, ogg, 4 if amb else 5)
-            z = measure(ogg, amb)
-            over = true_peak(z) - (CEILING - 0.1)
-            if over <= 0:
-                break
-            y = limit(y, CEILING - 1.2 - over - 0.3)
-        waveform(ogg, png, len(z) / SR)
-        creds = [credit(s) for s in srcs]
-        c.update({
-            "key": key, "file": os.path.relpath(ogg, ROOT), "waveform": os.path.relpath(png, ROOT),
-            "sources": [{"url": u, "author": a, "licence": l, "origin": o} for u, a, l, o in creds],
-            "ours": all(s.startswith("ours:") for s in srcs),
-            "seconds": round(len(z) / SR, 3), "lufs": round(float(lufs(z, amb)), 1), "truePeak": round(float(true_peak(z)), 1),
-        })
-        if amb:
-            c["seam"] = seam(z)
-        print(f"{name:34} {c['seconds']:6.2f}s {c['lufs']:6.1f} LUFS tp {c['truePeak']:5.1f}" + (f" seam {c['seam']}" if amb else ""))
+        z, gain, ogg, png = out(y, name, amb, target=target)
+        if c.get("run"):  # a run of coins, each a semitone up (the game re-pitches per play)
+            single = y * 10 ** (gain / 20)
+            rz, _, rogg, rpng = out(synth.mix(0.09 * c["run"] + len(single) / SR, *[(0.09 * i, resample(single, 2 ** (i / 12))) for i in range(c["run"])]),
+                                    name + "-run", False, gain=0)
+            extra = {"alt": {"label": f"a run of {c['run']}", "file": rogg, "waveform": rpng, "seconds": round(len(rz) / SR, 3)}}
+    creds = [credit(s) for s in srcs]
+    c.update({
+        "key": key, "file": ogg, "waveform": png,
+        "sources": [{"url": u, "author": a, "licence": l, "origin": o} for u, a, l, o in creds],
+        "ours": all(s.startswith("ours:") for s in srcs),
+        "seconds": round(len(z) / SR, 3), "lufs": round(float(lufs(z, amb)), 1), "truePeak": round(float(true_peak(z)), 1), **extra,
+    })
+    if target != TARGET[sound["category"]]:
+        c["target"] = target
+    if amb:
+        c["seam"] = seam(z)
+    print(f"{name:34} {c['seconds']:6.2f}s {c['lufs']:6.1f} LUFS tp {c['truePeak']:5.1f}" + (f" seam {c['seam']}" if amb else "")
+          + (f" walk {c['walkLufs']} LUFS, rms {c['walkRmsDb']} dB" if c.get("walk") else ""))
+
+
+RECIPE = ("src", "parts", "seq", "gap", "start", "dur", "fx", "walk", "run")
 
 
 def manifest(sounds):
     return {
-        "name": "SFX library", "round": 1, "spec": "specs/sfx-library.md",
-        "targets": {"lufs": TARGET, "truePeakDb": CEILING, "measure": "one-shots: the loudest 400 ms (K-weighted); ambience: integrated (EBU R128)"},
-        "sounds": [{**{k: v for k, v in s.items() if k != "candidates"}, "pick": s.get("pick"),
-                    "candidates": [{k: v for k, v in c.items() if k not in ("src", "parts", "seq", "gap", "start", "dur")} | {"recipe": {k: v for k, v in c.items() if k in ("src", "parts", "seq", "gap", "start", "dur")}}
+        "name": "SFX library", "round": ROUND, "spec": "specs/sfx-library.md",
+        "targets": {"lufs": TARGET, "footsteps": FOOTSTEPS, "truePeakDb": CEILING,
+                    "measure": "one-shots: the loudest 400 ms (K-weighted); ambience: integrated (EBU R128)"},
+        "sounds": [{**{k: v for k, v in s.items() if k != "candidates" and v is not None},
+                    "candidates": [{k: v for k, v in c.items() if k not in RECIPE} | {"recipe": {k: v for k, v in c.items() if k in RECIPE}}
                                    for c in s["candidates"]]} for s in sounds],
     }
 
@@ -398,17 +712,29 @@ def manifest(sounds):
 def check():
     m = json.load(open(MANIFEST))
     bad = []
+    ids = {s["id"]: s for s in m["sounds"]}
     for s in m["sounds"]:
-        if not 2 <= len(s["candidates"]) <= 3:
-            bad.append(f"{s['id']}: {len(s['candidates'])} candidates")
+        keys = [c["key"] for c in s["candidates"]]
+        if not keys or len(set(keys)) != len(keys):
+            bad.append(f"{s['id']}: candidates {keys}")
+        for k in [s.get("pick")] + list((s.get("uses") or {})):
+            if k and k not in keys:
+                bad.append(f"{s['id']}: pick {k} is not a candidate")
+        for k in s.get("compare", []):
+            sid, _, kk = k.rpartition(":")
+            if kk not in [c["key"] for c in ids[sid or s["id"]]["candidates"]]:
+                bad.append(f"{s['id']}: compare {k} missing")
         for c in s["candidates"]:
-            for f in (c["file"], c["waveform"]):
+            for f in (c["file"], c["waveform"]) + ((c["alt"]["file"], c["alt"]["waveform"]) if "alt" in c else ()):
                 if not os.path.exists(os.path.join(ROOT, f)):
                     bad.append(f"missing {f}")
             for src in c["sources"]:
-                if src["licence"] != CC0 or not src["url"]:
+                ok = src["licence"] == CC0 or (src["licence"] == PIXABAY and src["origin"].endswith(".mp3"))
+                if not ok or not src["url"]:
                     bad.append(f"{c['file']}: licence {src['licence']}")
-            want = m["targets"]["lufs"][s["category"]]
+            want = c.get("target", m["targets"]["lufs"][s["category"]])
+            if "walkLufs" in c:
+                want, c = m["targets"]["footsteps"], {**c, "lufs": c["walkLufs"]}
             if abs(c["lufs"] - want) > 1.0 and c["truePeak"] < CEILING - 1.5:  # under target is fine only when the peak ceiling held it back
                 bad.append(f"{c['file']}: {c['lufs']} LUFS (want {want})")
             if c["truePeak"] > CEILING + 0.2:
@@ -416,6 +742,9 @@ def check():
             sm = c.get("seam")
             if sm and (sm["step"] > max(10, 1.5 * sm["bedStep95"]) or sm["levelDb"] > max(1.5, 1.5 * sm["bedLevelDb95"])):
                 bad.append(f"{c['file']}: seam {c['seam']}")
+    walks = [c["walkLufs"] for s in m["sounds"] for c in s["candidates"] if "walkLufs" in c]
+    if walks and max(walks) - min(walks) > 0.6:
+        bad.append(f"footstep walks differ by {max(walks) - min(walks):.1f} LU")
     n = sum(len(s["candidates"]) for s in m["sounds"])
     print(f"{len(m['sounds'])} sounds, {n} candidates;", "OK" if not bad else f"{len(bad)} problems:\n  " + "\n  ".join(bad))
     return not bad
@@ -426,16 +755,17 @@ if __name__ == "__main__":
         sys.exit(0 if check() else 1)
     os.makedirs(OUT, exist_ok=True)
     want = set(sys.argv[1:])
-    old = {s["id"]: s for s in json.load(open(MANIFEST))["sounds"]} if want and os.path.exists(MANIFEST) else {}
-    done = []
+    old = {s["id"]: {c["key"]: c for c in s["candidates"]} for s in json.load(open(MANIFEST))["sounds"]} if os.path.exists(MANIFEST) else {}
     for s in SOUNDS:
-        if not want or s["id"] in want:
-            build(s)
-            done.append(s)
-        elif s["id"] in old:
-            done.append({**old[s["id"]], "candidates": [{**c, **c.pop("recipe", {})} for c in old[s["id"]]["candidates"]]})
-    os.makedirs(os.path.dirname(MANIFEST), exist_ok=True)
+        for key, c in zip("abcdefgh", s["candidates"]):
+            prev = old.get(s["id"], {}).get(key)
+            if c.get("round", 1) == ROUND and (not want or s["id"] in want):
+                build(s, key, c)
+            elif prev:  # built in an earlier round (or not asked for now): keep its files and numbers
+                c.update({k: v for k, v in prev.items() if k != "recipe"})
+            else:
+                build(s, key, c)
     with open(MANIFEST, "w") as f:
-        json.dump(manifest(done), f, indent=1)
+        json.dump(manifest(SOUNDS), f, indent=1)
         f.write("\n")
     check()

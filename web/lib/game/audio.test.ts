@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AudioManagerImpl } from "./audio";
+import { AudioManagerImpl, footstepRate } from "./audio";
 
 class FakeAudio extends EventTarget {
   static all: FakeAudio[] = [];
@@ -144,5 +144,15 @@ describe("loop layers on the world clock (the campfire's drums)", () => {
     expect(loopOffset(-500, 4)).toBeCloseTo(3.5);
     // A 4 s layer and an 8 s layer started at any instant stay on the same bar.
     for (const t of [1234, 98_765, 1_791_931_346_000]) expect(loopOffset(t, 8) % 4).toBeCloseTo(loopOffset(t, 4));
+  });
+});
+
+describe("footsteps follow walking speed (SFX library r2)", () => {
+  it("plays a step at walk speed as recorded, faster when running, within the library's range", () => {
+    expect(footstepRate(1)).toBe(1);
+    expect(footstepRate(1.7)).toBeCloseTo(1.2);
+    expect(footstepRate(0.9)).toBeCloseTo(0.97);
+    expect(footstepRate(5)).toBe(1.2);
+    expect(footstepRate(0)).toBe(0.9);
   });
 });

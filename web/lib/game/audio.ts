@@ -148,6 +148,14 @@ export function loopOffset(worldMs: number, lengthS: number): number {
   const len = lengthS * 1000, t = worldMs % len;
   return (t < 0 ? t + len : t) / 1000;
 }
+/**
+ * A footstep's playback rate at `speedRatio` (the player's speed over walk speed): faster walking plays each step
+ * faster and a touch higher (David, SFX library r1: "faster the sound goes faster"). The library renders its slow and
+ * fast walks at these rates (art/audio/sfxlib.py WALKS). Pass it as playSFX's rate.
+ */
+export function footstepRate(speedRatio: number): number {
+  return Math.min(1.2, Math.max(0.9, 1 + 0.3 * (speedRatio - 1)));
+}
 /** A loop layer: its buffer once decoded, its source while playing, its gain node and where its gain is heading. */
 interface LoopLayer { buffer: AudioBuffer | null; loading: boolean; failed: boolean; source: AudioBufferSourceNode | null; gain: GainNode; target: number; idleAt: number }
 /** How fast a layer fades in or out (s, the time constant). */
