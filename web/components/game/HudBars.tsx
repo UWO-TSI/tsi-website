@@ -11,30 +11,44 @@
  *   would extend the health bar (VitalBar `shield`), its mana one more bar;
  * - stamina (the movement sim's, lib/game/movement/sim.ts) beside the character, not in the card (r6: "fades in a )
  *   shaped bar beside the character when stamina is low but doesnt show when it is above 25%"): the kit's StaminaArc,
- *   placed after each frame is drawn (the camera final, as LabelLayer does) from where the avatar is (hudLive). It
- *   keeps its size through the zoom (r7: "make sure zooming in and out keeps the bar like adaptive"): the size it has
- *   at zoom 1, beside the body at any zoom.
+ *   placed after each frame is drawn (the camera final, as LabelLayer does) from where the avatar is (hudLive):
+ *   beside the body as it is drawn, through the world's bend, on its right at any turn and tilt, and the same size on
+ *   screen at any zoom (r8: "it should be beside the character even when zoomed out, it should always be to the right
+ *   of the character and adaptive to camera angels").
  */
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { addAfterEffect } from "@react-three/fiber";
-import { Vector3, type PerspectiveCamera } from "three";
+import { Vector3, type Camera } from "three";
 import { StaminaArc, VitalBar, Vitals, XpRing } from "@/components/gui/flat";
 import { CHARACTER_HEIGHT } from "@/components/game/character/Character";
 import { levelProgress } from "@/lib/combat/progression";
 import { combat, useCombatValue } from "@/lib/game/combat/runtime";
 import { hudLive, useHud } from "@/lib/game/hudStore";
 import { CRITICAL } from "@/lib/game/lowHealth";
-import { orbit } from "@/lib/game/orbitCamera";
+import { projectCurved, type ScreenPoint } from "./net/projection";
 
 /** Fired as the XP ring reaches its end on a level up (detail: { level }). */
 export const LEVEL_FILLED = "tsi:level-filled";
 /** How long the ring takes to fill to its end before the level turns over. */
 const FILL_MS = 650;
 /** Stamina shows at or under this (r6: "doesnt show when it is above 25%"), and the arc is that last quarter: full as
- * it fades in, empty when you're winded. The arc: its height as a share of the character's at zoom 1; it stands right
- * of the body's middle by half the body's width (BODY_HALF, body heights, so it clears the body at any zoom) and a
- * fixed gap (ARC_GAP, body heights at zoom 1). */
-const STAMINA_SHOW = 0.25, ARC_SIZE = 0.74, BODY_HALF = 0.32, ARC_GAP = 0.04;
+ * it fades in, empty when you're winded. */
+const STAMINA_SHOW = 0.25;
+/** The arc's middle is level with the body's (MID, character heights up) and its left end half the body's width
+ * (HALF, character heights, past the hair) to its right; its size and the gap after that are the kit's, in pixels. */
+const MID = 0.45, HALF = 0.32;
+const right = new Vector3(), mid: ScreenPoint = { x: 0, y: 0, depth: 0 };
+
+/** Where the arc's left middle goes, as shares of the canvas: level with the body's middle and past its right side on
+ * screen (along the camera's right, so at any turn and tilt), both through the world's bend as the body is drawn
+ * (round 8 projected flat, which put the arc over the head once zoomed out). False when the body is behind the camera. */
+export function arcPlace(at: { x: number; y: number; z: number }, cam: Camera, out: ScreenPoint): boolean {
+  const y = at.y + CHARACTER_HEIGHT * MID, r = CHARACTER_HEIGHT * HALF;
+  right.setFromMatrixColumn(cam.matrixWorld, 0).multiplyScalar(r);
+  if (!projectCurved(at.x, y, at.z, cam, 1, 1, mid) || !projectCurved(at.x + right.x, y + right.y, at.z + right.z, cam, 1, 1, out)) return false;
+  out.y = mid.y;
+  return true;
+}
 
 interface XpView { level: number; fill: number; snap: boolean; into: number; needed: number }
 const fillOf = (xp: number) => { const p = levelProgress(xp); return { level: p.level, fill: p.needed ? p.into / p.needed : 1, into: p.into, needed: p.needed }; };
@@ -65,7 +79,7 @@ function useXpBar(xp: number | null): XpView | null {
 /** The stamina arc: shown at a quarter or under, placed beside the character after each frame is drawn. */
 function useStaminaArc(el: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
-    const v = new Vector3();
+    const at: ScreenPoint = { x: 0, y: 0, depth: 0 };
     let shown = false, winded = false, hidAt = -1e9, now = 0;
     return addAfterEffect(t => {
       const arc = el.current, cam = hudLive.camera;
@@ -77,15 +91,9 @@ function useStaminaArc(el: RefObject<HTMLDivElement | null>) {
       if (!show && now - hidAt > 500) return; // faded out: nothing to place
       arc.style.setProperty("--vital", Math.min(1, st / STAMINA_SHOW).toFixed(3)); // the arc is the last quarter, full as it shows
       arc.setAttribute("aria-valuenow", String(Math.round(st * 100)));
-      const { x, y, z } = hudLive.at;
-      v.set(x, y + CHARACTER_HEIGHT * 0.45, z).project(cam);
-      const mx = v.x, my = v.y;
-      v.set(x, y + CHARACTER_HEIGHT * 0.95, z).project(cam);
-      const body = v.y - my; // the body's height, as a share of the screen's (NDC spans 2; this is half a body of it)
-      const size = body * orbit.view.zoom; // the body's height at zoom 1: the camera's distance scales with the zoom
-      arc.style.setProperty("--x", String((mx + 1) / 2 + (body * BODY_HALF + size * ARC_GAP) / ((cam as PerspectiveCamera).aspect || 1)));
-      arc.style.setProperty("--y", String((1 - my) / 2));
-      arc.style.setProperty("--h", String(size * ARC_SIZE));
+      if (!arcPlace(hudLive.at, cam, at)) return;
+      arc.style.setProperty("--x", at.x.toFixed(4));
+      arc.style.setProperty("--y", at.y.toFixed(4));
     });
   }, [el]);
 }

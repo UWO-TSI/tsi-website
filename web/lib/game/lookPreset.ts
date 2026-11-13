@@ -3,6 +3,7 @@ import type { Grade } from "./grading";
 import type { IslandLight, IslandWater } from "./islandLighting";
 import type { IslandPhase } from "./islandTime";
 import type { SunAngles } from "./sunPath";
+import { compassDir, skyColours, type MoonSky } from "./atmosphere";
 
 /**
  * Look presets (ledger rows 235-236, specs/look-development.md). One plain
@@ -279,6 +280,29 @@ function tint(hex: string, m: Tint): string {
   return `#${c.setRGB(Math.min(1, c.r * m[0]), Math.min(1, c.g * m[1]), Math.min(1, c.b * m[2])).getHexString()}`;
 }
 
+/** The night's own sky (the phase table's, on the look's): what the dome adds as the sun goes, under the moon's light. */
+export const NIGHT_SKY = { top: new Color(tint(CURRENT.sky.top, PHASE_LOOK.night.skyTop)), horizon: new Color(tint(CURRENT.sky.horizon, PHASE_LOOK.night.skyHorizon)) };
+
+const _sky = new Color(), _black = new Color(0, 0, 0), _white = new Color(1, 1, 1);
+const skyHex = ([r, g, b]: readonly number[], night: Color | null) => `#${_sky.setRGB(r, g, b).add(night ?? _black).getHexString()}`;
+
+/**
+ * The real sky's colours for a sun, as the dome draws them (atmosphere.ts skyColours: the top of the follow view and
+ * the skyline), plus at night the night's own sky. The fog sits a little paler than the skyline, as the look's does.
+ */
+function realSky(solar: SunAngles, phase: IslandPhase): { top: string; horizon: string; fog: string } {
+  const { top, horizon } = skyColours(compassDir(solar.elevation, solar.azimuth)), night = phase === "night";
+  const h = skyHex(horizon, night ? NIGHT_SKY.horizon : null);
+  return { top: skyHex(top, night ? NIGHT_SKY.top : null), horizon: h, fog: `#${_sky.set(h).lerp(_white, 0.1).getHexString()}` };
+}
+
+/**
+ * How bright the night's key (the moon) is for the real moon: its light by how full it is and how high, over a floor
+ * of starlight so a moonless night still reads (David, terrain v3 R2b: the night "should be viby", never ominous).
+ */
+export const moonKey = (moon: Pick<MoonSky, "illumination" | "elevation">) =>
+  0.45 + 0.55 * moon.illumination * Math.min(1, Math.max(0, (moon.elevation + 2) / 14));
+
 function adjust(color: number, look: ClassLook): number {
   const c = new Color(color), hsl = { h: 0, s: 0, l: 0 };
   c.getHSL(hsl);
@@ -302,12 +326,14 @@ export type PhaseBase = Pick<IslandLight, "water" | "lamp" | "lampsOn" | "window
  * (`solar`, compass angles; world direction per the compass in defaultIsland.ts, lab azimuth = compass − 180).
  * Without `solar` the key stays where the preset puts it (/lab/look's sliders).
  */
-export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase = "day", solar: SunAngles | null = null): IslandLight {
+export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase = "day", solar: SunAngles | null = null, moon: MoonSky | null = null): IslandLight {
   const { light, sky } = p, m = PHASE_LOOK[phase];
   const sunPosition = m.elevation !== null ? sunFromAngles(m.elevation, sunAngles(light.sunPosition).azimuth, SUN_DISTANCE)
     : solar ? sunFromAngles(Math.max(MIN_SUN_ELEVATION, solar.elevation), solar.azimuth - 180, SUN_DISTANCE) : light.sunPosition;
   const { elevation: elev, azimuth } = sunAngles(sunPosition);
-  const sun = tint(light.sunColor, m.sun), top = tint(sky.top, m.skyTop), horizon = tint(sky.horizon, m.skyHorizon);
+  // With the real sun, the sky's colours are the real sky's (the dome's); without it (/lab/look), the phase table's.
+  const real = solar && realSky(solar, phase);
+  const sun = tint(light.sunColor, m.sun), top = real?.top ?? tint(sky.top, m.skyTop), horizon = real?.horizon ?? tint(sky.horizon, m.skyHorizon);
   const fill = tint(light.fillSky, m.fill), bounce = tint(light.fillGround, m.bounce);
   const rim = light.rimIntensity + m.rim;
   // Today's view looks +z (west): the sun's share of its horizontal direction along +z is how backlit it is. The orbit
@@ -316,9 +342,9 @@ export function lookToLight(p: LookPreset, base: PhaseBase, phase: IslandPhase =
   const fillIntensity = m.fillIntensity * (1 + BACKLIT_FILL * ahead);
   return {
     ...base,
-    sky: horizon, sun, sunIntensity: light.sunIntensity * m.sunIntensity, sunPosition,
+    sky: horizon, sun, sunIntensity: light.sunIntensity * m.sunIntensity * (m.elevation !== null && moon ? moonKey(moon) : 1), sunPosition,
     fill, bounce, ambient: light.ambient * fillIntensity, hemisphere: light.hemisphere * fillIntensity,
-    fogNear: sky.fogNear * m.fog, fogFar: sky.fogFar * m.fog, fogColor: tint(sky.fog, m.skyHorizon),
+    fogNear: sky.fogNear * m.fog, fogFar: sky.fogFar * m.fog, fogColor: real?.fog ?? tint(sky.fog, m.skyHorizon),
     environment: { skyTop: top, skyBottom: horizon, sun, ground: bounce, intensity: light.envIntensity * fillIntensity, sunElev: elev / 90, sunAzimuth: azimuth },
     grade: { ...p.grade, exposure: p.grade.exposure * m.exposure, warmth: p.grade.warmth + m.warmth, lift: p.grade.lift + m.lift, desat: p.grade.desat + m.desat },
     water: waterLook(base.water, p.materials.water),

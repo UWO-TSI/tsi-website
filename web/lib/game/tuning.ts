@@ -48,36 +48,6 @@ export interface Tuning {
   };
   /** See `lib/game/waterShader.ts` — every field is documented on WaterParams. */
   water: WaterParams;
-  sky: {
-    /** How many times the cloud sheet repeats across the sky. Higher = smaller clouds. */
-    cloudScale: number;
-    /** Discrete puffy clouds with gaps. The fair-weather layer. */
-    puffy: number;
-    /** Bigger, denser, still broken up. */
-    chunky: number;
-    /** Continuous soft ceiling. */
-    overcast: number;
-    /** Heavy dark ceiling. */
-    storm: number;
-    /** How far down the storm ceiling reaches. 1 = to the skyline. */
-    stormReach: number;
-    /** Height the cloud bank centres on, as a fraction of the VISIBLE sky. */
-    bandHeight: number;
-    /** 0 = coverage is flat at every height, 1 = clouds gather at bandHeight. */
-    bandEffect: number;
-    /** Drift speed. */
-    wind: number;
-    /** Lit face of a cloud, hex. */
-    cloudLit: number;
-    /** Shadowed underside, hex. */
-    cloudDark: number;
-    /** Straight up, hex. In the game this comes from the time-of-day table. */
-    zenith: number;
-    /** At the skyline, hex. In the game this is the time-of-day fog colour. */
-    horizon: number;
-    /** Star brightness. 0 by day; the bench drives it directly. */
-    night: number;
-  };
   grass: {
     /** Strength of the ACNH normal map on the ground. 0 = the flat green. */
     normalStrength: number;
@@ -207,25 +177,6 @@ export const TUNING_DEFAULTS: Tuning = {
     hazeFrom: 24,
     hazeTo: 78,
   },
-  // Sky defaults after the CPU-preview pass 2026-07-29. Coverage numbers are
-  // whatever the WEATHER ENGINE pushes at runtime; these are only what the
-  // bench opens on.
-  sky: {
-    cloudScale: 0.5,
-    puffy: 0.6,
-    chunky: 0.25,
-    overcast: 0,
-    storm: 0,
-    stormReach: 1,
-    bandHeight: 0.52,
-    bandEffect: 1,
-    wind: 0.84,
-    cloudLit: 0xffffff,
-    cloudDark: 0xb9cbdc,
-    zenith: 0x4fb6f5,
-    horizon: 0xa9dcf2,
-    night: 0,
-  },
   // Cinematic pass (David, 2026-10-10: "grass needs texture and flowing
   // grass"): a stronger quilt. The v1 land pass (specs/v1-drop.md §8b/§8c)
   // replaced the tufts with the blade field (GrassField).
@@ -249,7 +200,7 @@ export const TUNING_DEFAULTS: Tuning = {
 };
 
 function clone(t: Tuning): Tuning {
-  return { gull: { ...t.gull }, water: { ...t.water }, sky: { ...t.sky }, grass: { ...t.grass } };
+  return { gull: { ...t.gull }, water: { ...t.water }, grass: { ...t.grass } };
 }
 
 let current: Tuning = clone(TUNING_DEFAULTS);
@@ -307,8 +258,6 @@ export function tuningSource(): string {
     group("gull", current.gull as unknown as Record<string, number>) +
     "\n" +
     group("water", current.water as unknown as Record<string, number>) +
-    "\n" +
-    group("sky", current.sky as unknown as Record<string, number>) +
     "\n" +
     group("grass", current.grass as unknown as Record<string, number>) +
     "\n};"

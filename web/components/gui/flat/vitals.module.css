@@ -58,11 +58,11 @@
 
 /* Stamina beside the character (StaminaArc): a ")" with a white rim over a dark well, filling from the bottom (--vital
    0 to 1 of what it shows), blue when full and its low orange near empty. The host places it (--x, --y: where its left
-   middle goes, --h: its height, fractions of the layer it sits in) and shows it; it fades in and out. Run out: it
-   shakes once. */
+   middle goes, fractions of the layer it sits in) and shows it; it keeps one size on screen, a small gap after that
+   point. It fades in and out. Run out: it shakes once. */
 .arc { --sfill: color-mix(in oklab, var(--ui-stamina) clamp(0%, calc(var(--vital) * 160%), 100%), var(--ui-stamina-low));
-  position: absolute; left: calc(var(--x, 0.5) * 100%); top: calc(var(--y, 0.5) * 100%); height: calc(var(--h, 0.1) * 100%); aspect-ratio: 30 / 100;
-  translate: 0 -50%; pointer-events: none; opacity: 0; transition: opacity 0.35s ease; }
+  position: absolute; left: calc(var(--x, 0.5) * 100%); top: calc(var(--y, 0.5) * 100%); height: 68px; aspect-ratio: 30 / 100;
+  translate: 4px -50%; pointer-events: none; opacity: 0; transition: opacity 0.35s ease; }
 .arc[data-show] { opacity: 0.6; }
 .arc[data-hidden] { opacity: 0; }
 .arc[data-low] { animation: shake 0.45s ease-in-out; }
@@ -76,6 +76,7 @@
   .bar { --w: 140px; }
   .bar + .bar { --w: 118px; }
   .ring { width: 44px; height: 44px; font-size: 15px; }
+  .arc { height: 50px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .bar, .ring { transition: opacity 0.3s ease; }

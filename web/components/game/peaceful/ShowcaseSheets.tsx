@@ -1,17 +1,15 @@
 "use client";
 
 /**
- * HQ trophy case (this week's biggest catches, /api/collections/trophies) and
- * the profile showcase picker (three finds, /api/collections/showcase);
- * decision 204. Both open with E at their station, and E closes them.
+ * HQ trophy case (this week's biggest catches, /api/collections/trophies);
+ * decision 204. It opens with E at its station, and E closes it. (The three-find
+ * showcase picker is gone: one show-off now sits on your ID, hq/IdCard.tsx.)
  */
 import { useEffect, useState } from "react";
-import { Trophy as TrophyIcon, Sparkles } from "lucide-react";
-import type { Trophy, JournalEntryKnown } from "@/lib/collections/logic";
-import { CATEGORIES } from "@/lib/collections/roster";
+import { Trophy as TrophyIcon } from "lucide-react";
+import type { Trophy } from "@/lib/collections/logic";
 import { ApiError, apiCall } from "@/lib/apiClient";
-import { Button, Empty, ErrorNote, ItemTile, List, ListRow, Loading, SignInLink } from "@/components/gui";
-import { fetchJournalPage } from "../JournalPages";
+import { Empty, ErrorNote, List, ListRow, Loading, SignInLink } from "@/components/gui";
 import IslandSheet from "../IslandSheet";
 import styles from "../DefaultIslandWorld.module.css";
 
@@ -39,45 +37,5 @@ export function TrophySheet({ open, onClose }: { open: boolean; onClose: () => v
           : <List label="This week's trophies">{data.trophies.map(t => <ListRow key={t.key} icon={t.icon ?? <TrophyIcon size={22} />}
             title={<>{t.name} · {t.size_cm} cm</>} detail={`${t.member_name} · ${t.rarity}`} value={<span className={styles.trophyRank} aria-label={`Rank ${t.rank}`}>{t.rank}</span>} />)}</List>}
       </>}
-  </IslandSheet>;
-}
-
-export function ShowcaseSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [slots, setSlots] = useState<(string | null)[]>([null, null, null]);
-  const [finds, setFinds] = useState<JournalEntryKnown[] | null>(null);
-  const [active, setActive] = useState(0);
-  const [note, setNote] = useState("");
-  useEffect(() => {
-    if (!open) return;
-    let alive = true;
-    apiCall<({ key: string } | null)[]>("/api/collections/showcase", "showcase").then(s => alive && setSlots(s.map(x => x?.key ?? null)), () => {});
-    void Promise.all(CATEGORIES.map(fetchJournalPage)).then(pages => {
-      if (alive) setFinds(pages.flatMap(p => (p?.entries ?? []).filter((e): e is JournalEntryKnown => e.discovered)));
-    });
-    return () => { alive = false; };
-  }, [open]);
-  const byKey = new Map((finds ?? []).map(f => [f.key, f]));
-  const save = async (next: (string | null)[]) => {
-    setSlots(next);
-    setNote(await apiCall("/api/collections/showcase", "showcase", { items: next }, "PUT").then(
-      () => "Showcase saved to your profile.",
-      (err) => (err instanceof ApiError && err.body?.error ? err.message : "Couldn't save the showcase.")));
-  };
-  const chosen = slots[active];
-  return <IslandSheet open={open} title="Your profile showcase" onClose={onClose} testId="showcase-sheet" keys="e">
-    <div className={styles.showcaseSlots} role="group" aria-label="Showcase slots">{slots.map((key, i) => {
-      const f = key ? byKey.get(key) : null;
-      return <ItemTile key={i} icon={f?.icon ?? null} name={f ? f.name : `Slot ${i + 1}`} empty={!f} selected={active === i} onClick={() => setActive(i)} size={84}
-        caption={f ? f.name : `Slot ${i + 1}, empty`} aria-label={`Slot ${i + 1}: ${f ? f.name : "empty"}`} />;
-    })}</div>
-    <div className={styles.showcaseBar}>
-      <p className={styles.hint} style={{ margin: 0 }}>{chosen ? `Slot ${active + 1}: pick another find, or clear it.` : `Pick a find for slot ${active + 1}.`}</p>
-      {chosen && <Button size="sm" variant="quiet" onClick={() => void save(slots.map((k, i) => (i === active ? null : k)))}>Clear slot {active + 1}</Button>}
-    </div>
-    {finds === null ? <Loading label="Looking through your finds…" />
-      : finds.length === 0 ? <Empty icon={<Sparkles size={32} />} title="Nothing to show yet">Catch, net or gather something and it can go on your profile.</Empty>
-      : <List label="Your finds">{finds.map(f => <ListRow key={f.key} icon={f.icon ?? undefined} title={f.name} detail={f.best_size_cm ? `Record ${f.best_size_cm} cm` : `×${f.total_collected}`}
-          selected={slots.includes(f.key)} onClick={() => void save(slots.map((k, i) => (i === active ? f.key : k === f.key ? null : k)))} />)}</List>}
-    {note && <p role="status" className={styles.hint}>{note}</p>}
   </IslandSheet>;
 }

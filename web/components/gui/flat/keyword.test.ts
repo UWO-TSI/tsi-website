@@ -30,6 +30,19 @@ describe("a line's keywords (the kit's Keyword, the default for every talk line)
     expect(kinds("Hop that box, then dash. The water's deep off the dock.")).toEqual(["jump", "dash", "sea", "wharf"]);
     expect(kinds("Easy now. That's solid ground under you.")).toEqual([]);
   });
+  it("grows to the game's UI words (round 7): menus, the world's weather, its places, gear and what you do", () => {
+    const kinds = (line: string) => keywordParts(line).filter(p => p.kind).map(p => p.kind);
+    expect(kinds("Your wallet, the collection, the settings and the chest.")).toEqual(["wallet", "collection", "settings", "chest"]);
+    expect(kinds("Rain at dawn; snow at night by the campfire in the plaza.")).toEqual(["rain", "dawn", "snow", "night", "campfire", "monument"]);
+    expect(kinds("Claim your plot, decorate it, plant a sapling by the river.")).toEqual(["plot", "decorate", "seed", "river"]);
+    expect(kinds("Take a photo with your glider, then glide to the library.")).toEqual(["photo", "glider", "glide", "library"]);
+    expect(kinds("Swords and a shield for the monsters at the ruins; fight, then unlock the gate.")).toEqual(["weapon", "shield", "monster", "ruins", "fight", "unlock"]);
+    expect(kinds("Deliver it to the notice board? The job board has bounties.")).toEqual(["deliver", "board", "board", "board"]);
+  });
+  it("draws each kind's icon on its own in the UI, in its tone (KeywordIcon), and every kind has one", async () => {
+    const { KEYWORD_LIBRARY, keywordIcon } = await import("./keyword");
+    for (const e of KEYWORD_LIBRARY) expect(keywordIcon(e.kind)).toBeTruthy();
+  });
   it("names every word once, in one kind", async () => {
     const { KEYWORD_LIBRARY } = await import("./keyword");
     const all = KEYWORD_LIBRARY.flatMap(e => e.words.map(w => w.toLowerCase()));

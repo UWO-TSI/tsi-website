@@ -5,11 +5,11 @@
  * code goes (the existing flow: the QR at the door), the Founder's plaque (blank until David writes it), the lore
  * overlay (the island, a page at a time, over a dimmed room) and the fly card (an icon up in the middle, then off to
  * its place on screen; David's v2 review: coins and gems). Your island ID is IdCard.tsx. Copy: lib/game/arrival/hq/lines.ts (drafts).
+ * Their words and icons come from the icon library (KeywordLine, KeywordIcon; round 7).
  */
 import { useState } from "react";
-import { CalendarCheck, Landmark, QrCode } from "lucide-react";
 import { Button, Sheet } from "@/components/gui";
-import { DarkButton, FlyIn, Spotlight } from "@/components/gui/flat";
+import { DarkButton, FlyIn, KeywordIcon, KeywordLine, Spotlight } from "@/components/gui/flat";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import { AudioManager } from "@/lib/game/audio";
 import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, LORE_CARD, PLAQUE_CARD, type FlyTarget } from "@/lib/game/arrival/hq/lines";
@@ -19,18 +19,18 @@ import s from "./HqCards.module.css";
 /** Where a gathering's check-in code goes: the QR at the door, which opens the check-in page. */
 export function CheckInCard({ open, onDone }: { open: boolean; onDone: () => void }) {
   const host = CHECK_IN_ORIGIN.replace(/^https?:\/\//, "");
-  return <Sheet open={open} onClose={onDone} title={CHECKIN_CARD.title} eyebrow={CHECKIN_CARD.eyebrow} icon={<CalendarCheck size={20} />} size="sm" tone="sage" testId="hq-checkin"
+  return <Sheet open={open} onClose={onDone} title={CHECKIN_CARD.title} eyebrow={CHECKIN_CARD.eyebrow} icon={<KeywordIcon kind="gathering" />} size="sm" tone="sage" testId="hq-checkin"
     footer={<Button onClick={onDone} data-testid="hq-checkin-done">{CHECKIN_CARD.done}</Button>}>
     <ol className={s.steps}>
-      {CHECKIN_CARD.steps.map((step, i) => <li key={i}>{i === 0 ? <QrCode size={18} aria-hidden /> : <span className={s.num}>{i + 1}</span>}<span>{step.replace("{host}", host)}</span></li>)}
+      {CHECKIN_CARD.steps.map((step, i) => <li key={i}>{i === 0 ? <KeywordIcon kind="qr" size={18} /> : <span className={s.num}>{i + 1}</span>}<span><KeywordLine line={step.replace("{host}", host)} /></span></li>)}
     </ol>
-    <p className={s.note}>{CHECKIN_CARD.note}</p>
+    <p className={s.note}><KeywordLine line={CHECKIN_CARD.note} /></p>
   </Sheet>;
 }
 
 /** The Founder's desk: the plaque. Blank (nothing written for the Founder) until David's words are in FOUNDER_PLAQUE. */
 export function PlaqueCard({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return <Sheet open={open} onClose={onClose} title={PLAQUE_CARD.title} eyebrow={PLAQUE_CARD.eyebrow} icon={<Landmark size={20} />} size="sm" testId="hq-plaque"
+  return <Sheet open={open} onClose={onClose} title={PLAQUE_CARD.title} eyebrow={PLAQUE_CARD.eyebrow} icon={<KeywordIcon kind="founder" />} size="sm" testId="hq-plaque"
     footer={<Button variant="secondary" onClick={onClose}>{PLAQUE_CARD.done}</Button>}>
     <div className={s.plaque} data-blank={FOUNDER_PLAQUE === null || undefined} aria-label={FOUNDER_PLAQUE ?? PLAQUE_CARD.blank}>
       {FOUNDER_PLAQUE && <p>{FOUNDER_PLAQUE}</p>}
@@ -44,7 +44,7 @@ export function LoreOverlay({ open, onDone }: { open: boolean; onDone: () => voi
   const [page, setPage] = useState(0);
   const pages = LORE_CARD.pages, p = pages[page], last = page === pages.length - 1;
   const next = () => { AudioManager.playSFX("blip2", { rate: 1.2, gain: 0.35 }); if (last) { setPage(0); onDone(); } else setPage(page + 1); };
-  return <Spotlight open={open} label={p.title} eyebrow={`${page + 1} / ${pages.length}`} title={p.title} text={p.text} story
+  return <Spotlight open={open} label={p.title} eyebrow={`${page + 1} / ${pages.length}`} title={p.title} text={<KeywordLine line={p.text} />} story
     steps={{ count: pages.length, at: page }} testId="hq-lore"
     footer={<DarkButton onClick={next} autoFocus data-testid="hq-lore-next">{last ? LORE_CARD.done : LORE_CARD.next}</DarkButton>} />;
 }
@@ -63,6 +63,6 @@ const FLY_SOUND = { pop: ["blip3", 1.3], fly: ["blip2", 1.5], land: ["blip4", 1.
 export function FlyCard({ target, onDone }: { target: FlyTarget | null; onDone: () => void }) {
   if (!target) return null;
   const card = FLY_CARDS[target];
-  return <FlyIn key={target} icon={FLY_ICON[target]} name={card.name} text={card.text} to={FLY_TO[target]} onDone={onDone} testId="hq-fly"
+  return <FlyIn key={target} icon={FLY_ICON[target]} name={card.name} text={<KeywordLine line={card.text} />} to={FLY_TO[target]} onDone={onDone} testId="hq-fly"
     onBeat={b => AudioManager.playSFX(FLY_SOUND[b][0], { rate: FLY_SOUND[b][1], gain: 0.45 })} />;
 }

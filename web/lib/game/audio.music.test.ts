@@ -32,7 +32,8 @@ let now = 0;
 let sequence = 0;
 let frames: Map<number, FrameRequestCallback>;
 let saved: Map<string, string>;
-const playing = () => FakeAudio.all.filter(a => !a.paused).map(a => a.src);
+// What plays besides the member island's ambient beds (their own channel, under the music: the ambience tests below).
+const playing = () => FakeAudio.all.filter(a => !a.paused && !a.src.includes("/ambient/bed-")).map(a => a.src);
 function frame(time: number) { now = time; const pending = [...frames.values()]; frames.clear(); pending.forEach(fn => fn(now)); }
 
 beforeEach(() => {
@@ -51,9 +52,10 @@ describe("music channel", () => {
     manager.setAmbience({ phase: "day" });
     manager.setMusic({ block: "12", phase: "day" });
     manager.enable();
-    // The member island's ambient has no real ambience to play, so only the bed starts.
+    // One music source; the ambient channel plays the island's own bed under it.
     expect(playing()).toEqual(["/assets/audio/music/12.mp3"]);
-    const music = FakeAudio.all[0];
+    expect(FakeAudio.all.filter(a => !a.paused).map(a => a.src)).toContain("/audio/ambient/bed-day.ogg");
+    const music = FakeAudio.all.find(a => a.src === "/assets/audio/music/12.mp3")!;
 
     manager.setMusic({ block: "14", phase: "day" });
     frame(400); // mid-crossfade: two tracks, for the fade only
@@ -179,9 +181,12 @@ describe("one music bed", () => {
     manager.stop();
   });
 
-  it("member ambience is silent until real ambience is authored", () => {
-    for (const phase of ["dawn", "day", "dusk", "night"] as const) expect(ambientCandidates({ phase, weather: "rain", season: "winter" })).toEqual([]);
-    expect(ambientCandidates({ phase: "night", weather: "rain" }, new Set(["night-rain"]))).toEqual(["/audio/ambient/night-rain.ogg"]);
+  it("member ambience is the synthesised beds: the weather's, else the time of day's, after any authored variant", () => {
+    for (const phase of ["dawn", "day", "dusk", "night"] as const) {
+      expect(ambientCandidates({ phase, weather: "rain", season: "winter" })).toEqual(["/audio/ambient/bed-rain.ogg", `/audio/ambient/bed-${phase}.ogg`]);
+      expect(ambientCandidates({ phase, weather: "clear" })).toEqual([`/audio/ambient/bed-${phase}.ogg`]);
+    }
+    expect(ambientCandidates({ phase: "night", weather: "rain" }, new Set(["night-rain"]))).toEqual(["/audio/ambient/night-rain.ogg", "/audio/ambient/bed-rain.ogg", "/audio/ambient/bed-night.ogg"]);
   });
 });
 

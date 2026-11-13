@@ -2,8 +2,8 @@
    Crossing UI kit): cream circles for petals round a small centre, the chosen one grows and turns butter yellow, the
    name in a teal pill beside it, round brown keycaps. Matte, restrained shadows. Motion: the petals pop out from the
    centre one after another; flipping to the dances swings the new ring in with a little turn; the chosen petal bobs. */
-.wheel { --cream: #fffae6; --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark);
-  position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: var(--gui-font); }
+.wheel, .flower { --cream: #fffae6; --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark); }
+.wheel { position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: var(--gui-font); }
 .wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a10 0, #1c2a2a30 75%); opacity: 0; transition: opacity 0.16s ease; }
 .wheel[data-shown]::before { opacity: 1; }
 .flower { position: relative; width: 0; height: 0; opacity: 0; transform: scale(0.72) rotate(-8deg); transition: opacity 0.14s ease, transform 0.26s cubic-bezier(0.2, 1.4, 0.4, 1); zoom: var(--tsi-text-scale, 1); }
