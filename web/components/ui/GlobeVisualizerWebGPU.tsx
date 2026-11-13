@@ -582,6 +582,7 @@ function SceneContent() {
     const controls = useRef<any>(null);
     const lightRef = useRef<DirectionalLight | null>(null);
     const [anyNodeHovered, setAnyNodeHovered] = useState(false);
+    const [touch] = useState(touchOnly);
 
     // Poll the module-level hover counter each frame
     useFrame(() => {
@@ -635,7 +636,7 @@ function SceneContent() {
             diveGroup.current.quaternion.setFromAxisAngle(viewAxis.copy(camera.position).normalize(), DIVE_ROLL * d);
         }
         if (controls.current) {
-            controls.current.enabled = dive.interactive ?? d < 0.02;
+            controls.current.enabled = !touch && (dive.interactive ?? d < 0.02);
             controls.current.autoRotate = !anyNodeHovered && d < 0.6;
         }
         if (!dive.hidden) invalidate();
@@ -654,6 +655,7 @@ function SceneContent() {
             </group>
             <OrbitControls
                 ref={controls}
+                enabled={!touch}
                 autoRotate={!anyNodeHovered}
                 autoRotateSpeed={0.3}
                 dampingFactor={0.03}
@@ -671,8 +673,15 @@ function SceneContent() {
 
 const NO_DIVE: DiveRef = { current: 0 };
 
+/**
+ * A touch screen never drags the globe: a finger on it has to scroll the page (on a phone the globe fills most of the
+ * hero, so a globe that took touches would trap the page). Read once; a device doesn't change its pointer mid-visit.
+ */
+const touchOnly = () => typeof window !== "undefined" && window.matchMedia("(hover: none), (pointer: coarse)").matches;
+
 /** `base` scales the resting globe (the home hero draws it on a full-screen canvas, so it starts small). */
 export default function GlobeVisualizerWebGPU({ className = "", dive = NO_DIVE, base = 1 }: { className?: string; dive?: DiveRef; base?: number }) {
+    const [touch] = useState(touchOnly);
     return (
         <div className={className} style={{ position: "relative", width: "100%", height: "100%", minHeight: 500 }}>
           <DiveContext.Provider value={{ dive, base }}>
@@ -690,7 +699,7 @@ export default function GlobeVisualizerWebGPU({ className = "", dive = NO_DIVE, 
                     return renderer as any;
                 }}
                 frameloop="demand"
-                style={{ touchAction: "none", userSelect: "none" }}
+                style={touch ? { pointerEvents: "none", touchAction: "pan-y", userSelect: "none" } : { touchAction: "none", userSelect: "none" }}
             >
                 <Suspense fallback={null}>
                     <GlobePostProcessing>

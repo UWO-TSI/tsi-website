@@ -47,7 +47,8 @@
   .hd-globe { pointer-events: none; }
   .hd-hint { display: none; }
 }
-@media (pointer: coarse) { .hd-globe { pointer-events: none; } }
+/* Touch screens: nothing in the globe takes a touch, so a finger anywhere on the hero scrolls the page. */
+@media (hover: none), (pointer: coarse) { .hd-globe, .hd-globe * { pointer-events: none !important; touch-action: pan-y !important; } }
 
 /* ── Numbers ───────────────────────────────────────────── */
 

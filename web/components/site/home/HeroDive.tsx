@@ -164,8 +164,11 @@ export default function HeroDive() {
       if (f > 0 && f < 1) flicker = window.setInterval(draw, 85);
     };
 
-    // Stop on the globe: if scrolling rests near the hold, ease back to it.
+    // Stop on the globe: if scrolling rests near the hold, ease back to it. Only with a mouse, where the globe can be
+    // dragged; on a touch screen a snap would fight the finger's momentum scroll.
+    const touchOnly = window.matchMedia("(hover: none), (pointer: coarse)").matches;
     const snap = (self: ScrollTrigger) => {
+      if (touchOnly) return;
       clearTimeout(snapTimer);
       snapTimer = window.setTimeout(() => {
         const p = self.progress;
