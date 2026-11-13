@@ -4,6 +4,33 @@ Worktree `.claude/worktrees/rod-titanium`, branch `game/rod-titanium`, cut from 
 
 rod-gear owns the rods and runs round 9 in parallel (the Tidewarden and a `Water` effect type) in `art/pipeline/build_rods.py`, `fx_library.py`, `web/lib/game/fx/library.ts` and `RodAura`. Keep your edits to the Titanium's own functions and lines so the two branches merge cleanly; this branch merges into `game/rod-gear`. Read `specs/lanes/rod-gear.md` (Status, Tools and gotchas, Rules) and `specs/fx-library.md` first: the effects library, the awakening cutscene, rodMotion and the Blender pipeline are all there.
 
+## Round 3: David's Rods Titanium 2 review (2026-11-13, verbatim; https://claude.ai/artifact/4iNo5j7Um8GXPMKfxaZQsm)
+
+Approved: none.
+- rti2-a1 (redo): "it should open from bottom to top and it should open angeled outwards with more smaller moving parts and the and it should hover and float as kinda like effect amlost where it follows teh rod but theres a lil staggar and it spins aroudn the main energy beam like cw and ccw each layer rotating"
+- rti2-awaken (redo): "i want the parts to split open each section one by one and they open in like not the same side like 0 degreen 30 degreen 60 degree so on kind of the and it hovers around the and the unlock sequence has a lil shake for each part and smoke comes out like a machine moving and then its a neon henergy beam rod with the sections floading around. you can add more sections too"
+- rti2-bag-phone (redo)
+- rti2-hand (redo)
+- rti2-questions (redo)
+- rti2-shelf (redo): "the evolved should have like something that dictates that its evolved maybe in the top right corner a icon or smth"
+- rti2-stage (redo)
+- rti2-titanium (redo): "the texture for the material is not right, it should be titanium look and the rainbow glow should work like a texture and should still show that its the metal steel color, just when its hit in a angle you see the shade, cuz rn the wholething looks rainbow"
+- rti2-workbench (redo)
+
+The cards without a note are redo because the rod changes under them: reshoot them once it does.
+
+Build (coordinator):
+1. **The material first.** Base Titanium reads as titanium: grey-steel metal, brushed or polished. The thin-film rainbow is a sheen that shows only at grazing angles, like a texture on the metal (fresnel-weighted, low at facing angles), never the whole rod. Show it turning so the sheen comes and goes. His references `epic-titanium-metal-ref.png` and `epic-titanium-awakened-ref.png` (untracked, `specs/references/rods/`) are the material and feeling studies.
+2. **The awakening:** the sections unlock one at a time from the bottom to the top. Each unlock: a small shake, a puff of machine smoke, then the section splits open angled outwards, each at a different turn (0, 30, 60 degrees and so on round the rod). Add more, smaller moving parts; more sections are fine. The end state is a neon energy beam rod (the blue core as the beam) with the opened sections floating round it.
+3. **Awakened, at rest and in use:** the sections hover and follow the rod with a slight stagger (lag on movement), and each layer spins round the beam, alternating clockwise and counter-clockwise.
+4. **The bag shelf:** an awakened rod's slot shows an icon in its top right corner that says it is awakened. Same for any awakened item.
+5. Budgets: the held rod stays inside rods' draw and triangle budgets (specs/perf/effects-cost.md); the floating parts are one instanced or merged mesh if that's what it takes. The perf rerun owed from round 2 runs once at the end on a quiet machine (load under 4).
+6. **The page, "Rods Titanium 3":** the material turning (clip), the awakening (clip, normal and slowed), awakened idle and while walking and casting (clip), the shelf slot, hand, bag and phone views, the workbench and stage reshot, a questions card.
+
+Rebuild the Titanium GLBs and `pack-glbs.mjs` them after any Blender export. Evidence `rti3-*` in `specs/evidence/rod-titanium/r3/`.
+
+**Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, headless clips, one perf:check at the end.
+
 ## Round 2: David's Titanium 1 review (2026-11-06, verbatim; https://claude.ai/artifact/86pLJkarHExN3epnHF88TR)
 
 Approved: rti1-budget, rti1-questions. Every other card is redo; the references were misread. They were studies of feeling and material, not models to copy:
