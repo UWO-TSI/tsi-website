@@ -5,6 +5,7 @@ import { raisePg } from "@/lib/result";
 import { torontoInstant } from "@/lib/time";
 import type { CollectionsStore } from "./store";
 import { ledgerToolsTaught } from "@/lib/game/arrival/arrivalLedger";
+import { bookLuck } from "@/lib/wallet/rules";
 
 type Row = Record<string, unknown>;
 const raise = (error: { code?: string; message?: string } | null): never =>
@@ -169,11 +170,13 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       return rows.map((r) => ({ member_id: String(r.member_id), member_name: n.get(String(r.member_id)) ?? "Member", category: r.category as "fish" | "sea", item_key: String(r.item_key), size_cm: Number(r.size_cm), caught_at: String(r.caught_at) }));
     },
     async buff(memberId, now) {
-      const { data, error } = await db.from("member_buffs").select("luck, size").eq("member_id", memberId).gt("until", now.toISOString()).maybeSingle();
-      // Before the meal buffs' migration (or any read failure) a cast rolls plain rather than failing.
-      if (error || !data) return null;
-      const r = data as Row;
-      return { luck: Number(r.luck), size: Number(r.size) };
+      const [meal, book] = await Promise.all([
+        db.from("member_buffs").select("luck, size").eq("member_id", memberId).gt("until", now.toISOString()).maybeSingle(),
+        db.from("tasting_book").select("species_key", { count: "exact", head: true }).eq("member_id", memberId),
+      ]);
+      // Before the buffs' migrations (or any read failure) a cast rolls plain rather than failing.
+      const r = meal.error ? null : (meal.data as Row | null), luck = (r ? Number(r.luck) : 0) + bookLuck(book.error ? 0 : (book.count ?? 0));
+      return r || luck > 0 ? { luck, size: r ? Number(r.size) : 0 } : null;
     },
     async showcase(memberId) {
       const { data, error } = await db.from("member_showcase").select("slot, item_key").eq("member_id", memberId);

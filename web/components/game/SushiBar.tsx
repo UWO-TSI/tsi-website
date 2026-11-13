@@ -23,12 +23,13 @@ import { easeFacing } from "@/lib/game/locomotion";
 import { worldNow, worldTime } from "@/lib/game/worldClock";
 import { OWNER_WALK, ownerAt, type OwnerPose } from "@/lib/game/cafe";
 import type { IslandPhase } from "@/lib/game/islandTime";
-import { SUSHI_BAR_GETA_URL, SUSHI_BAR_GLOW_URL, SUSHI_BAR_HOURS_URL, SUSHI_BAR_ISLES_URL, SUSHI_KNIFE_URL } from "@/lib/game/propModels";
+import { SUSHI_BAR_GETA_URL, SUSHI_BAR_GLOW_URL, SUSHI_BAR_HOURS_URL, SUSHI_BAR_ISLES_URL, SUSHI_BAR_MENU_URL, SUSHI_KNIFE_URL } from "@/lib/game/propModels";
 import { localAvatar } from "@/lib/net/localAvatar";
 import { isSeatedPose } from "@/lib/game/seatPrompt";
+import { DEFAULT_PITCH, orbit } from "@/lib/game/orbitCamera";
 import {
   BAR_POOLS, CHEF_LOOK, CHEF_OUTSIDE, CHEF_STATIONS, HANDOFF, HOURS_TOP, PIECES, PREP_AT, SERVED_AT, SERVER, SERVER_LOOK,
-  SERVE_S, STAFF_Y, STOOLS, barEarshot, barOpen, barPoint, prepAt, readingView, seatView, servedAt, stoolAt, type Bar, type BarStation, type BarView,
+  SERVE_S, STAFF_Y, STOOLS, barEarshot, barOpen, barPoint, counterMenu, looksAtMenu, menuAt, prepAt, readingView, seatView, servedAt, stoolAt, type Bar, type BarStation, type BarView,
 } from "@/lib/game/sushiBar";
 
 /** The glow's brightness (in the evening a little under the night's), how fast it comes up or goes out (the lamps' ease, AmbientProps LAMP_RATE), and how fast the blinds roll. */
@@ -43,6 +44,40 @@ const GETAS = STOOLS.length + 1;
 const ISLES_NEAR = 1.5;
 /** The staff are there (drawn, at work) only while you're this near the bar; a little further before they go. */
 const STAFF_IN = 40, STAFF_OUT = 44;
+
+/**
+ * The menu lying on the counter before your stool (tasting-book round 4, David: "have menu be on the table"; round 5:
+ * "make the menu on the table actually our menu"; round 6: "better modeled more prominent in the center"): the menu you
+ * pick up (SushiSheets MenuPickup), closed, square in the middle of your place, its cover the menu's own
+ * (art/buildings/build_sushi_menu.py: a bound washi menu, the cover rendered from the game's, the stab binding's thread), one draw.
+ * Loaded the first time you sit.
+ */
+function CounterMenu() {
+  const gltf = useGLTF(SUSHI_BAR_MENU_URL);
+  const model = useMemo(() => prepareModel(gltf.scene, SUSHI_BAR_MENU_URL), [gltf.scene]);
+  useEffect(() => () => disposeModelMaterials(model), [model]);
+  return <primitive object={model} />;
+}
+
+/** Module scope (the react compiler forbids writing through hook values): the counter's menu before stool `i` (none at -1), down unless `down` is false. */
+function layMenu(menu: THREE.Object3D, i: number, down: boolean) {
+  menu.visible = i >= 0 && down;
+  if (i >= 0) menu.position.set(...menuAt(STOOLS[i]));
+}
+const MENU_BOX = new THREE.Box3(), CORNER = new THREE.Vector3();
+/** Module scope: where the counter's menu is on the screen (counterMenu: its box's eight corners through `camera`, in CSS px). */
+function spotMenu(menu: THREE.Object3D, camera: THREE.Camera, size: { left: number; top: number; width: number; height: number }) {
+  MENU_BOX.setFromObject(menu);
+  counterMenu.seen = !MENU_BOX.isEmpty();
+  if (!counterMenu.seen) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let c = 0; c < 8; c++) {
+    CORNER.set(c & 1 ? MENU_BOX.max.x : MENU_BOX.min.x, c & 2 ? MENU_BOX.max.y : MENU_BOX.min.y, c & 4 ? MENU_BOX.max.z : MENU_BOX.min.z).project(camera);
+    const x = size.left + ((CORNER.x + 1) / 2) * size.width, y = size.top + ((1 - CORNER.y) / 2) * size.height;
+    x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+  }
+  Object.assign(counterMenu, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+}
 
 /** Module scope (the react compiler forbids writing through hook values): the glow's materials and the pools' gain. */
 function shine(mats: readonly THREE.MeshStandardMaterial[], pools: THREE.Object3D | null, level: number) {
@@ -128,6 +163,7 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
   useEffect(() => () => { getas.meshes.forEach(m => m.geometry.dispose()); disposeModelMaterials(getas.model); }, [getas]);
   const pools = useRef<THREE.Group>(null);
   const [seated, setSeated] = useState(false), [staffOn, setStaffOn] = useState(false);
+  const menu = useMemo(() => new THREE.Group(), []);
   const ear = useMemo(() => barEarshot(onNear), [onNear]);
   const s = useRef({
     on: 0, open: open ? 1 : 0, staff: false, stool: -1, prep: [NaN, NaN], getas: { served: -1, carried: false },
@@ -135,6 +171,8 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     base: { eye: { x: 0, y: 0, z: 0 }, look: { x: 0, y: 0, z: 0 } } as BarView,
     /** The menu in your hands (tsi:bar-menu): 0 down on the counter, 1 picked up; `read` its target. */
     reading: 0, read: 0,
+    /** Looking down at the menu on the counter (tsi:bar-look: the E prompt). */
+    look: false,
   });
   useEffect(() => {
     const on = (e: Event) => { s.current.read = (e as CustomEvent<boolean>).detail ? 1 : 0; };
@@ -142,7 +180,7 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     return () => window.removeEventListener("tsi:bar-menu", on);
   }, []);
   useEffect(() => () => { viewRef.current = null; }, [viewRef]);
-  useFrame((_, raw) => {
+  useFrame((three, raw) => {
     const dt = Math.min(raw, 0.1), st = s.current, t = worldTime(), p = player.current, now = worldNow() / 1000;
     st.on = THREE.MathUtils.damp(st.on, open ? level : 0, RATE, dt);
     st.open = THREE.MathUtils.damp(st.open, open ? 1 : 0, ROLL, dt);
@@ -165,6 +203,12 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
       Object.assign(st.base.eye, { x: ex, y: y + eye[1], z: ez });
       Object.assign(st.base.look, { x: lx, y: y + look[1], z: lz });
     }
+    // The menu lies there while you sit (it's in your hands while you read it: the one picked up rises from where this
+    // one is on the screen, round 7), and looking down at it is the prompt.
+    layMenu(menu, i, !counterMenu.held);
+    if (i >= 0) spotMenu(menu, three.camera, three.size); else counterMenu.seen = false;
+    const look = i >= 0 && looksAtMenu(orbit.target.pitch, DEFAULT_PITCH, st.look);
+    if (look !== st.look) { st.look = look; window.dispatchEvent(new CustomEvent("tsi:bar-look", { detail: look })); }
     st.stool = i;
     st.reading = THREE.MathUtils.damp(st.reading, i >= 0 ? st.read : 0, 6, dt);
     readingView(st.base, st.reading, st.seat);
@@ -180,6 +224,7 @@ export default function SushiBar({ bar, y, player, phase, viewRef, onNear }: {
     <primitive object={glow.model} />
     <primitive object={hours.model} />
     {seated && <Suspense fallback={null}><Isles viewRef={viewRef} /></Suspense>}
+    {seated && <primitive object={menu}><Suspense fallback={null}><CounterMenu /></Suspense></primitive>}
     <group ref={pools}><LampPools pools={BAR_POOLS} gain={0} /></group>
     <primitive object={getas.group} />
     {staffOn && <Staff look={CHEF_LOOK} stations={CHEF_STATIONS} outside={open ? null : CHEF_OUTSIDE} />}

@@ -1,7 +1,7 @@
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CallTag, CardGrid, DetailView, FlatPanel, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, type RailItem } from ".";
+import { BoostTrack, CallTag, CardGrid, DetailView, FlatPanel, FoldedMenu, GivenFish, HairlineRow, IconRail, ItemCard, PayRow, Purse, SidePanel, SpecBand, WithSide, badgeText, priced, railStep, spreadOf, type RailItem } from ".";
 import { NUDGE, markerOf, nudgeOf } from "../motion";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -60,6 +60,7 @@ describe("ItemCard", () => {
   it("covers a sold-out card and an owned one with the word", () => {
     expect(card({ cover: "sold-out" })).toMatch(/data-cover="sold-out"[\s\S]*>Sold out<\/span><\/button>$/);
     expect(card({ cover: "owned" })).toMatch(/data-cover="owned"[\s\S]*>Owned<\/span><\/button>$/);
+    expect(card({ cover: "given", onClick: undefined })).toMatch(/data-cover="given"[\s\S]*>Given<\/span><\/div>$/);
     expect(card()).not.toMatch(/data-cover|Sold out|Owned/);
   });
   it("shows something not found yet as a silhouette, with no word over it", () => {
@@ -211,5 +212,37 @@ describe("CallTag", () => {
     const chip = html(h(CallTag, { kind: "block", team: "var(--ui-away)", live: true, children: "Block" }));
     expect(chip).toContain("<svg"); expect(chip).toContain('data-kind="block"'); expect(chip).toContain("data-live"); expect(chip).toContain("--team:var(--ui-away)");
     expect(html(h(CallTag, { kind: "good", children: "Good" }))).not.toContain("data-live");
+  });
+});
+
+describe("the menu's collection (tasting-book round 6)", () => {
+  it("shows the boost large and a track of round stamps to the cap, the last one pressed when fresh", () => {
+    const out = html(h(BoostTrack, { icon: "L", value: "+6%", label: "permanent luck boost", filled: 6, total: 20, fresh: true, note: "+1% a new fish", filter: "ink" }));
+    expect(out).toContain("+6%");
+    expect(out).toContain('aria-label="+6% permanent luck boost, 6 of 20"');
+    expect(out.match(/<i[ >]/g)).toHaveLength(20);
+    expect(out.match(/<i data-on="true"/g)).toHaveLength(6);
+    // Round 7: each stamp is round (its rings are circles, no square seal) and only the sixth presses down.
+    // Round 8: the stamp block comes down on that sixth one alone (David: "comes down like a hard stamp").
+    const cells = out.split("<i ").slice(1);
+    expect(cells.filter(c => c.includes("<svg"))).toHaveLength(6);
+    expect(cells.slice(0, 5).join("")).not.toContain("<rect");
+    expect(out.match(/data-fresh="true"/g)).toHaveLength(1);
+    expect(cells[5]).toContain('data-fresh="true"');
+    expect(cells[5].match(/<svg/g)).toHaveLength(2);
+    expect(html(h(BoostTrack, { icon: "L", value: "+6%", label: "luck", filled: 6, total: 20, filter: "ink" })).match(/<svg/g)).toHaveLength(6);
+  });
+  it("shows a fish given with what it gave, and no stamp on it (round 7)", () => {
+    const out = html(h(GivenFish, { picture: "P", name: "Dace", gave: "Luck +1%", extra: "Dace karaage", fresh: true }));
+    expect(out).toContain('data-state="given"');
+    expect(out).toContain("Dace. Given");
+    expect(out).not.toContain("<svg");
+    expect(out).toMatch(/<b>Dace<\/b><span>Luck \+1%<\/span><span>Dace karaage<\/span>/);
+  });
+  it("names the menu's parts under it, the one you are in inked", () => {
+    expect([0, 1, 2, 3, 10].map(spreadOf)).toEqual([1, 1, 2, 2, 6]);
+    const parts = [{ label: "Collection", panel: 0 }, { label: "Menu", panel: 2 }];
+    // Closed on its cover: no parts, the dots.
+    expect(html(h(FoldedMenu, { cover: "C", panels: ["a", "b", "c", "d"], label: "M", chapters: parts }))).not.toContain("Parts of the menu");
   });
 });

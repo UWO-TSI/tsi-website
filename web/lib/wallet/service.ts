@@ -6,10 +6,10 @@
 import { fnv1a } from "@/lib/game/weatherSystem";
 import { RODS, TACKLE, onShopShelf } from "@/lib/game/rods";
 import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
-import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, sellRows, TAB_OF, type SellEntry, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, type FishingTask, type FishRequest } from "./rules";
+import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, sellRows, TAB_OF, type SellEntry, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, tastingWater, type FishingTask, type FishRequest } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
-import { EconomyError, type DailyGift, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff } from "./store";
-import { boxPool, welcomeDay, SUSHI_MENU, type Dish, type MealBuff } from "./catalogue";
+import { EconomyError, type DailyGift, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff, type TastingSlot } from "./store";
+import { boxPool, welcomeDay, SUSHI_MENU, TASTING, type Dish, type MealBuff } from "./catalogue";
 import { shopIcon } from "@/lib/icons/keys";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { seasonBlend, type Season } from "@/lib/game/season";
@@ -38,6 +38,8 @@ const ERR: Record<string, [number, string]> = {
   not_done: [409, "Catch it first, then claim it."],
   already_claimed: [409, "Already claimed."],
   not_rare_enough: [422, "Bancha only cooks an epic or legendary fish into a feast."],
+  already_in_book: [409, "That fish already has its slot in your book."],
+  not_learned: [409, "Bancha hasn't learnt that one yet. Give him its fish first."],
   failed: [500, "Something went wrong. Try again."],
 };
 const fail = <T>(err: unknown): Result<T> => toFailure(ERR, err);
@@ -201,13 +203,14 @@ export const chefView = (store: EconomyStore, m: string, now: Date, waters: read
     return { day, order: order && { ...order, filled: (await store.chefFills(m, day)).includes(order.item_key) } };
   });
 const until = (now: Date, minutes: number) => new Date(now.getTime() + minutes * 60_000).toISOString();
+/** A meal as member_buffs keeps it: its source, the luck the server's casts roll with, until when (its other stats are the dish's, mealOf). */
+const buffOf = (source: string, meal: MealBuff, now: Date): ActiveBuff => ({ source, luck: meal.luck ?? 0, size: 0, until: until(now, meal.minutes) });
 /** Hand the chef today's fish: the server picks the order and its pay; the store takes the fish once. */
 export const fillChefOrder = (store: EconomyStore, m: string, input: { item_key: string; idempotency_key: string }, now: Date, waters: readonly WaterType[]) =>
   run(async () => {
     const day = torontoDay(now), order = chefOrder(day, waters);
     if (!order || order.item_key !== input.item_key) throw new EconomyError("not_requested");
-    const meal = { source: "staff_meal", luck: order.meal.luck, size: order.meal.size, until: until(now, order.meal.minutes) };
-    return store.chefFill(m, day, order.item_key, order.reward, input.idempotency_key, meal);
+    return store.chefFill(m, day, order.item_key, order.reward, input.idempotency_key, buffOf("staff_meal", order.meal, now));
   });
 
 export interface TackleView {
@@ -236,9 +239,15 @@ export const sushiView = (store: EconomyStore, m: string, now: Date) => run<Sush
 
 /**
  * Order at the sushi bar (f-sushi): a dish off the menu for its coins, or the feast for one of your own epic or
- * legendary fish (`fish`). Eating it sets your meal buff from now for its minutes, replacing the last one.
+ * legendary fish (`fish`), or a dish the tasting book taught (TASTING.dishes: its coins and its ingredients, once its key
+ * fish is in HQ's tank). Eating it sets your meal buff from now for its minutes, replacing the last one.
  */
 export async function orderDish(store: EconomyStore, m: string, input: { dish: string; fish?: string; idempotency_key: string }, now: Date): Promise<Result<{ balance: number; paid: number; buff: ActiveBuff; replayed: boolean }>> {
+  const learnt = TASTING.dishes.find((d) => d.id === input.dish);
+  if (learnt) {
+    if (input.fish) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
+    return run(() => store.bookDish(m, learnt.id, learnt.price, learnt.unlock, learnt.ingredients.flatMap(([k, n]) => Array<string>(n).fill(k)), buffOf(learnt.id, learnt.buff, now), input.idempotency_key));
+  }
   const dish = SUSHI_MENU.find((d) => d.id === input.dish);
   if (!dish) return fail(new EconomyError("not_found"));
   if ((dish.price === null) !== !!input.fish) return { ok: false, status: 400, code: "invalid", error: "Invalid request" };
@@ -246,9 +255,26 @@ export async function orderDish(store: EconomyStore, m: string, input: { dish: s
     const cls = speciesClass(input.fish);
     if (!cls || (cls.category !== "fish" && cls.category !== "sea") || !["epic", "legendary"].includes(cls.rarity)) return fail(new EconomyError("not_rare_enough"));
   }
-  const buff = { source: dish.id, luck: dish.buff.luck, size: dish.buff.size, until: until(now, dish.buff.minutes) };
-  return run(() => store.order(m, dish.id, dish.price ?? 0, input.fish ?? null, buff, input.idempotency_key));
+  return run(() => store.order(m, dish.id, dish.price ?? 0, input.fish ?? null, buffOf(dish.id, dish.buff, now), input.idempotency_key));
 }
+
+/** The tasting book: your filled slots, in the order given, and HQ's tank (the species members dropped in, newest first). */
+export interface TastingView { book: TastingSlot[]; aquarium: string[] }
+/** How many of the club's drops swim in HQ's tank at once (the newest). */
+export const AQUARIUM_MAX = 12;
+export const tastingView = (store: EconomyStore, m: string) =>
+  run<TastingView>(async () => { const [book, aquarium] = await Promise.all([store.tasting(m), store.aquarium(AQUARIUM_MAX)]); return { book, aquarium }; });
+/**
+ * Give Bancha a fish not yet in your book (catalogue TASTING; `cook`, the menu's first page): the fee (tastingFee, summed
+ * in the store under its lock) and its stamp, which raises your casts' luck for good (bookLuck), pays the milestones,
+ * and for a key fish teaches Bancha its dish. Or drop any rod fish in HQ's tank (`tank`; round 6, David: "if you wanna
+ * drop but it doesnt do anything"): it swims there, and that is all. The server prices it all.
+ */
+export const serveFish = (store: EconomyStore, m: string, input: { fish: string; way: "cook" | "tank"; idempotency_key: string }) =>
+  run(async () => {
+    if (!tastingWater(input.fish)) throw new EconomyError("not_found");
+    return store.serve(m, input.fish, input.way, TASTING.fee, TASTING.marks, TASTING.full, input.idempotency_key);
+  });
 
 export interface InventoryView {
   groups: Record<string, InventoryRow[]>;

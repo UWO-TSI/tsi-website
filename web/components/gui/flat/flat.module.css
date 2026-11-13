@@ -331,6 +331,14 @@ div.card:hover { box-shadow: none; }
 @keyframes holo { to { background-position: 0 0, 0 0, 300% 0; } }
 @keyframes holoOne { to { background-position: 300% 0; } }
 
+/* A meal's buff (BuffChip): faint on purpose, a slim column on the screen's right edge; firmer under the pointer. */
+.buff { display: grid; justify-items: center; gap: 7px; margin: 0; padding: 8px 5px; border-radius: 999px; background: color-mix(in srgb, var(--ui-card) 55%, transparent);
+  color: var(--ui-ink); font: 700 11px/1 var(--gui-font); opacity: 0.5; pointer-events: auto; transition: opacity 0.2s ease; }
+.buff:hover { opacity: 0.9; }
+.buff span { display: grid; justify-items: center; gap: 3px; }
+.buff i { display: grid; place-items: center; }
+.buff i svg { width: 15px; height: 15px; stroke-width: 2.25; }
+.buff small { color: var(--ui-ink-2); font: 600 10px/1 var(--gui-font); }
 @media (prefers-reduced-motion: reduce) {
   .pop, .pop[data-rarity="divine"], .popArt img, .popArt::before, .popArt::after, .popRarity { animation: none; }
 }

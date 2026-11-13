@@ -13,7 +13,10 @@ import { AudioManager } from "@/lib/game/audio";
 import type { IslandWeather } from "@/lib/game/islandWeather";
 import type { IslandPhase } from "@/lib/game/islandTime";
 import { FLASH_MS } from "@/lib/game/hudPrefs";
-import { WalletSlot } from "@/components/gui/flat";
+import { BuffChip, WalletSlot } from "@/components/gui/flat";
+import { mealRows } from "@/components/economy/statIcons";
+import { useMeal } from "@/lib/game/mealStore";
+import { mealOf } from "@/lib/wallet/catalogue";
 import { useFlash } from "./useFlash";
 import styles from "./TopCluster.module.css";
 
@@ -93,4 +96,18 @@ export function HudWallet({ full, showcase = null, onWallet, walletKey }: {
   if (at === null || (hud.coins === null && hud.gems === null && !shown)) return null;
   return <WalletSlot coins={hud.coins ?? 0} gems={hud.gems ?? 0} at={at} landing={shown?.kind ?? null}
     onOpen={onWallet} title={walletKey ? `Wallet (${walletKey})` : "Wallet"} />;
+}
+
+const wallMinute = () => Math.floor(Date.now() / 60_000);
+/**
+ * The meal you ate (design bible UI 8b's right side, tasting-book r3: "buff will show on the right side of the screen with
+ * icon, timer and percent, its like very faint"): its stats and the minutes left, faint, gone when it runs out.
+ */
+export function HudBuff({ className }: { className?: string }) {
+  const buff = useMeal(), meal = mealOf(buff?.source), minute = useSyncExternalStore(subscribeMinute, wallMinute, () => 0);
+  if (!buff || !meal || minute <= 0) return null;
+  const left = Math.max(1, Math.ceil((new Date(buff.until).getTime() - minute * 60_000) / 60_000)), rows = mealRows(meal.buff);
+  return <div className={className} data-hud-buff="">
+    <BuffChip stats={rows} left={`${left}m`} title={`${meal.name}: ${rows.map(r => `${r.label} ${r.value}`).join(", ")}, ${left} min left`} />
+  </div>;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RODS, STAT_KEYS, STAT_MAX, TACKLE, bestOwnedRod, ownedRig, biteWindowMs, canHook, castLuck, hookCap, onShopShelf, rig, rodByTier } from "./rods";
+import { RODS, STAT_KEYS, STAT_MAX, TACKLE, bestOwnedRod, ownedRig, biteWindowMs, canHook, castLuck, hookCap, onShopShelf, rig, rodByTier, withMeal, BITE_WINDOW_MS } from "./rods";
 import { CATALOGUE, HOLLOW_TOOLS } from "@/lib/wallet/catalogue";
 import { advanceFishingReel, createFishingReel } from "./fishingReel";
 import { FISH } from "./fishing";
@@ -94,5 +94,18 @@ describe("rod stats and add-ons (v1-gameplay m4, x-shop)", () => {
   it("rolls a cast on the server with only the add-ons the member owns", () => {
     expect(ownedRig(2, ["bobber_lucky"], []).rarityBonus).toBe(rodByTier(2).rarityBonus);
     expect(ownedRig(2, ["bobber_lucky"], ["bobber_lucky"]).rarityBonus).toBeGreaterThan(rodByTier(2).rarityBonus);
+  });
+
+  it("puts a meal's stats on the rod as shares of each effect, luck left to the server (tasting-book r3)", () => {
+    const r = rodByTier(2);
+    expect(withMeal(r, null)).toBe(r);
+    const m = withMeal(r, { luck: 0.1, bite: 0.1, strength: 0.1, reel: 0.1, lure: 0.1, control: 0.1 });
+    expect(m.rarityBonus).toBe(r.rarityBonus);
+    expect(m.biteWindowMs).toBeCloseTo(r.biteWindowMs + 0.1 * BITE_WINDOW_MS);
+    expect(m.tensionMul).toBeCloseTo(r.tensionMul * 0.9);
+    expect(m.fillMul).toBeCloseTo(r.fillMul * 1.1);
+    expect(m.waitMul).toBeCloseTo(r.waitMul * 0.9);
+    expect(m.barMul).toBeCloseTo(r.barMul * 1.1);
+    expect(withMeal(r, { reel: 0.05 })).toMatchObject({ key: r.key, biteWindowMs: r.biteWindowMs, barMul: r.barMul });
   });
 });

@@ -118,6 +118,18 @@ export function rodByTier(tier: number): RodTier {
 export function bestOwnedRod(owned: readonly string[]): RodTier {
   return [...RODS].reverse().find(r => r.source === "starter" || owned.includes(r.key)) ?? RODS[0];
 }
+/** The hook window after the ! before the rod's and the cast's extras (useFishingSession). */
+export const BITE_WINDOW_MS = 1400;
+/**
+ * A meal's stats on the rod while it lasts (catalogue MealBuff, tasting-book r3): each a share of that stat's effect,
+ * +10% bite a tenth more hook window, +10% strength a tenth less drain, reel a faster fill, lure a shorter wait, control
+ * a wider bar. Luck is the server's (member_buffs.luck on the cast's roll), so it isn't added here.
+ */
+export function withMeal<T extends RodEffects>(r: T, meal: Partial<Record<RodStat, number>> | null | undefined): T {
+  if (!meal) return r;
+  return { ...r, biteWindowMs: r.biteWindowMs + (meal.bite ?? 0) * BITE_WINDOW_MS, tensionMul: r.tensionMul * (1 - (meal.strength ?? 0)),
+    fillMul: r.fillMul * (1 + (meal.reel ?? 0)), waitMul: r.waitMul * (1 - (meal.lure ?? 0)), barMul: r.barMul * (1 + (meal.control ?? 0)) };
+}
 export function biteWindowMs(baseMs: number, r: RodEffects): number {
   return baseMs + r.biteWindowMs;
 }

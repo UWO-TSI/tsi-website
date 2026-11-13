@@ -5,7 +5,7 @@ import { torontoInstant } from "@/lib/time";
 import { EconomyError, type EconomyErrorCode, type EconomyStore, type LedgerEntry, type Reservation } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked", "already_filled", "not_done", "already_claimed"];
+const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked", "already_filled", "not_done", "already_claimed", "already_in_book", "not_learned"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (data: unknown) => ((Array.isArray(data) ? data[0] : data) ?? {}) as Row;
 const ITEM_COLS = "id, slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, sprite_url, position, active, available_from, available_until, retired_at";
@@ -115,6 +115,31 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
     },
     async order(m, dish, price, fishKey, buff, idem) {
       const { data, error } = await db.rpc("sushi_order", { p_member_id: m, p_dish: dish, p_price: price, p_fish_key: fishKey, p_luck: buff.luck, p_size: buff.size, p_until: buff.until, p_idempotency_key: idem });
+      if (error) raise(error);
+      const r = first(data);
+      return { balance: Number(r.balance), paid: Number(r.paid), buff: { source: String(r.source), luck: Number(r.luck), size: Number(r.size), until: String(r.until) }, replayed: r.replayed === true };
+    },
+    async tasting(m) {
+      const { data, error } = await db.from("tasting_book").select("species_key").eq("member_id", m).order("created_at");
+      if (error) raise(error);
+      return ((data ?? []) as Row[]).map((r) => ({ species_key: String(r.species_key) }));
+    },
+    async aquarium(limit) {
+      const { data, error } = await db.from("tasting_serves").select("species_key").eq("way", "tank").order("created_at", { ascending: false }).limit(500);
+      if (error) raise(error);
+      return [...new Set(((data ?? []) as Row[]).map((r) => String(r.species_key)))].slice(0, limit);
+    },
+    async serve(m, key, way, fee, marks, full, idem) {
+      const { data, error } = await db.rpc("tasting_serve", {
+        p_member_id: m, p_species_key: key, p_way: way, p_fee: fee.base, p_fee_step: fee.step,
+        p_marks: marks.map((x) => x.at), p_mark_pay: marks.map((x) => x.coins), p_full_pay: full, p_idempotency_key: idem,
+      });
+      if (error) raise(error);
+      const r = first(data);
+      return { balance: Number(r.balance), remaining: Number(r.remaining), paid: Number(r.paid), stamped: r.stamped === true, earned: Number(r.earned), marks: (r.marks as string[]) ?? [], replayed: r.replayed === true };
+    },
+    async bookDish(m, dish, price, unlock, ingredients, buff, idem) {
+      const { data, error } = await db.rpc("tasting_dish", { p_member_id: m, p_dish: dish, p_price: price, p_unlock: unlock, p_ingredients: ingredients, p_luck: buff.luck, p_size: buff.size, p_until: buff.until, p_idempotency_key: idem });
       if (error) raise(error);
       const r = first(data);
       return { balance: Number(r.balance), paid: Number(r.paid), buff: { source: String(r.source), luck: Number(r.luck), size: Number(r.size), until: String(r.until) }, replayed: r.replayed === true };

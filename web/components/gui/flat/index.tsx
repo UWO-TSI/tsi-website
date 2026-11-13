@@ -176,13 +176,13 @@ export function CardGrid({ title, min, phoneMin, label, children }: { title?: Re
   </>;
 }
 
-export type CardCover = "sold-out" | "owned" | "not-found";
+export type CardCover = "sold-out" | "owned" | "given" | "not-found";
 /** A price: its amount and currency. An amount of nothing (unset, or 0) is a price still to come. */
 export type Price = { amount: number | null | undefined; currency: string };
 export const PRICE_TO_COME = "Price to come";
 /** Has it a price you can pay? */
 export const priced = (p: Price | null | undefined): boolean => !!p && !!p.amount;
-const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out": "Sold out", owned: "Owned" };
+const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out": "Sold out", owned: "Owned", given: "Given" };
 
 /**
  * A white card: the picture centred with lots of air (a URL gets the pixel finish, `PixelImage`), the name small and a
@@ -450,6 +450,18 @@ export function RewardPop({ picture, title, name, rarity, rarityLabel, facts, no
       {children}
     </span>
   </article>;
+}
+
+/**
+ * A meal's buff at rest (tasting-book r3, David: "buff will show on the right side of the screen with icon, timer and
+ * percent, its like very faint so its not obvious"): a slim column of each stat's icon over its share, then the minutes
+ * left, all faint; it firms up under the pointer, where `title` says it in words.
+ */
+export function BuffChip({ stats, left, title }: { stats: readonly { key: string; icon: ReactNode; value: string }[]; left: string; title: string }) {
+  return <p className={f.buff} title={title} aria-label={title} data-testid="buff-chip">
+    {stats.map(s => <span key={s.key}><i aria-hidden>{s.icon}</i>{s.value}</span>)}
+    <small>{left}</small>
+  </p>;
 }
 
 /** The day strip, the hover card, odds, the reveal, tasks and the small panel (pieces.tsx). */

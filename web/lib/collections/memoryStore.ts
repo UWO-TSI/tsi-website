@@ -5,6 +5,7 @@ import { clampSize, monthStart, trophyFor, weekStart, type Donation, type Member
 import { CAST_GAP_MS, MIN_REEL_MS, ROLL_TTL_MS } from "./rolls";
 import { torontoInstant } from "@/lib/time";
 import { ROSTER } from "./roster";
+import { bookLuck } from "@/lib/wallet/rules";
 import { CollectionsError, type CollectionsStore, type LearnedRecipe } from "./store";
 import type { TourneyEntry } from "@/lib/progression/seasonal";
 
@@ -28,6 +29,7 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
   const handIns: { member: string; species_key: string; key: string }[] = []; // museum_handins
   const gear = new Map<string, string[]>();
   const buffs = new Map<string, { luck: number; size: number; until: Date }>(); // member_buffs
+  const stamps = new Map<string, number>(); // tasting_book's slots, counted
   const taught = new Set<string>(); // members who arrived under row 312
   const locks = new Set<string>(); // `${member}:${key}`
   const chest = new Map<string, number>(); // `${member}:${key}`
@@ -208,8 +210,8 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
       return [...entries.values()].filter((e) => e.goal === `${goalId}:${cycle}`).map(({ goal: _g, ...e }) => (void _g, { ...e, member_name: names.get(e.member_id) ?? "Member" }));
     },
     async buff(m, at) {
-      const b = buffs.get(m);
-      return b && b.until > at ? b : null;
+      const b = buffs.get(m), meal = b && b.until > at ? b : null, luck = (meal?.luck ?? 0) + bookLuck(stamps.get(m) ?? 0);
+      return meal || luck > 0 ? { luck, size: meal?.size ?? 0 } : null;
     },
     async showcase(m) {
       return showcases.get(m) ?? [null];
@@ -270,6 +272,8 @@ export function memoryCollectionsStore(now: () => Date = () => new Date("2026-09
     store, name: (id: string, n: string) => names.set(id, n),
     /** A meal at the sushi bar (tests, the dev demo): its buff until `until`. */
     feed: (m: string, luck: number, size: number, until: Date) => buffs.set(m, { luck, size, until }),
+    /** The tasting book's stamps (tests): `n` species given, its permanent luck on every cast. */
+    stamp: (m: string, n: number) => stamps.set(m, n),
     /** A catch recorded directly (tests, the dev demo): the species' size clamp and trophy rule, then the capped record. */
     record: (m: string, key: string, sizeCm: number | null) => {
       const sp = ROSTER.find((s) => s.key === key), size = clampSize(sp, sizeCm);

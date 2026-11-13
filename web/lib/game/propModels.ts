@@ -88,6 +88,8 @@ export const SUSHI_BAR_GLOW_URL = "/assets/game/buildings/sushi-bar-glow.glb";
 export const SUSHI_BAR_HOURS_URL = "/assets/game/buildings/sushi-bar-hours.glb";
 export const SUSHI_BAR_ISLES_URL = "/assets/game/buildings/sushi-bar-isles.glb";
 export const SUSHI_BAR_GETA_URL = "/assets/game/buildings/sushi-bar-geta.glb";
+/** The menu lying closed on the counter before your stool (art/buildings/build_sushi_menu.py). */
+export const SUSHI_BAR_MENU_URL = "/assets/game/buildings/sushi-bar-menu.glb";
 export const SUSHI_KNIFE_URL = "/assets/game/tools/sushi-knife.glb";
 /** The `prop` kind's scenery outside the dump's props folder, by model name (terrain v3: the market, the beach, the lighthouse). */
 export const SCENERY_URLS: Readonly<Record<string, string>> = {

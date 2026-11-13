@@ -13,7 +13,7 @@ export async function GET() {
   return jsonResult(await sushiView(ctx.store, ctx.userId, new Date()), "sushi");
 }
 
-// POST /api/economy/sushi: order a dish (coins), or the feast (`fish`: one of your epic or legendary fish); retry with the same key.
+// POST /api/economy/sushi: order a dish (coins), the feast (`fish`: one of your epic or legendary fish) or a dish the tasting book taught (coins and its ingredients); retry with the same key.
 export async function POST(request: Request) {
   const ctx = await withStore(supabaseEconomyStore);
   if (ctx instanceof NextResponse) return ctx;
