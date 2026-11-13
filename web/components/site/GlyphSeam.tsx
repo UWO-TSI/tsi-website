@@ -10,7 +10,8 @@ const GLYPHS = "01<>[]{}()/\\|=+*#%&$@!?;:.~ABCDEF0123456789";
 // The same cell as the page grain (AsciiGrain), so the characters match the texture behind them.
 const CELL_W = 7;
 const CELL_H = 12;
-const HEIGHT = 192;
+// The canvas's height (CSS sets 192 px, or 128 px on phones); read from the element so both stay in step.
+let HEIGHT = 192;
 // The seam steps through this many tones from one ground to the other, each step its own jagged edge.
 const STEPS = 5;
 
@@ -54,6 +55,7 @@ export default function GlyphSeam({ from, to, seed = 1 }: { from: Ground; to: Gr
     const resize = () => {
       dpr = canvasDpr();
       const w = canvas.clientWidth;
+      HEIGHT = canvas.clientHeight || 192;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(HEIGHT * dpr);
       cols = Math.ceil(w / CELL_W);

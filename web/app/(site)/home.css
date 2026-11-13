@@ -100,6 +100,7 @@
 }
 @media (min-width: 600px) and (max-width: 820px) {
   .nm__list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 32px; }
+  .nm__item:last-child { grid-column: 1 / -1; }
   .nm__item .nm__fig { font-size: clamp(3.5rem, 10.5vw, 6rem); }
 }
 @media (prefers-reduced-motion: reduce) {

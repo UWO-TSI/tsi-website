@@ -165,7 +165,7 @@
 .ts-nav__link:hover, .ts-nav__link[aria-current="page"] { color: var(--on-dark); }
 .ts-nav__link:focus-visible { outline: 2px solid var(--signal); outline-offset: 4px; border-radius: 4px; }
 
-.ts-nav__icons { display: flex; align-items: center; gap: 2px; padding-left: 6px; }
+.ts-nav__icons { display: flex; align-items: center; gap: 2px; padding: 8px 0 8px 6px; margin-block: -8px; }
 .ts-nav__icon { display: grid; place-items: center; flex: none; width: var(--item); height: var(--item); border-radius: 50%; color: rgba(241, 255, 255, 0.88);
   opacity: 0; transform: translateY(6px) scale(0.6);
   transition: opacity 0.2s var(--ease-ui), transform 0.3s var(--ease-pop), background-color 0.2s var(--ease-ui), color 0.2s var(--ease-ui); }
@@ -274,7 +274,7 @@
 @media (hover: none) { .ts-hover-only { display: none; } .ts-touch-only { display: inline; } }
 .ts-footer__links a:hover { color: var(--on-light); }
 .ts-footer__small { margin-top: 32px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-light-3); }
-.ts-footer__small a { color: var(--on-light-2); }
+.ts-footer__small a { color: var(--on-light-2); display: inline-block; padding-block: 13px; margin-block: -13px; }
 .ts-footer__small a:hover { color: var(--signal-light); }
 
 /* ── ASCII grain over the whole site ───────────────────── */
@@ -343,6 +343,11 @@
 
 .ts-seam { position: relative; height: 0; z-index: 57; }
 .ts-seam canvas { position: absolute; left: 0; width: 100%; height: 192px; top: -96px; display: block; pointer-events: none; }
+/* Phones: a shallower seam, so it never reaches a section's heading (sections there start 80 px down). */
+@media (max-width: 820px) { .ts-seam canvas { height: 128px; top: -64px; } }
+/* A page that ends on a seam: the footer starts below the seam's reach. */
+main:has(> .ts-seam:last-child) + .ts-footer { padding-top: 120px; }
+@media (max-width: 820px) { main:has(> .ts-seam:last-child) + .ts-footer { padding-top: 88px; } }
 
 /* ── Reveal on view ─────────────────────────────────────── */
 

@@ -25,9 +25,10 @@ export default function RollingRows({ id, title, rows, tone = "light" }: { id: s
   const refs = useRef<(HTMLLIElement | null)[]>([]);
 
   useEffect(() => {
+    const narrow = window.matchMedia("(max-width: 820px)").matches;
     const io = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) setActive(Number((e.target as HTMLElement).dataset.index));
-    }, { rootMargin: "-48% 0px -52% 0px" });
+    }, { rootMargin: narrow ? "-38% 0px -61% 0px" : "-48% 0px -52% 0px" });
     refs.current.forEach((r) => r && io.observe(r));
     return () => io.disconnect();
   }, []);

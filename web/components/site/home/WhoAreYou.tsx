@@ -105,6 +105,8 @@ function MarkGlyph({ path, box, word, open }: { path: string; box: readonly numb
  */
 export default function WhoAreYou() {
   const [open, setOpen] = useState(0);
+  // Whether the panel under a touch was already open when the touch began (focus lands before the click).
+  const press = useRef<{ i: number; wasOpen: boolean; touch: boolean } | null>(null);
   return (
     <section className="ts-section" data-tone="dark" id="audiences" aria-labelledby="audiences-title">
       <div className="ts-wrap">
@@ -112,8 +114,15 @@ export default function WhoAreYou() {
         <Reveal delay={0.12} className="wy-panels">
           {CARDS.map((c, i) => (
             <Link key={c.who} href={c.href} className="wy-panel" data-open={open === i || undefined}
-              onPointerEnter={(e) => { if (e.pointerType === "mouse") setOpen(i); }} onFocus={() => setOpen(i)}
-              onClick={(e) => { if (open !== i) { e.preventDefault(); setOpen(i); } }}>
+              onPointerEnter={(e) => { if (e.pointerType === "mouse") setOpen(i); }}
+              onPointerDown={(e) => { press.current = { i, wasOpen: open === i, touch: e.pointerType !== "mouse" }; }}
+              onFocus={() => { if (!press.current) setOpen(i); }}
+              onClick={(e) => {
+                const p = press.current;
+                press.current = null;
+                const side = window.matchMedia("(min-width: 821px)").matches;
+                if (p?.touch && side && !(p.i === i && p.wasOpen)) { e.preventDefault(); setOpen(i); }
+              }}>
               <span className="wy-panel__num">{String(i + 1).padStart(2, "0")}</span>
               <MarkGlyph path={c.path} box={c.box} word={c.who} open={open === i} />
               <span className="wy-panel__text">
