@@ -14,7 +14,7 @@
  * that gives them new fish from your inv, and the pages after are temp boosts"; round 6: "make it obvious it s a
  * collection that give [permanent] boosts", "display all fish thats already given, allow you to open bag to give fish in
  * inv but grey out ones you already given", "the pages need to be reorganized in a userfriendly intuitive way"). The menu
- * in four parts, named under it: the collection (your luck for good, Open your bag, every fish given and what it gave),
+ * in four parts, named under it: the collection (your permanent luck boost, Open your bag, every fish given and what it gave),
  * the dishes your key fish taught Bancha (ordered for coins and their ingredients, orderDish), the house's meals, and
  * every fish, a page per water (lib/wallet/service.ts serveFish). Every meal is named in the rod's six stats.
  */
@@ -190,7 +190,7 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
     setBusy(true);
     try {
       const r = await transport.serve(f.item_key, "cook", newKey()), taught = teachOf(f.item_key);
-      toast(`${f.name}, stamped. Luck ${pct(bookLuck(given.length + 1))} for good${taught ? `, and Bancha learnt his ${taught.name.toLowerCase()}` : ""}.`, iconUrl(f.item_key));
+      toast(`${f.name}, stamped. Permanent luck boost ${pct(bookLuck(given.length + 1))}${taught ? `, and Bancha learnt his ${taught.name.toLowerCase()}` : ""}.`, iconUrl(f.item_key));
       r.marks.forEach(mk => window.dispatchEvent(new CustomEvent("tsi:gift", { detail: markGift(mk) })));
       // The stamp lands here at once (the server has said so): the bag closes onto the collection and it presses down.
       setData(cur => cur && [cur[0], cur[1].map(e => (e.item_key === f.item_key ? { ...e, count: r.remaining } : e)), cur[2] && { ...cur[2], book: [...cur[2].book, { species_key: f.item_key }] }]);
@@ -253,8 +253,8 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
   const collection: ReactNode[] = [
     <>
       <PanelSection title="Collection">
-        <p className={m.welcome}>Every fish you give Bancha stays in your book and makes your fishing luckier, for good.</p>
-        <BoostTrack filter={ink} icon={<Clover />} value={pct(bookLuck(given.length))} label="luck, for good" filled={Math.min(given.length, LUCK_SLOTS)} total={LUCK_SLOTS} fresh={!!fresh && given.length <= LUCK_SLOTS} onLand={() => AudioManager.playSFX("stamp-heavy")}
+        <p className={m.welcome}>Every fish you give Bancha stays in your book and adds to your permanent luck boost.</p>
+        <BoostTrack filter={ink} icon={<Clover />} value={pct(bookLuck(given.length))} label="permanent luck boost" filled={Math.min(given.length, LUCK_SLOTS)} total={LUCK_SLOTS} fresh={!!fresh && given.length <= LUCK_SLOTS} onLand={() => AudioManager.playSFX("stamp-heavy")}
           note={`${pct(TASTING.luck.each)} a new fish, up to ${pct(TASTING.luck.cap)}. A key fish teaches him a dish too.`} />
         <span><button type="button" className={m.order} onClick={() => setBag(true)} disabled={!data} data-testid="open-bag"><Backpack size={15} aria-hidden />Open your bag</button></span>
         {next ? <p className={m.meal}><Coins size={13} aria-hidden />At {next.at} fish given, Bancha pays {next.coins}<CurrencyIcon size={11} /></p> : null}
@@ -335,7 +335,7 @@ export function MenuPickup({ open, onClose, waters = ["sea", "river"], transport
 /**
  * Your bag, opened from the menu's collection (round 6, David: "allow you to open bag to give fish in inv but grey out
  * ones you already given"): the flat kit's panel over the menu, your fish as cards, the ones not in your collection
- * first; a fish already given is greyed out. Pick one and the side says what it gives (luck for good, a dish for a key
+ * first; a fish already given is greyed out. Pick one and the side says what it gives (a permanent luck boost, a dish for a key
  * fish), what it costs, and Give.
  */
 function GiveSheet({ open, onClose, fish, book, fee, busy, onGive }: { open: boolean; onClose: () => void; fish: readonly SellEntry[]; book: ReadonlySet<string>; fee: number; busy: boolean; onGive: (f: SellEntry) => void }) {
@@ -344,7 +344,7 @@ function GiveSheet({ open, onClose, fish, book, fee, busy, onGive }: { open: boo
   const fresh = fish.filter(f => !book.has(f.item_key)), old = fish.filter(f => book.has(f.item_key));
   const chosen = fresh.find(f => f.item_key === picked) ?? null, teaches = chosen && teachOf(chosen.item_key), step = gaveLuck(book.size);
   const side = chosen ? <SidePanel picture={iconUrl(chosen.item_key)} kind="New to your collection" title={chosen.name} onClose={() => setPicked(null)} testId="give-pick"
-      text={`${step > 0 ? `Luck ${pct(step)} for good` : "Your luck is at its most already, but it fills its slot"}${teaches ? `, and Bancha learns his ${teaches.name.toLowerCase()}` : ""}.`}
+      text={`${step > 0 ? `Permanent luck boost ${pct(step)}` : "Your permanent luck boost is at its most already, but it fills its slot"}${teaches ? `, and Bancha learns his ${teaches.name.toLowerCase()}` : ""}.`}
       facts={[["In your bag", `×${chosen.count}`], ["Costs", <>{fee}<CurrencyIcon size={13} /></>]]}
       actions={<DarkButton disabled={busy} onClick={() => onGive(chosen)} data-testid="give-fish"><span className={m.price}>Give {fee}<CurrencyIcon size={14} /></span></DarkButton>} />
     : null;

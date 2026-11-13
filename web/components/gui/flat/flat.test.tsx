@@ -217,9 +217,9 @@ describe("CallTag", () => {
 
 describe("the menu's collection (tasting-book round 6)", () => {
   it("shows the boost large and a track of round stamps to the cap, the last one pressed when fresh", () => {
-    const out = html(h(BoostTrack, { icon: "L", value: "+6%", label: "luck, for good", filled: 6, total: 20, fresh: true, note: "+1% a new fish", filter: "ink" }));
+    const out = html(h(BoostTrack, { icon: "L", value: "+6%", label: "permanent luck boost", filled: 6, total: 20, fresh: true, note: "+1% a new fish", filter: "ink" }));
     expect(out).toContain("+6%");
-    expect(out).toContain('aria-label="+6% luck, for good, 6 of 20"');
+    expect(out).toContain('aria-label="+6% permanent luck boost, 6 of 20"');
     expect(out.match(/<i[ >]/g)).toHaveLength(20);
     expect(out.match(/<i data-on="true"/g)).toHaveLength(6);
     // Round 7: each stamp is round (its rings are circles, no square seal) and only the sixth presses down.

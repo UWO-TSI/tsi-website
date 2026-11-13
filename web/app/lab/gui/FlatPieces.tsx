@@ -70,7 +70,7 @@ export default function FlatPieces() {
         chapters={[{ label: "Collection", panel: 0 }, { label: "Menu", panel: 2 }]}
         panels={[
           <PanelSection key="c" title="Collection">
-            <BoostTrack filter={ink} icon={<Clover />} value="+6%" label="luck, for good" filled={6} total={20} note="+1% a new fish, up to +20%." />
+            <BoostTrack filter={ink} icon={<Clover />} value="+6%" label="permanent luck boost" filled={6} total={20} note="+1% a new fish, up to +20%." />
           </PanelSection>,
           <PanelSection key="g" title="Given">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
