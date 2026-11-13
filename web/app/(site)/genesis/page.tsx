@@ -70,7 +70,7 @@ export default function GenesisPage() {
         </div>
         <div className="ts-wrap gx-hero__grid">
           <div className="gx-hero__copy">
-            <Reveal delay={0.06}><h1 className="gx-word">GENESIS</h1></Reveal>
+            <Reveal delay={0.06}><h1 className="ts-h1 ts-hero-title">GENESIS</h1></Reveal>
             <Reveal delay={0.12}><p className="ts-lede">Every March, student teams present the software they built for nonprofits to the organizations, sponsors and students behind it.</p></Reveal>
             <Reveal delay={0.18}>
               <dl className="gx-stats">

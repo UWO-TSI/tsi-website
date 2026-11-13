@@ -76,7 +76,7 @@ export default function NpoPage() {
         </div>
         <div className="ts-wrap gx-hero__grid">
           <div className="gx-hero__copy">
-            <Reveal delay={0.06}><h1 className="ts-h1 np-hero__title" id="npo-title">An 8-month build for your organization, at no cost.</h1></Reveal>
+            <Reveal delay={0.06}><h1 className="ts-h1 ts-hero-title" id="npo-title">An 8-month build for your organization, at no cost.</h1></Reveal>
             <Reveal delay={0.12}><p className="ts-lede">A team of student developers and designers, led by a project manager, works with you from October to April. You keep everything they build.</p></Reveal>
             <Reveal delay={0.18}>
               <dl className="gx-stats">

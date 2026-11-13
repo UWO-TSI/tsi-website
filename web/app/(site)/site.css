@@ -84,6 +84,10 @@
 [data-tone="light"] .ts-label { color: var(--on-light-3); }
 
 .ts-h1 { font-size: clamp(2.5rem, 6.2vw, 6rem); line-height: 1.02; letter-spacing: -0.035em; font-weight: 500; }
+/* Every page's hero shares one layout (David, 2026-11-13): one title size, one copy column, and the title starting
+   the same distance below the nav on every page, so it doesn't jump when you move between them. The art sits right. */
+:root { --hero-copy: 620px; --hero-top: clamp(132px, 22vh, 230px); --hero-bottom: clamp(56px, 9vh, 96px); }
+.ts-hero-title { font-size: clamp(2.6rem, 5.4vw, 5.25rem); line-height: 1.04; max-width: 11.5em; text-wrap: balance; }
 .ts-h2 { font-size: clamp(2rem, 4.4vw, 3.75rem); line-height: 1.05; letter-spacing: -0.03em; font-weight: 500; }
 .ts-h3 { font-size: clamp(1.25rem, 1.8vw, 1.625rem); line-height: 1.2; letter-spacing: -0.015em; font-weight: 500; }
 .ts-lede { font-size: clamp(1.0625rem, 1.4vw, 1.3125rem); line-height: 1.5; color: var(--on-dark-2); max-width: 36em; }

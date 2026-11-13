@@ -23,7 +23,7 @@ export default function ContactPage() {
       </div>
       <div className="ts-wrap gx-hero__grid">
         <div className="gx-hero__copy">
-          <Reveal delay={0.06}><h1 className="ts-h1 ct-hero__title" id="contact-title">Talk to us.</h1></Reveal>
+          <Reveal delay={0.06}><h1 className="ts-h1 ts-hero-title" id="contact-title">Talk to us.</h1></Reveal>
           <Reveal delay={0.12}><p className="ts-lede">One inbox for everything: nonprofits, sponsors, students, and anyone who wants to start a chapter.</p></Reveal>
           <Reveal delay={0.18}><CopyEmail email={TETHOS.contact} /></Reveal>
           <Reveal delay={0.24}>

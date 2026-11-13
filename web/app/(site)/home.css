@@ -12,14 +12,12 @@
   transform: translate(calc(var(--gx) * (1 - var(--t))), calc(var(--gy) * (1 - var(--t))));
   will-change: transform; }
 .hd-globe__canvas { width: 100% !important; height: 100% !important; }
-.hd-copy { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 24px;
+.hd-copy { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; gap: 24px; padding-top: var(--hero-top); padding-bottom: var(--hero-bottom);
   pointer-events: none; opacity: calc(1 - var(--t) * 1.6); transform: translateX(calc(var(--t) * -96px)); }
-.hd-copy > * { pointer-events: auto; max-width: min(760px, 48vw); }
-/* The hero's copy sits further left than the page column on wide screens, leaving a gap before the globe. */
-.hd-copy.ts-wrap { max-width: 1760px; }
+.hd-copy > * { pointer-events: auto; max-width: min(var(--hero-copy), 100%); }
 .hd-stage[data-taken="true"] .hd-copy { visibility: hidden; }
 .hd-title { display: block; line-height: 1.06; padding-bottom: 0.08em; }
-.hd-title__dim { color: var(--on-dark-3); }
+.hd-title__dim { display: block; color: var(--on-dark-3); }
 .hd-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .hd-cue { position: absolute; z-index: 2; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px;
   font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-dark-3); opacity: calc(1 - var(--t) * 3); }

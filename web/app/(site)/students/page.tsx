@@ -67,7 +67,7 @@ export default async function StudentsPage() {
       <section className="ts-section st-hero" data-tone="dark" id="students" aria-labelledby="students-title">
         <div className="ts-wrap st-hero__grid">
           <div className="st-hero__copy">
-            <Reveal delay={0.06}><h1 className="ts-h1 st-hero__title" id="students-title">Build software a nonprofit will use.</h1></Reveal>
+            <Reveal delay={0.06}><h1 className="ts-h1 ts-hero-title" id="students-title">Build software a nonprofit will use.</h1></Reveal>
             <Reveal delay={0.12}>
               <p className="ts-lede">TSI is 150+ students at Western and UBC. Each year our teams of developers, designers and project managers build for a nonprofit from October to April, then show it at GENESIS in March.</p>
             </Reveal>

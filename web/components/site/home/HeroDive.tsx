@@ -197,7 +197,7 @@ export default function HeroDive() {
         </div>
 
         <div className="ts-wrap hd-copy">
-          <h1 className="ts-h1 hd-title">
+          <h1 className="ts-h1 ts-hero-title hd-title">
             <span className="hd-title__dim">Most tech is built to make money.</span>{" "}
             <span>We build it for purpose.</span>
           </h1>
