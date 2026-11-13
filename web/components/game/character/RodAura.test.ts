@@ -8,6 +8,7 @@ import { mergeHeld } from "@/lib/game/character/heldMesh";
 import { rodTip } from "@/lib/game/rodTip";
 import { rodFxUrl } from "./RodAura";
 import { fxAt } from "@/lib/game/fx/library";
+import { FILM_GRAZE } from "@/lib/game/modelMaterials";
 
 const PUBLIC = join(__dirname, "../../../public");
 const load = (url: string) => new Promise<THREE.Object3D>((resolve, reject) => {
@@ -28,7 +29,7 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     expect(named.get("rod-titanium-a1.glb")).toBe("/assets/game/props/rodfx-titanium-a1.glb");
     expect(named.get("rod-tidewarden-a1.glb")).toBe("/assets/game/props/rodfx-tidewarden-a1.glb");
     expect(named.get("rod-tempest-a1.glb")).toBe("/assets/game/props/rodfx-tempest-a1.glb");
-    expect([...named.values()].filter(Boolean)).toHaveLength(6);
+    expect([...named.values()].filter(Boolean)).toHaveLength(7);
     expect(named.get("rod-1.glb")).toBeNull();
   });
 
@@ -69,28 +70,36 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     expect(hi).toBeLessThanOrEqual(Math.min(1, fxAt("water", "wrap", made) - 1));
   });
 
-  it("keeps the Titanium plain and opens it when it awakens (rod-titanium round 2)", async () => {
-    // One polished material with a thin film (the rainbow glisten), so each draws once in a hand.
+  it("keeps the Titanium plain steel with a grazing film, and floats its sections round a beam when it awakens (rod-titanium round 3)", async () => {
+    // One polished material with a thin film, so each draws once in a hand; the film only at grazing angles, however made.
+    expect(THREE.ShaderChunk.lights_fragment_begin).toContain(FILM_GRAZE);
     const held = async (url: string) => { const m: THREE.Mesh[] = []; mergeHeld(await load(url), url).traverse(o => { if ((o as THREE.Mesh).isMesh) m.push(o as THREE.Mesh); }); return m; };
-    const [shut] = await held("/assets/game/tools/rod-titanium.glb"), woke = await held("/assets/game/tools/rod-titanium-a1.glb");
+    const shut = await held("/assets/game/tools/rod-titanium.glb"), woke = await held("/assets/game/tools/rod-titanium-a1.glb");
+    expect(shut).toHaveLength(1);
     expect(woke).toHaveLength(1);
-    for (const m of [shut, woke[0]]) {
+    for (const m of [shut[0], woke[0]]) {
       expect((m.material as THREE.Material).name).toBe("P_Polished");
       expect((m.material as THREE.MeshPhysicalMaterial).iridescence).toBeGreaterThan(0);
     }
-    // The awakened rod is the same rod opened: its morph target is the closed rod, and it ships open.
+    // The awakened rod's reel and claws open: its morph target is them shut, and it ships open.
     const g = woke[0].geometry, pos = g.getAttribute("position"), delta = g.morphAttributes.position![0];
     expect(woke[0].morphTargetInfluences).toEqual([0]);
     const closed = new THREE.Box3(), v = new THREE.Vector3(), d = new THREE.Vector3();
     for (let i = 0; i < pos.count; i++) closed.expandByPoint(v.fromBufferAttribute(pos, i).add(g.morphTargetsRelative ? d.fromBufferAttribute(delta, i) : d.fromBufferAttribute(delta, i).sub(v)));
-    shut.geometry.computeBoundingBox(); g.computeBoundingBox();
-    expect(closed.min.distanceTo(shut.geometry.boundingBox!.min) + closed.max.distanceTo(shut.geometry.boundingBox!.max)).toBeLessThan(1e-4);
+    g.computeBoundingBox();
     expect(g.boundingBox!.max.x - g.boundingBox!.min.x).toBeGreaterThan(closed.max.x - closed.min.x);
-    // Its energy from the library: a core and hexagons of light, no halo or aura.
-    const names: string[] = [];
-    (await load("/assets/game/props/rodfx-titanium-a1.glb")).traverse(o => names.push(o.name));
-    expect(names).toEqual(expect.arrayContaining(["Core", "Rings"]));
+    // Its effect: the sections (one lit mesh, each vertex's section in its UV), the beam, its haze and rings; no halo or aura.
+    const fx = await load("/assets/game/props/rodfx-titanium-a1.glb"), names: string[] = [];
+    fx.traverse(o => names.push(o.name));
+    expect(names).toEqual(expect.arrayContaining(["Sections", "Core", "Beam", "Rings"]));
     expect(names.some(n => n.startsWith("Halo") || n.startsWith("Aura"))).toBe(false);
+    const sections = fx.getObjectByName("Sections") as THREE.Mesh, feet = sections.userData.sections as number[], uv = sections.geometry.getAttribute("uv");
+    expect(feet.length).toBe(14);
+    const layers = new Set<number>();
+    for (let i = 0; i < uv.count; i++) layers.add(uv.getX(i));
+    expect([...layers].sort()).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    // bottom to top, each section's foot above the last
+    for (let i = 2; i < feet.length; i += 2) expect(feet[i]).toBeGreaterThan(feet[i - 2]);
   });
 
   it.each(rods)("%s: its effect exists, costs at most five draws a holder, and never moves the tip", async url => {

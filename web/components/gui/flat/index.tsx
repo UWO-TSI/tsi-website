@@ -186,17 +186,20 @@ const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out"
  * button; without, a picture. `size`: "lg" (the shop's), "md" or "sm" for many to a screen. `price`: the pill shows it
  * (its amount and currency's icon), or "Price to come" while it has none; `pill` is any other short value.
  */
-export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag, arrow = true, cover, selected, size = "lg", label, testId, onClick, className, rarity, ...rest }:
+export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag, arrow = true, cover, selected, size = "lg", label, testId, onClick, className, rarity, awakened, ...rest }:
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "children"> & {
     picture: string | ReactNode; px?: number; name: ReactNode; line?: ReactNode; price?: Price | null; pill?: ReactNode; tag?: ReactNode; arrow?: boolean;
     cover?: CardCover | null; selected?: boolean; size?: "lg" | "md" | "sm"; label?: string; testId?: string; onClick?: () => void;
     /** Its rung on the rarity ladder, as a thin outline round the card. */
     rarity?: Rarity | null;
+    /** It has awakened (a rod that has landed enough fish): a small mark in its top right corner, in its rung's colour. */
+    awakened?: boolean;
   }) {
   const pill = price ? (price.amount ? <>{price.amount.toLocaleString()}<CurrencyIcon currency={price.currency} size={14} /></> : PRICE_TO_COME) : other;
   const face = <>
     {tag ? <span className={f.tag}><Sparkles size={12} aria-hidden />{tag}</span> : null}
     {arrow ? <ArrowUpRight className={f.arrow} size={16} aria-hidden /> : null}
+    {awakened ? <span className={f.awake} title="Awakened"><Zap size={13} strokeWidth={2.4} aria-hidden /></span> : null}
     {typeof picture === "string" ? <PixelImage src={picture} px={px} className={f.cardArt} /> : <span className={f.cardArt} aria-hidden>{picture}</span>}
     <span className={f.cardFoot}>
       <span className={f.cardText}>

@@ -26,7 +26,8 @@ import { glowOn, sparkRecipe } from "@/lib/game/fx/glowOn";
 import { useGlowParticles, type GlowParticles } from "./GlowFx";
 import type { FxKind } from "@/lib/game/fx/library";
 import HolderFx from "./fx/HolderFx";
-import { AWAKEN_FX, BEAT, auraAt, gatherAt, moveOf, type Move } from "./rodMotion";
+import { AWAKEN_FX, BEAT, UNLOCKS, auraAt, gatherAt, moveOf, type Move } from "./rodMotion";
+import type { Unlock } from "@/lib/game/fx/sections";
 
 const GATHER: FxKind[] = ["gather"], NONE: FxKind[] = [];
 
@@ -52,7 +53,7 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
   const loaded = useCallback(() => setReady(true), []);
   const beats = useRef(0), timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  const outside = AWAKEN_FX[rod.key];
+  const outside = AWAKEN_FX[rod.key], opens = UNLOCKS.has(rod.key);
   // The holders of the library's types: the old form (light gathering in), the new form (the strike, what it wears).
   const [[oldForm, newForm]] = useState(() => [new THREE.Group(), new THREE.Group()] as const);
   const [colours] = useState(() => { const css = getComputedStyle(document.documentElement), of = (r: string) => css.getPropertyValue(`--ui-rarity-${r}`).trim() || "#7FD8FF";
@@ -76,9 +77,9 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
       {newPassive && <><br /><b>{newPassive.name}</b> {newPassive.text}</>}</>}
     thing={(next, phase) => looks[0] && looks[1] && <TurnStage label={rod.name} cameraZ={3.3 * AWAKEN_ROOM}>
       <Suspense fallback={null}>
-        <Motion move={moveOf(rod.key)} phase={phase} from={before.rarity} to={after.rarity}>
-          <primitive object={oldForm} visible={!next}><FittedModel spec={looks[0]} aura={auraAt(stage - 1) + BEAT[phase].aura} /></primitive>
-          <primitive object={newForm} visible={next}><FittedModel spec={looks[1]} aura={outside?.strength?.(phase, beat) ?? auraAt(stage) + BEAT[phase].aura} /></primitive>
+        <Motion move={moveOf(rod.key)} phase={phase} from={before.rarity} to={after.rarity} opens={opens}>
+          <primitive object={oldForm} visible={!next && !opens}><FittedModel spec={looks[0]} aura={auraAt(stage - 1) + BEAT[phase].aura} /></primitive>
+          <primitive object={newForm} visible={next || opens}><FittedModel spec={looks[1]} aura={outside?.strength?.(phase, beat) ?? auraAt(stage) + BEAT[phase].aura} /></primitive>
         </Motion>
         <HolderFx holder={oldForm} kinds={GATHER} strength={gatherAt(phase, beat)} colour={colours.from} />
         {(outside?.strike || outside?.wears) && <HolderFx holder={newForm} kinds={outside.wears ?? NONE} strength={auraAt(stage) + BEAT[phase].aura} colour={colours.to}
@@ -98,11 +99,12 @@ export default function RodAwakening({ rod, stage, onClose }: { rod: RodTier; st
  * sheen, a band of light running up it (the light stays in the scene, dark when unused, so nothing recompiles). At the
  * burst, sparks fly off it in the new colour.
  */
-function Motion({ move, phase, from, to, children }: { move: Move; phase: AwakenPhase; from: string; to: string; children: ReactNode }) {
+function Motion({ move, phase, from, to, opens, children }: { move: Move; phase: AwakenPhase; from: string; to: string; opens: boolean; children: ReactNode }) {
   const group = useRef<THREE.Group>(null), light = useRef<THREE.PointLight>(null);
   const [live] = useState(() => {
     const css = getComputedStyle(document.documentElement), of = (r: string) => new THREE.Color(css.getPropertyValue(`--ui-rarity-${r}`).trim() || "#000000");
-    return { e: 0, glow: 0, twirl: 0, shake: 0, shut: 1, colour: of(from), from: of(from), to: of(to), lit: new Map<THREE.MeshStandardMaterial, THREE.Color>(), burst: false };
+    return { e: 0, glow: 0, twirl: 0, shake: 0, shut: 1, colour: of(from), from: of(from), to: of(to), lit: new Map<THREE.MeshStandardMaterial, THREE.Color>(), burst: false,
+      phase: phase as AwakenPhase, since: 0, unlock: opens ? { seq: 0, float: 0 } as Unlock : null };
   });
   const glow = useGlowParticles();
   useFrame(({ clock }, dt) => { if (group.current) pose(group.current, light.current, live, glow, move, phase, clock.elapsedTime, Math.min(dt, 0.1)); });
@@ -116,7 +118,8 @@ const LATER: AwakenPhase[] = ["burst", "show", "reveal"];
  */
 const SHUT: Record<AwakenPhase, number> = { frame: 1, glow: 1, pulse: 0.85, burst: 0, show: 0, reveal: 0 };
 /** Module scope (the react compiler forbids writing through hook values): one frame of Motion. */
-type Live = { e: number; glow: number; twirl: number; shake: number; shut: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color>; burst: boolean };
+type Live = { e: number; glow: number; twirl: number; shake: number; shut: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color>; burst: boolean;
+  phase: AwakenPhase; since: number; unlock: Unlock | null };
 const at = new THREE.Vector3();
 function pose(g: THREE.Group, light: THREE.PointLight | null, live: Live, pool: GlowParticles, move: Move, phase: AwakenPhase, t: number, dt: number) {
   const ease = 1 - Math.exp(-dt * 3), beat = BEAT[phase];
@@ -131,6 +134,14 @@ function pose(g: THREE.Group, light: THREE.PointLight | null, live: Live, pool: 
   g.rotation.set(p.tip + j * Math.sin(t * 53.7 + 2), live.twirl, p.roll + j * Math.sin(t * 61.3));
   live.shut += (SHUT[phase] - live.shut) * (1 - Math.exp(-dt * 2.5));
   g.traverse(o => { const m = (o as THREE.Mesh).morphTargetInfluences; if (m) m[0] = live.shut; });
+  // A form that opens section by section (rodMotion UNLOCKS): one at a time from the bottom through the pulse, all
+  // floating from the burst (lib/game/fx/sections.ts reads this off the rod's ancestors).
+  if (live.phase !== phase) { live.phase = phase; live.since = t; }
+  if (live.unlock) {
+    live.unlock.seq = phase === "frame" || phase === "glow" ? 0 : phase === "pulse" ? Math.min(1, (t - live.since) / (0.9 * AWAKEN_MS.pulse / 1000)) : 1;
+    live.unlock.float = LATER.includes(phase) ? 1 : 0;
+    g.userData.unlock = live.unlock;
+  }
   // Under its full colour, so the rod keeps its own colours inside the glow instead of washing out pale.
   glowOn(g, live.colour, 0.7 * (live.glow + p.flash), live.lit);
   if (phase === "burst" && !live.burst) {

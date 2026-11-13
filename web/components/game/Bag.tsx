@@ -297,6 +297,8 @@ function Owned({ group, transport = httpEconomyTransport, visit = 0 }: { group: 
   const caught = (ref: string | null) => data.catches?.[ref ?? ""] ?? 0;
   /** A rod card's outline: the rarity it has awakened to. */
   const rodRarity = (ref: string | null) => { const r = rodByKey(ref); return r ? awakened(r, caught(ref)).rarity : undefined; };
+  /** A rod that has awakened shows its mark (ItemCard `awakened`). */
+  const rodAwake = (ref: string | null) => { const r = rodByKey(ref); return !!r && awakened(r, caught(ref)).stage > 0; };
   if (row && rod) return <>
     {error && <StatusLine error><SignInText text={error} /></StatusLine>}
     <DetailView testId="bag-rod" rarity={awakened(rod, caught(rod.key)).rarity} quiet onBack={() => setPicked(null)} stage={<RodStage rod={awakened(rod, caught(rod.key))} tackle={on} className={STAGE.stage} />}
@@ -314,7 +316,7 @@ function Owned({ group, transport = httpEconomyTransport, visit = 0 }: { group: 
   return <>
     {!row && error && <StatusLine error><SignInText text={error} /></StatusLine>}
     {rows.length === 0 ? <Quiet>{SHELF_EMPTY[group]}</Quiet>
-      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} rarity={rodRarity(r.item.catalogue_ref)} picture={rowPicture(r, data.catches)} name={r.item.display_name}
+      : <WithSide side={side}><CardGrid title={title} min={170} phoneMin={150}>{rows.map(r => <ItemCard key={r.item.id} size="md" arrow={false} rarity={rodRarity(r.item.catalogue_ref)} awakened={rodAwake(r.item.catalogue_ref)} picture={rowPicture(r, data.catches)} name={r.item.display_name}
         line={rodByKey(r.item.catalogue_ref) ? `${caught(r.item.catalogue_ref).toLocaleString()} fish caught` : r.item.slot ? kind(r) : USE_HINT[group] ?? kind(r)} selected={r.item.id === picked}
         pill={r.equipped ? "Equipped" : r.qty > 1 ? `×${r.qty}` : null} onClick={() => setPicked(r.item.id === picked ? null : r.item.id)} label={`${r.item.display_name}${r.equipped ? ", equipped" : ""}`} />)}</CardGrid></WithSide>}
   </>;

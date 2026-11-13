@@ -63,6 +63,7 @@ function RodGearShow() {
     </div>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginTop: 24 }} data-testid="rarity-cards">
       {RARITIES.filter(r => r !== "contraband").map(r => <ItemCard key={r} size="md" arrow={false} rarity={r} picture={iconUrl("rod_glass")} name={RARITY_LABEL[r]} line="A rod at this rung" />)}
+      <ItemCard size="md" arrow={false} rarity="epic" awakened picture={iconUrl("rod_titanium_a1")} name="Awakened" line="Its mark, top right" />
     </div>
   </>;
 }

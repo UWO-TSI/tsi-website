@@ -159,18 +159,29 @@ export const MATERIAL_PRESETS = {
   wood: { roughness: 0.9, metalness: 0, look: "props" },
   stone: { roughness: 0.95, metalness: 0, look: "props" },
   metal: { roughness: 0.4, metalness: 0.75, look: "metal" },
-  // Polished anodised metal (the Titanium rod): streaks of the room and the sky slide over its flats, the studio's room
-  // seen brighter in it than in a matte part (the island's sky is seen at its own brightness: lookPreset), and a thin
-  // film over it (its GLB's KHR_materials_iridescence) whose rainbow glisten shifts as it turns.
-  polished: { roughness: 0.16, metalness: 0.6, look: "metal", env: 2.2, film: { amount: 0.5, ior: 1.8, thickness: 180 } },
+  // Polished titanium (the Titanium rod): grey steel, streaks of the room and the sky sliding over its flats (the
+  // studio's room seen brighter in it than in a matte part; the island's sky at its own brightness: lookPreset), and a
+  // thin film over it (its GLB's KHR_materials_iridescence) that shows only where the light meets it at a slant
+  // (FILM_GRAZE): a rainbow sheen coming and going as it turns, the metal's own grey facing you.
+  polished: { roughness: 0.26, metalness: 0.85, look: "metal", env: 2.2, film: { amount: 1, ior: 1.8, thickness: [160, 420] } },
   paint: { roughness: 0.45, metalness: 0, look: "props" },
   glass: { roughness: 0.08, metalness: 0, look: "glass" },
   cloth: { roughness: 1, metalness: 0, look: "props" },
   leather: { roughness: 0.36, metalness: 0, look: "props" },
   velvet: { roughness: 0.85, metalness: 0, look: "props" },
 } as const satisfies Record<string, { roughness: number; metalness: number; look: "props" | "glass" | "metal"; env?: number;
-  film?: { amount: number; ior: number; thickness: number } }>;
+  film?: { amount: number; ior: number; thickness: readonly [number, number] } }>;
 export type MaterialPreset = keyof typeof MATERIAL_PRESETS;
+/**
+ * A thin film shows at grazing angles only (David 2026-11-13, rti2-titanium: "the rainbow glow should work like a
+ * texture and should still show that its the metal steel color, just when its hit in a angle you see the shade, cuz rn
+ * the wholething looks rainbow"): three's iridescence weighted by a Fresnel term, about none facing you and all of it
+ * edge-on. In the shared chunk, so every iridescent material has it however it was made or cloned (the stages'
+ * prepareModel, a hand's merged copy, an effect's parts); only the Titanium's GLBs carry a film.
+ */
+export const FILM_GRAZE = "0.03 + 0.97 * pow(1.0 - dotNVi, 2.6)";
+ShaderChunk.lights_fragment_begin = ShaderChunk.lights_fragment_begin.replace(
+  "material.iridescence = saturate( material.iridescence );", `material.iridescence = saturate( material.iridescence ) * (${FILM_GRAZE});`);
 const PRESET = /^P_(Wood|Stone|Metal|Polished|Paint|Glass|Cloth|Leather|Velvet)(?:\.\d+)?$/;
 /** The preset a material's name asks for (Blender's ".001" suffixes allowed), or null. */
 export function presetFor(name: string): MaterialPreset | null {
@@ -254,7 +265,7 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
         if ("film" in p && material instanceof MeshPhysicalMaterial) {
           material.iridescence = p.film.amount;
           material.iridescenceIOR = p.film.ior;
-          material.iridescenceThicknessRange = [100, p.film.thickness];
+          material.iridescenceThicknessRange = [...p.film.thickness];
         }
       }
       material.side = glassShell ? FrontSide : DoubleSide;

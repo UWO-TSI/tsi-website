@@ -14,6 +14,7 @@
  * A node with a `trail` extra leaves a fading ribbon (that wide, from its `trailFrom` point) in its own colour. Parts
  * whose material is `Water`, `Foam` or `Spray` are the Water type (lib/game/fx/water.ts): each holder has its own copy
  * of those materials, so its water runs, foams, reaches and splashes at its own strength.
+ * A node with a `sections` extra is an awakened rod's floating sections (RodSections: the Titanium's).
  * A node with a `sway` extra is soft (the library's Sway: the Cedar's foliage, David 2026-11-06: "the leaves sway a lil
  * when moved like physics"): lit as the rod, each holder its own copy of its materials, every vertex bent by a spring
  * that follows the holder's motion (and a little breeze), more the further it reaches from the rod's axis.
@@ -35,6 +36,7 @@ import { FACE, type Recipe } from "@/lib/game/fx/particles";
 import { fxAt, fxGrow } from "@/lib/game/fx/library";
 import { WATER_PART, waterAt, waterMaterial } from "@/lib/game/fx/water";
 import { useGlowParticles, type GlowParticles } from "../GlowFx";
+import RodSections from "./RodSections";
 
 /** The effect a rod's GLB names (its scene extras), or null. */
 export const rodFxUrl = (rod: THREE.Object3D): string | null =>
@@ -150,14 +152,16 @@ export default function RodAura({ rod, url, strength = 1 }: { rod: THREE.Object3
       for (let n: THREE.Object3D | null = mesh; n && n !== group; n = n.parent) if (n.userData.sway) { mesh.material = swaying(mesh.material as THREE.MeshStandardMaterial, sway, Number(n.userData.sway)); break; }
     });
     const made = Number(scene.userData.fxStrength ?? 1);
-    return { t, group, halos, trails, waters, sway, made, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: made } };
+    let sections: THREE.Mesh | null = null;
+    group.traverse(o => { if (o.userData.sections) sections = o as THREE.Mesh; });
+    return { t, group, halos, trails, waters, sway, made, sections: sections as THREE.Mesh | null, moving: nodesOf(group), clock: { next: 0, seed: rod.id * 7919, k: made } };
   }, [scene, rod]);
   useEffect(() => {
     rod.add(fx.group);
     return () => { fx.group.removeFromParent(); };
   }, [rod, fx]);
   useFrame(({ camera, clock }, delta) => idle(rod, fx, glow, camera, clock.elapsedTime, delta, strength * fx.made));
-  return null;
+  return fx.sections ? <RodSections rod={rod} mesh={fx.sections} /> : null;
 }
 
 /** A trail's ribbon: TRAIL_N points, two vertices each, fading toward its end (additive, so black is clear). */

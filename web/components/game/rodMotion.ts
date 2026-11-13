@@ -85,5 +85,11 @@ export const AWAKEN_FX: Record<string, { strike?: StrikeKind; sound: AwSfx; soun
 /** The Tidewarden's water at each beat, as the water's own strength (none under 1, all of the wrap from 1.45), and the
  * strength its awakened effect is drawn at as made (its `fxStrength`, which RodAura multiplies in). */
 const TIDE: Partial<Record<AwakenPhase, number>> = { frame: 0.6, glow: 0.6, hush: 0.7, burst: 1.8, show: 2.3, reveal: 1.5 }, TIDE_MADE = 1.5;
+/**
+ * Rods whose awakened form opens section by section (lib/game/fx/sections.ts; the Titanium, David 2026-11-13: "i want
+ * the parts to split open each section one by one"): the cutscene shows that form from the start, shut, and unlocks its
+ * sections from the bottom through the pulse instead of flickering between its two looks; they float at the burst.
+ */
+export const UNLOCKS: ReadonlySet<string> = new Set(["rod_titanium"]);
 /** An effect rod's aura at a look (0 as bought, 1 after its first awakening, ...): a little stronger each awakening. */
 export const auraAt = (look: number) => 1 + 0.5 * look;
