@@ -80,7 +80,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .hudRight > .hudColumn { pointer-events: auto; }
 .hudLead { display: flex; align-items: flex-start; gap: 10px; }
 .hudLead > * { pointer-events: auto; }
-.hudLead > .rightCluster { position: static; }
 .hudColumn { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; zoom: var(--tsi-text-scale, 1); }
 /* The time's row: the biome tag (where you fish) left of the time. */
 /* The time, the biome tag under it (round 7, David: "move it under. the time"), both right-aligned under the minimap. */
@@ -124,9 +123,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .posterList { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 6px; }
 .anonRow { color: var(--gui-muted); font-style: italic; }
 .cue small { display: block; font-weight: 600; font-size: var(--gui-text-xs); }
-.showcaseSlots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 4px; }
-.showcaseSlots > * { justify-self: center; }
-.showcaseBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 0 10px; }
 @media (max-width: 700px) { .wardrobeBody { grid-template-columns: 1fr; } }
 /* Oracle quiz sheet: the Oracle keeps its lavender, in the kit's paper. */
 .keeperLine { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--gui-r-card); background: #ebe2f5; }

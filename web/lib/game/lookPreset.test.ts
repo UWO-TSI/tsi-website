@@ -197,8 +197,10 @@ describe("time of day as multipliers on the day preset (§5.5)", () => {
   });
   it("makes dawn cool-pink with soft shadows, golden hour warm with a rim, night a blue moonlight key", () => {
     const { dawn, day, evening, night } = ISLAND_LIGHTING, rb = (hex: string) => lin(hex).r / lin(hex).b;
-    expect(rb(dawn.sky)).toBeGreaterThan(1); // pink horizon
-    expect(rb(dawn.skyTop!)).toBeLessThan(1); // blue-lilac top
+    // The sky is the real one (atmosphere.ts): dawn's preview, nine degrees before sunrise, is the blue hour; golden
+    // hour's skyline glows warm.
+    expect(rb(dawn.skyTop!)).toBeLessThan(1);
+    expect(rb(evening.sky)).toBeGreaterThan(1);
     expect(dawn.shadow.radius).toBeGreaterThan(day.shadow.radius * 2);
     expect(rb(evening.sun)).toBeGreaterThan(rb(day.sun) * 2);
     expect(evening.rim!.intensity).toBeGreaterThan(0);
@@ -235,7 +237,8 @@ describe("weather and season on top of the look (§5.5)", () => {
       expect(light.sunIntensity).toBeLessThanOrEqual(ISLAND_LIGHTING[phase].sunIntensity);
     }
     const autumn = seasonLook(parseSeasonOverride("?season=autumn")!, {});
-    expect(withSeason(ISLAND_LIGHTING.day, autumn).skyTop).toBe(CURRENT.sky.top);
+    // The sky's top is the real sky's (atmosphere.ts, landing near the preset's at noon); a season leaves it be.
+    expect(withSeason(ISLAND_LIGHTING.day, autumn).skyTop).toBe(ISLAND_LIGHTING.day.skyTop);
     expect(CURRENT.sky.top).toBe("#4a9de0");
   });
 });

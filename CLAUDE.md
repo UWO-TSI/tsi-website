@@ -8,7 +8,7 @@ Tethos (UWO-TSI): the club website plus the member game. **The repo is public:**
 
 | Surface | Where | Status |
 |---|---|---|
-| Marketing site | `web/app/(site)/`, `web/app/student/page.tsx`, `web/components/sections/` | Stable. Don't touch unless tasked. |
+| Marketing site | `web/app/(site)/` (home, `/npo`, `/genesis`), `web/components/site/`, `web/lib/site/` | Redesigned 2026-11 (`specs/site/revamp.md`). Don't touch unless tasked. |
 | Recruitment portal | `web/app/student/apply/`, `web/components/recruit/`, `web/components/admin/` | Live in production. Don't touch unless tasked. |
 | Member game | `web/components/game/`, `web/lib/game/`, `realtime/`; portal overlays in `web/app/student/dashboard/`, `web/components/portal/` | Cozy 3D island game (React Three Fiber, Supabase, Colyseus on Fly.io), live at play.tethos.ca on the new world (`web/data/world/`). The old village island is retired. There is no launch date: David keeps building until he's content (`specs/launch/v1-gameplay.md`). |
 
@@ -56,6 +56,6 @@ Prefix `[build]`, `[qa]` or `[review]`. Short-lived branches, merged to `main` o
 
 ## Out of scope unless tasked
 
-- Marketing: `web/app/(site)/**`, `web/components/sections/**`.
+- Marketing: `web/app/(site)/**`, `web/components/site/**`, `web/lib/site/**`, `web/app/api/npo-applications/**`, `web/app/admin/npo/**`.
 - Recruitment: `web/app/student/apply/**`, `web/components/recruit/**`, `web/components/admin/**`, and migrations `001_recruitment`, `009` to `012`.
-- Owned by the play.tethos.ca session: `next.config.ts`, `middleware.ts`, `web/lib/supabase/*`, the top-level `web/app/student/*` pages, the nav and the footer.
+- Owned by the play.tethos.ca session: `next.config.ts`, `middleware.ts`, `web/lib/supabase/*`, the top-level `web/app/student/*` pages and their nav (`web/components/layout/`). The marketing site's nav and footer (`web/components/site/`) belong to the site.

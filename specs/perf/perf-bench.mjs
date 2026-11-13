@@ -3,7 +3,8 @@
 //   scenes: comma list of v2 (the member island: the new world, web/data/world, 384 × 552, with 24 bots), cafe, shop
 //   (the shop from its door), hq (HQ from its door: the hall, the aquarium, the mezzanine showing), ruins-<kit>
 //   (default: v2, cafe and the four heavy ults' kits).
-//   Env: TIER=high|lite (default high), SECONDS (default 8), PROFILE=1 (a CPU profile after each run, top self time),
+//   Env: TIER=high|lite (default high), SECONDS (default 8), PITCH (the orbit's tilt, default 0.62; 0.35, its lowest,
+//   puts a band of sky in the frame), TIME (default day: ?time=), PROFILE=1 (a CPU profile after each run, top self time),
 //   UNCAPPED=0 (keep the display's frame pacing; default off so the frame rate shows the real cost), SHOTS=dir (a
 //   close-up and a wide screenshot per scene), HEADED=1 (show the window; the default is headless, no window on David's screen: for machines whose agents may only run
 //   headless; compare headless runs with headless runs, never with a headed baseline).
@@ -26,7 +27,7 @@ if (UNCAPPED) args.push("--disable-gpu-vsync", "--disable-frame-rate-limit");
 const browser = await chromium.launch({ headless: process.env.HEADED !== "1", args });
 const LOOK = JSON.stringify({ skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_curtain", back: "back_bob", top: "top_hoodie", bottom: "bottom_joggers", onepiece: null, shoes: "shoes_sneakers", acc: {}, colors: {} });
 const TIER = { high: { "tsi.liteMode.v1": "false", "tsi.shadows.v1": "true" }, lite: { "tsi.liteMode.v1": "true", "tsi.shadows.v1": "false" } }[TIER_NAME];
-const BASE = "time=day&weather=clear&season=summer";
+const BASE = `time=${process.env.TIME ?? "day"}&weather=clear&season=summer`, PITCH = Number(process.env.PITCH ?? 0.62);
 const ME = { x: 2, z: -16 }, AIM = { x: 2, z: -11.5 };
 const PACK = [
   ...Array.from({ length: 5 }, (_, i) => ["shadow-fox", 2 + Math.cos(i * 1.3) * 3.2, -11 + Math.sin(i * 1.3) * 2.2]),
@@ -39,11 +40,11 @@ let ctx, page;
 async function fresh() {
   await ctx?.close();
   ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-  await ctx.addInitScript(([look, store]) => { try {
+  await ctx.addInitScript(([look, store, pitch]) => { try {
     localStorage.setItem("tsi.look.v1", look); localStorage.removeItem("tsi.combatKeys.v3"); localStorage.setItem("tsi.hud.full.v1", "true");
-    localStorage.setItem("tsi.camera.v1", JSON.stringify({ yaw: 1.05, pitch: 0.62, zoom: 1.12, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false }));
+    localStorage.setItem("tsi.camera.v1", JSON.stringify({ yaw: 1.05, pitch, zoom: 1.12, mouseLook: false, autoFollow: false, sensitivity: 1, invertY: false }));
     for (const [k, v] of Object.entries(store)) localStorage.setItem(k, v);
-  } catch {} }, [LOOK, TIER]);
+  } catch {} }, [LOOK, TIER, PITCH]);
   page = await ctx.newPage();
   page.on("pageerror", e => console.log("pageerror", e.message.slice(0, 200)));
 }

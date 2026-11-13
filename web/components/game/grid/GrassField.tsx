@@ -45,6 +45,7 @@ import { GRASS_BENDERS } from "@/lib/game/grassBenders";
 import { useTuning } from "@/lib/game/tuning";
 import { worldTime } from "@/lib/game/worldClock";
 import { WIND_DIR, viewFocus } from "@/lib/game/worldFx";
+import { FRONT_GLSL, WIND, frontPhase } from "@/lib/game/wind";
 import { addCutout } from "@/lib/game/occluders";
 import { TERRAIN_GRASS, TERRAIN_SNOW, TERRAIN_WET } from "./GridTerrain";
 import { SPLAT_GROUND_GLSL } from "../world/splatMaterial";
@@ -121,6 +122,7 @@ const VERTEX_HEAD = /* glsl */ `
 uniform float uTime;
 uniform vec4 uWind;      // sway (share of the blade), speed, gust length, blade height
 uniform vec2 uWindDir;
+uniform vec2 uFront;     // the one wind's gust fronts (lib/game/wind.ts): where they are, how hard they bow the field
 uniform vec4 uGrid;      // n, spacing, density, card width
 uniform vec4 uRing;      // this layer's span in camera distance: keep from (x→y), drop (z→w)
 uniform float uLayerH;   // this layer's blade height, × the field's
@@ -153,6 +155,7 @@ vec4 grassRand(ivec2 c) {
   uvec2 a = grassPcg(uvec2(c + 65536)), b = grassPcg(a ^ uvec2(0x9e3779b9u, 0x85ebca6bu));
   return vec4(float(a.x & 0xffffu), float(a.y & 0xffffu), float(b.x & 0xffffu), float(b.y & 0xffffu)) / 65535.0;
 }
+${FRONT_GLSL}
 float grassNoise(vec2 p) {
   vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f);
   float a = grassRand(ivec2(i)).x, b = grassRand(ivec2(i) + ivec2(1, 0)).x, c = grassRand(ivec2(i) + ivec2(0, 1)).x, d = grassRand(ivec2(i) + ivec2(1, 1)).x;
@@ -202,11 +205,14 @@ const VERTEX_BODY = /* glsl */ `
   float gAlong = dot(gRoot, uWindDir) - uTime * uWind.y * 2.4 * uWind.z / 6.2832;
   float gBand = grassNoise(vec2(gAlong / uWind.z * 1.7, dot(gRoot, gAcrossDir) / uWind.z * 0.6));
   float gGust = smoothstep(0.38, 0.78, gBand) * 0.8 + (sin(gAlong / uWind.z * 6.2832) * 0.5 + 0.5) * 0.2;
+  // The one wind's gust fronts roll over it too: the field bows deeper, and catches the light, as each crosses.
+  float gFront = windFront(gRoot, uFront.x) * uFront.y;
+  gGust = max(gGust, gFront);
   float gFlutter = sin(gAlong * 2.1 - uTime * uWind.y * 1.6) * (0.3 + 0.7 * gGust);
-  vec2 gWind = (uWindDir * (0.12 + 1.15 * gGust + 0.12 * gFlutter) + gAcrossDir * (gr2.z - 0.5) * 0.12) * uWind.x;
+  vec2 gWind = (uWindDir * (0.12 + 1.15 * gGust + 0.12 * gFlutter + 0.5 * gFront) + gAcrossDir * (gr2.z - 0.5) * 0.12) * uWind.x;
 #else
   // Wind: a gust wave travelling along the world wind, and each clump's own flutter across it.
-  float gGust = sin(dot(gRoot, uWindDir) / uWind.z * 6.2832 - uTime * uWind.y * 2.4) * 0.5 + 0.5;
+  float gGust = max(sin(dot(gRoot, uWindDir) / uWind.z * 6.2832 - uTime * uWind.y * 2.4) * 0.5 + 0.5, windFront(gRoot, uFront.x) * uFront.y);
   float gFlutter = sin(uTime * uWind.y * 3.3 + gr2.z * 6.2832 + gRoot.x * 0.7);
   vec2 gWind = (uWindDir * (0.2 + gGust) + gSide * gFlutter * 0.3) * uWind.x;
 #endif
@@ -268,7 +274,7 @@ const FRAGMENT_MAP = /* glsl */ `
 /** The uniforms every layer shares (one object each, so a frame writes them once). */
 function sharedUniforms(dataTex: THREE.DataTexture, bendTex: THREE.DataTexture, data: number, ground?: GroundUniforms) {
   return {
-    uTime: { value: 0 }, uWind: { value: new THREE.Vector4() }, uWindDir: { value: new THREE.Vector2(WIND_DIR.x, WIND_DIR.z) },
+    uTime: { value: 0 }, uWind: { value: new THREE.Vector4() }, uWindDir: { value: new THREE.Vector2(WIND_DIR.x, WIND_DIR.z) }, uFront: { value: new THREE.Vector2() },
     uFocus: { value: new THREE.Vector2() }, uFade: { value: new THREE.Vector2(20, 30) },
     uData: { value: dataTex }, uDataN: { value: new THREE.Vector2(data, DATA_TEXEL) },
     uBend: { value: bendTex }, uBendN: { value: new THREE.Vector3(BEND_N, BEND_TEXEL, 1) },
@@ -410,7 +416,9 @@ function advance(s: FieldState, camera: THREE.Camera, delta: number, g: Grass, w
   if (bend.encode()) s.bendTex.needsUpdate = true;
   const u = s.uniforms;
   u.uTime.value = worldTime();
-  u.uWind.value.set(g.swayAmount * windScale, g.swaySpeed, g.gustLength, g.bladeHeight);
+  // The one wind (lib/game/wind.ts): its slow swell on the sway, its fronts by its strength.
+  u.uWind.value.set(g.swayAmount * windScale * WIND.swell, g.swaySpeed, g.gustLength, g.bladeHeight);
+  u.uFront.value.set(frontPhase(u.uTime.value), Math.min(1, 0.3 + 0.25 * WIND.strength));
   u.uFocus.value.set(_focus.x, _focus.z);
   u.uBendN.value.z = g.bend;
   u.uLean.value = g.lean;

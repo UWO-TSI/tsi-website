@@ -27,6 +27,8 @@
    scrim, a small white card on a hairline edge with a soft shadow, just the cue, the keys and a quiet foot. */
 /* v5 review: "the keyboard overlay can be bigger, 15% bigger" (the keys 37 px, up from 32). */
 .spotlight[data-light] { gap: 11px; padding: 14px 14px 9px; border-radius: 20px; background: var(--ui-card); box-shadow: 0 0 0 1px var(--ui-line), 0 12px 32px rgb(var(--ui-shade) / 0.16); }
+/* Round 8 ("move the keyboard ui a lil down"): the light card sits a little under the middle, room for a peek above it. */
+.spotlight[data-light] { translate: 0 clamp(32px, 9vh, 96px); }
 .spotlight[data-light] .lead { min-height: 0; margin: 2px 0 0; font-size: 17px; gap: 8px; }
 .spotlight[data-light] .board { --u: min(37px, calc((100vw - 72px) / 15.5)); }
 .spotlight[data-light] .foot { padding: 0 2px; }
@@ -34,6 +36,8 @@
 .spotlight[data-light] .dots i { width: 7px; height: 7px; }
 /* Beside the card, on its right (the keyboard tour's KeyPeek): centred on it, never taking its room. */
 .aside { position: absolute; left: calc(100% + 16px); top: 50%; translate: 0 -50%; pointer-events: none; }
+/* Above it, centred (round 8: the tool wheel's peek "on top of the keyboard ui"). */
+.aside[data-at="top"] { left: 50%; top: auto; bottom: calc(100% + 14px); translate: -50% 0; }
 
 /* The keyboard: white keys on a light well, a thin foot for depth; the lit key ink with the marker's glow. */
 .board { --u: min(32px, calc((100vw - 72px) / 15.5)); display: grid; gap: calc(var(--u) * 0.12); padding: calc(var(--u) * 0.2); border-radius: 12px; background: var(--ui-card-dim); box-shadow: inset 0 0 0 1px var(--ui-line); }
@@ -154,6 +158,14 @@
 .band small { font: 700 11px/1.2 var(--gui-font); letter-spacing: 0.14em; text-transform: uppercase; }
 .paperBody { display: grid; grid-template-columns: 29% 1fr; gap: 12px; padding: 12px 14px; }
 .picture { display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: 10px; background: var(--ui-paper-edge); color: var(--ui-paper-ink); font: 800 calc(var(--w) * 0.13)/1 var(--gui-font); }
+/* A phone: the held card is about 340 px wide, so its type steps down to keep the rows beside the headshot. */
+@media (max-width: 520px) {
+  .printed[data-large] .paperBody { gap: 10px; padding: 12px; }
+  .printed[data-large] .rows { gap: 5px; }
+  .printed[data-large] .rows dt { font-size: 9px; }
+  .printed[data-large] .rows [data-lead] dd { font-size: 22px; }
+  .printed[data-large] .rows div:not([data-lead]) dd { font-size: 12px; }
+}
 .rows { margin: 0; display: grid; gap: 4px; align-content: start; }
 .rows div { display: grid; grid-template-columns: auto 1fr; gap: 6px; align-items: baseline; }
 .rows dt { font: 700 10px/1.2 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }

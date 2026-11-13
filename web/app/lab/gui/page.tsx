@@ -14,6 +14,7 @@ import FlatPieces from "./FlatPieces";
 import { FamilyReveal } from "@/components/game/oracle/OracleSheetEmbed";
 import IncantationOverlay from "@/components/game/combat/IncantationOverlay";
 import { EmoteWheelView } from "@/components/game/emotes/EmoteWheel";
+import TourPeek from "@/components/game/hq/TourPeek";
 import { DANCE_RING } from "@/lib/game/emoteWheel";
 import ToastHub, { toast } from "@/components/game/ToastHub";
 import { Amount } from "@/components/economy/Amount";
@@ -27,9 +28,10 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { ChevronLeft, CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, KeyPeek, Keyword, KeywordLine, PaperField, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, LevelUpMoment, type PeekKind } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyHome, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
+import PhoneSignup from "@/components/game/hq/PhoneSignup";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
 import s from "./showroom.module.css";
 import FlatRewards from "./FlatRewards";
@@ -83,23 +85,49 @@ function KeyBoardShow() {
   return <>
     {bag && <span data-demo-bag style={{ position: "absolute", top: 16, left: 16, display: "flex", gap: 6, alignItems: "center", padding: "8px 14px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 800 }}><Backpack size={16} /> Bag</span>}
     {bag && <SlotPop to={["[data-demo-bag]"]} />}
-    <Spotlight light open label="Keys" lead={hold ? <>Hold <Keycap>Tab</Keycap> Tools</> : <>Press <Keycap>I</Keycap> Bag</>}
+    {/* FlyHome (round 9): the HUD isn't there before its key, then shows off above the card and flies to its place;
+        here a stand-in clock, top right. */}
+    {k >= 20 && <span data-demo-clock style={{ position: "absolute", top: 16, right: 16, padding: "6px 12px", borderRadius: 999, background: "var(--ui-card)", fontWeight: 800 }}>2:20 PM</span>}
+    {k >= 20 && <FlyHome to={["[data-demo-clock]"]} from='[data-testid="lab-keys"]' />}
+    <Spotlight light open label="Keys" testId="lab-keys" lead={hold ? <>Hold <Keycap>Tab</Keycap> Tools</> : <>Press <Keycap>I</Keycap> Bag</>}
       steps={{ count: 9, at: hold ? 0 : 4 }} footer={<GhostButton>Skip</GhostButton>}
-      aside={hold ? k >= 4 && <KeyPeek kind="wheel" out={k >= 18} /> : k >= 32 && <KeyPeek kind="bag" out={k >= 39} />}>
+      aside={hold ? k >= 4 && <TourPeek kind="wheel" out={k >= 18} /> : k >= 32 && <TourPeek kind="bag" out={k >= 39} />} asideAt={hold ? "top" : "right"}>
       <KeyBoard lit={hold ? "tab" : "i"} hold={hold} fill={hold ? Math.min(1, Math.max(0, (k - 4) / 12)) : 0} won={hold ? k >= 16 : k >= 34}
         done={hold ? [] : ["tab", "g", "h", "enter"]} down={new Set(hold ? (k >= 4 && k < 16 ? ["tab"] : []) : (k >= 32 && k < 34 ? ["i"] : []))} />
     </Spotlight>
   </>;
 }
-/** Every KeyPeek, one after another: each pops in, plays its loop, then fades as if the key were let go. */
-const PEEK_KINDS: PeekKind[] = ["wheel", "emote", "hud", "chat", "bag", "collection", "quests", "map", "mail"];
+/** The phone (design bible UI, the phone): it pulls out bottom right and flips open, an app opens (the phone tucks down
+ *  while it's open), the app closes and the phone comes back, then it's put away. */
+function PhoneShow() {
+  const [t, setT] = useState(0);
+  useEffect(() => { const i = window.setInterval(() => setT(v => (v + 1) % 10), 700); return () => window.clearInterval(i); }, []);
+  const apps: PhoneApp[] = [
+    { id: "settings", label: "Settings", icon: "settings", onOpen: () => {} },
+    { id: "quests", label: "Quests", icon: "quest", keyLabel: "J", onOpen: () => {} },
+    { id: "bag", label: "Bag", icon: "bag", keyLabel: "I", onOpen: () => {} },
+    { id: "collection", label: "Collection", icon: "collection", keyLabel: "B", onOpen: () => {} },
+    { id: "friends", label: "Friends", icon: "friend", badge: 1, onOpen: () => {} },
+    { id: "mail", label: "Mail", icon: "mail", keyLabel: "L", badge: 2, onOpen: () => {} },
+  ];
+  return <Phone open={t < 9} away={t >= 4 && t < 7} apps={apps} hint="X" onClose={() => {}} />;
+}
+/** The pitch (round 13, not shipped): Alice's phone in place of the ID, again from the start each time it's done. It sits
+ *  straight in the overlay (Loop's wrapper has no size, and the phone sizes itself to its parent). */
+function PitchShow() {
+  const [n, setN] = useState(0);
+  return <PhoneSignup key={n} open name="Marlowe" signedIn={false} friendCode={null} onDone={() => window.setTimeout(() => setN(v => v + 1), 1200)} />;
+}
+/** Every peek (TourPeek in the kit's KeyPeek), one after another: each pops in, plays its loop, then fades as if the key
+ *  were let go. The HUD and the minimap have none: the real pieces fly in from above the card (FlyHome, above). */
+const PEEK_KINDS: PeekKind[] = ["wheel", "emote", "chat", "bag", "collection", "quests", "mail"];
 function KeyPeekShow() {
   const [t, setT] = useState(0);
   useEffect(() => { const i = window.setInterval(() => setT(v => v + 1), 300); return () => window.clearInterval(i); }, []);
   const kind = PEEK_KINDS[Math.floor(t / 10) % PEEK_KINDS.length];
   return <div style={{ display: "grid", gridAutoFlow: "column", gap: 18, placeItems: "center", minHeight: "100%" }}>
-    <KeyPeek key={kind} kind={kind} out={t % 10 >= 9} />
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 150px)", gap: 12 }}>{PEEK_KINDS.map(k => <KeyPeek key={k} kind={k} />)}</div>
+    <TourPeek key={kind} kind={kind} out={t % 10 >= 9} />
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 184px)", gap: 12 }}>{PEEK_KINDS.map(k => <TourPeek key={k} kind={k} />)}</div>
   </div>;
 }
 /** The ID as the overlay: filled in on the card, printed out of the slot, stamped, then Done; hover it to tilt. */
@@ -171,7 +199,9 @@ function CoinFlyShow() {
 }
 
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
-  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek and SlotPop)", render: () => <KeyBoardShow /> },
+  { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek, SlotPop and FlyHome)", render: () => <KeyBoardShow /> },
+  { id: "phone", title: "The phone (Phone): up, an app open (it tucks away), back", render: () => <PhoneShow /> },
+  { id: "phone-pitch", title: "A pitch, not shipped: the phone in place of the ID (PhoneSignup, round 13)", render: () => <PitchShow /> },
   { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
   { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
   { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },
@@ -459,7 +489,7 @@ export default function GuiShowroom() {
         <Vitals ring={<XpRing level={3} fill={0.42} into={126} needed={300} />}><VitalBar kind="health" value={0.8} label="Health 80 of 100" /><VitalBar kind="mana" value={0.35} label="Mana 35 of 100" /></Vitals>
       </Row>
       <Row>{[1, 0.5, 0].map(st => <div key={st} style={{ position: "relative", width: 60, height: 120 }}>
-        <StaminaArc ref={el => { el?.toggleAttribute("data-show", true); el?.style.setProperty("--vital", String(st)); el?.style.setProperty("--x", "0.2"); el?.style.setProperty("--h", "1"); }} /></div>)}</Row>
+        <StaminaArc ref={el => { el?.toggleAttribute("data-show", true); el?.style.setProperty("--vital", String(st)); el?.style.setProperty("--x", "0.2"); }} /></div>)}</Row>
     </Section>
 
     <Section id="rewards" title="Rewards and moments (flat kit)" note="specs/design-bible.md UI 4 and 7: a reward pops with its rarity as the outline (divine: the holo); a level up is the big moment (motes into the figure, a flash per mote, the burst, then what it unlocks). components/gui/flat RewardPop and LevelUpMoment.">

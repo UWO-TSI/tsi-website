@@ -40,6 +40,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `look/applied.md` | Open-air sun applied, row 236 | reference
 `look/baseline.md` | Look baseline and flatness diagnosis | reference
 `look/presets.md` | Look lab and first three directions | reference
+`sky-ambient.md` | Sky, wind and ambient effects: round 1 audit, pitches, costs | live
 
 ## Characters and wardrobe
 `avatar-fit.md` | Face, hair, accessories sit on head | reference
@@ -153,6 +154,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `polish/portal-bugs.md` | Portal data bugs from GUI pass | reference
 
 ## Recruitment portal and site
+`site/revamp.md` | tethos.ca redesign: structure, look, frame, home, /npo, /genesis (2026-11-11) | live
 `applicant-lighting-2026-09-16.md` | Applicant island lighting research | reference
 `recruitment-ui-kit.md` | Recruitment village UI kit | reference
 `tokens.md` | Design tokens for game and portal | reference

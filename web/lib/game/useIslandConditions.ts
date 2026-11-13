@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { islandPhase, parseClockOverride, parseTimeOverride, torontoHour, type IslandPhase } from "./islandTime";
-import { parseWeatherBlendOverride, parseWeatherOverride, setLiveIslandWeather, weatherAt, weatherBlendAt, type IslandWeather, type WeatherBlend, type WeatherReport } from "./islandWeather";
+import { LONDON_ON, parseWeatherBlendOverride, parseWeatherOverride, setLiveIslandWeather, weatherAt, weatherBlendAt, type IslandWeather, type WeatherBlend, type WeatherReport } from "./islandWeather";
 import { parseSeasonOverride, seasonBlend, type SeasonBlend } from "./season";
 import { phaseBlend, setLiveSunDays, sunFor, type PhaseBlend } from "./sunTimes";
-import { phaseInstant, solarPosition, SUN_STEP_MS, type SunAngles } from "./sunPath";
+import { phaseInstant, setSkyInstant, solarPosition, SUN_STEP_MS, type SunAngles } from "./sunPath";
+import { moonPosition, type MoonSky } from "./atmosphere";
 import { setWorldClockOffset, worldNow } from "./worldClock";
 
 const DEV = process.env.NODE_ENV !== "production";
@@ -24,6 +25,10 @@ export interface IslandConditions {
   sunSource: "open-meteo" | "fallback";
   /** The real sun (row 239) at world-clock time, or a forced phase's preview time; the same object until it moves a step. */
   sun: SunAngles;
+  /** The real moon at the same instant and step as the sun (its key's strength at night). */
+  moon: MoonSky;
+  /** The instant the dome shows (sunPath skyInstant): a forced phase's preview time, else null (the world clock). */
+  skyAt: number | null;
   /** World-clock ms (worldNow, so `?at=` moves it), read once a minute: the events, forage and bugs follow it. */
   now: number;
   /** The light's phase blend (islandLightAt): across a boundary the two phases and how far; a forced phase is itself. */
@@ -72,6 +77,10 @@ export function useIslandConditions(): IslandConditions {
   const livePhase = islandPhase(date, report?.sun);
   const sunStep = Math.floor((forcedPhase ? phaseInstant(forcedPhase, date, report?.sun) : date).getTime() / SUN_STEP_MS);
   const sun = useMemo(() => solarPosition(new Date(sunStep * SUN_STEP_MS)), [sunStep]);
+  const moon = useMemo(() => moonPosition(sunStep * SUN_STEP_MS, LONDON_ON), [sunStep]);
+  // The dome shows a forced phase's preview time; the live sky follows the world clock.
+  const skyAt = forcedPhase ? sunStep * SUN_STEP_MS : null;
+  useEffect(() => { setSkyInstant(skyAt); return () => setSkyInstant(null); }, [skyAt]);
   const weather = weatherOverride ?? (report && weatherAt(report, date)) ?? "clear";
   // Keyed by value, like the phase blend: rebuilt only while a transition moves.
   const liveWeather = weatherBlendOverride ?? (!weatherOverride && report ? weatherBlendAt(report, date) : null);
@@ -98,6 +107,8 @@ export function useIslandConditions(): IslandConditions {
     season: seasonOverride ?? seasonBlend(date),
     sunSource: sunFor(date, report?.sun).source,
     sun,
+    moon,
+    skyAt,
     now,
     blend,
   };

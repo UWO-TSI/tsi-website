@@ -7,7 +7,7 @@ Layout: `web/` (Next.js: app, components, lib, data, scripts, supabase), `realti
 
 | Surface | Routes | Code |
 |---|---|---|
-| Marketing | `/`, `/genesis`, `/globetest`, `/npo/*` | `web/app/(site)/`, `app/genesis`, `app/npo`, `components/{sections,hero,layout,ui,title}/` |
+| Marketing | `/`, `/npo`, `/genesis`, `/globetest`, `/admin/npo` | `web/app/(site)/` (pages and their CSS), `components/site/` (frame, home sections, glyph field and seams, the NPO form), `lib/site/` (config, seasonal button), `lib/npo-*.ts`, `app/api/npo-applications/`, the globe in `components/ui/GlobeVisualizerWebGPU.tsx`. Spec: `specs/site/revamp.md` |
 | Recruitment/apply | `/student/apply/*`, `/student/election`, `/finalround[/token]`, `/admin/recruit` | `app/student/apply/`, `components/{recruit,admin}/`, `lib/recruitment*.ts`, `app/finalround/FinalRound.tsx` |
 | Applicant island (3D) | `/student/apply/portal` | `components/recruit/{ApplicantIsland,ApplicantWorld}.tsx`, `lib/game/{applicantVillage,applicantTime}.ts` |
 | Member game (3D) | `/student/dashboard` (renders `DefaultIslandWorld`), `/student/go`, `/student/onboarding`, `/student/opening-soon` | `components/game/DefaultIslandWorld.tsx`, `lib/game/` |

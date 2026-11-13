@@ -2,8 +2,9 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Html } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Color, DirectionalLight, DoubleSide, Material, Mesh, Points, Vector3, QuadraticBezierCurve3, BufferGeometry, LineDashedMaterial, Line } from "three";
+import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { BufferAttribute, Color, DirectionalLight, DoubleSide, Group, Material, Mesh, Points, Vector3, QuadraticBezierCurve3, BufferGeometry, LineDashedMaterial, Line } from "three";
+import { lowPower } from "@/lib/site/perf";
 import {
     ACESFilmicToneMapping,
     SRGBColorSpace,
@@ -12,7 +13,7 @@ import {
     PostProcessing,
 } from "three/webgpu";
 import type { UniformNode } from "three/webgpu";
-import { attribute, float, fract, smoothstep, uniform, vec3, pass } from "three/tsl";
+import { attribute, float, fract, smoothstep, uniform, vec3, vec4, pass, renderOutput } from "three/tsl";
 import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
 import globeData from "@/data/globe-nodes.json";
 
@@ -22,7 +23,8 @@ import globeData from "@/data/globe-nodes.json";
 
 const CONFIG = {
     topography: 0.10,
-    background: "#10121a",
+    // The page ink. The globe is composited onto it after tone mapping, so it matches the page exactly.
+    background: "#0f0f10",
     land: "#6b9362",
     water: "#181a25",
     blend: 1.00,
@@ -36,6 +38,19 @@ const ROTATION_Y = 3.45;
 
 // Module-level hover counter — GlobeNode writes, SceneContent reads
 let _nodeHoverCount = 0;
+
+/**
+ * How far the home page's dive has gone, 0 to 1 (a ref, read every frame, so scrolling never re-renders).
+ * `boost` scales the resting globe as it takes the centre; `interactive` says when people may drag it.
+ */
+/** `hidden`: nothing of the globe is on screen, so it stops drawing until a `globe-wake` event on window. */
+export type DiveRef = { current: number; boost?: number; interactive?: boolean; hidden?: boolean };
+const DiveContext = createContext<{ dive: DiveRef; base: number }>({ dive: { current: 0 }, base: 1 });
+/** The globe grows to this many times its resting size by the end of the dive, and rolls this far (radians). */
+const DIVE_SCALE = 3.2;
+const DIVE_ROLL = -1.2;
+const viewAxis = new Vector3();
+const ARC = "#1d9bf0";
 
 // ═══════════════════════════════════════════
 // Node types & data
@@ -216,7 +231,7 @@ function ArcLine({ start, end }: { start: Vector3; end: Vector3 }) {
         const pts = c.getPoints(48);
         const geo = new BufferGeometry().setFromPoints(pts);
         const mat = new LineDashedMaterial({
-            color: "#9cff00",
+            color: ARC,
             dashSize: 0.02,
             gapSize: 0.01,
             opacity: 0.25,
@@ -241,7 +256,7 @@ function ArcLine({ start, end }: { start: Vector3; end: Vector3 }) {
             <primitive object={lineObj} />
             <mesh ref={dotRef}>
                 <sphereGeometry args={[0.006, 8, 8]} />
-                <meshBasicMaterial color="#9cff00" transparent opacity={0.9} />
+                <meshBasicMaterial color={ARC} transparent opacity={0.9} />
             </mesh>
         </>
     );
@@ -258,9 +273,10 @@ function GlobeNode({ node, position }: { node: GlobeNodeData; position: Vector3 
     const hoverRingRef = useRef<Mesh>(null);
     const isChapter = node.type === "chapter";
     const r = isChapter ? 0.018 : 0.01;
-    const nodeColor = isChapter ? "#6b8cff" : "#9cff00";
-    const hoverColor = isChapter ? "#a0b8ff" : "#c8ff50";
-    const accentColor = isChapter ? "#3a6aff" : "#6b9362";
+    const nodeColor = isChapter ? ARC : "#c9d6e3";
+    const hoverColor = isChapter ? "#7cc4f7" : "#ffffff";
+    const accentColor = isChapter ? ARC : "#8da8cc";
+    const { dive } = useContext(DiveContext);
 
     useFrame(({ clock }) => {
         // Pulse glow ring for chapters
@@ -307,8 +323,8 @@ function GlobeNode({ node, position }: { node: GlobeNodeData; position: Vector3 
 
             {/* Invisible larger hitbox */}
             <mesh
-                onPointerOver={(e) => { e.stopPropagation(); setHovered(true); _nodeHoverCount++; document.body.style.cursor = "pointer"; }}
-                onPointerOut={(e) => { e.stopPropagation(); setHovered(false); _nodeHoverCount--; document.body.style.cursor = "auto"; }}
+                onPointerOver={(e) => { e.stopPropagation(); if (dive.current > 0.02) return; setHovered(true); _nodeHoverCount++; document.body.style.cursor = "pointer"; }}
+                onPointerOut={(e) => { e.stopPropagation(); if (!hovered) return; setHovered(false); _nodeHoverCount--; document.body.style.cursor = "auto"; }}
             >
                 <sphereGeometry args={[r * 4, 12, 12]} />
                 <meshBasicMaterial visible={false} />
@@ -389,8 +405,36 @@ function GlobeNode({ node, position }: { node: GlobeNodeData; position: Vector3 
 // Globe
 // ═══════════════════════════════════════════
 
+/**
+ * The globe file keeps its point attributes as normalized integers so it downloads small; WebGPU can't read single 8 or
+ * 16-bit values, so they are widened back to floats here. On a low-power machine only every other point is kept (the
+ * points run in a spiral from pole to pole, so every other one is an even half of the globe).
+ */
+function widen(src: BufferGeometry, stride: number): BufferGeometry {
+    const out = new BufferGeometry();
+    for (const [name, attr] of Object.entries(src.attributes)) {
+        const a = attr as BufferAttribute;
+        const k = a.itemSize, n = Math.floor(a.count / stride);
+        const f = new Float32Array(n * k);
+        const arr = a.array as ArrayLike<number>;
+        const plain = !(a as unknown as { isInterleavedBufferAttribute?: boolean }).isInterleavedBufferAttribute;
+        const scale = !a.normalized ? 1 : arr instanceof Int16Array ? 1 / 32767 : arr instanceof Uint16Array ? 1 / 65535 : arr instanceof Uint8Array ? 1 / 255 : arr instanceof Int8Array ? 1 / 127 : 1;
+        for (let i = 0; i < n; i++) {
+            const j = i * stride;
+            for (let c = 0; c < k; c++) f[i * k + c] = plain ? Math.max(-1, arr[j * k + c] * scale) : a.getComponent(j, c);
+        }
+        out.setAttribute(name, new BufferAttribute(f, k));
+    }
+    out.boundingSphere = src.boundingSphere?.clone() ?? null;
+    out.boundingBox = src.boundingBox?.clone() ?? null;
+    return out;
+}
+
 function Globe() {
     const { nodes } = useGLTF("/globe.glb");
+    const { gl } = useThree();
+    // Frames drawn with the points in; after a few the shaders are compiled and the loading screen may lift.
+    const drawn = useRef(0);
 
     const pointsRef = useRef<Points | null>(null);
     const uniformsRef = useRef<MaterialUniforms | null>(null);
@@ -406,7 +450,7 @@ function Globe() {
     }, []);
 
     useEffect(() => {
-        const geometry = (nodes.GlobePoints as Points).geometry;
+        const geometry = widen((nodes.GlobePoints as Points).geometry, lowPower() ? 2 : 1);
         const { material, uniforms } = pointMaterial(1.0);
 
         uniformsRef.current = uniforms;
@@ -420,6 +464,9 @@ function Globe() {
     }, [nodes]);
 
     useFrame((state, delta) => {
+        if (drawn.current < 3 && pointsRef.current?.material && ++drawn.current === 3) {
+            (gl.domElement as HTMLElement).closest<HTMLElement>("[data-ready-wait]")?.setAttribute("data-ready", "1");
+        }
         const cameraPosition = state.camera.position;
 
         if (previousCameraPosition.current.lengthSq() > 0) {
@@ -500,7 +547,13 @@ function GlobePostProcessing({ children }: { children: ReactNode }) {
         bloomPass.strength.value = CONFIG.glow.strength;
         bloomPass.threshold.value = CONFIG.glow.threshold;
 
-        pp.outputNode = sceneOutput.add(bloomPass);
+        // Tone-map the globe and its glow, then lay them on the page ink in display space. Tone mapping
+        // the background too shifted it a few steps off the page colour (a visible edge on the left).
+        const ink = CONFIG.background;
+        const ground = vec3(parseInt(ink.slice(1, 3), 16) / 255, parseInt(ink.slice(3, 5), 16) / 255, parseInt(ink.slice(5, 7), 16) / 255);
+        const lit = renderOutput(sceneOutput.add(bloomPass));
+        pp.outputColorTransform = false;
+        pp.outputNode = vec4(ground.mul(float(1).sub(sceneOutput.a.clamp(0, 1))).add(lit.rgb), 1);
         postProcessing.current = pp;
 
         return () => {
@@ -523,8 +576,13 @@ function GlobePostProcessing({ children }: { children: ReactNode }) {
 
 function SceneContent() {
     const { camera, gl, invalidate, scene } = useThree();
+    const { dive, base } = useContext(DiveContext);
+    const diveGroup = useRef<Group>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const controls = useRef<any>(null);
     const lightRef = useRef<DirectionalLight | null>(null);
     const [anyNodeHovered, setAnyNodeHovered] = useState(false);
+    const [touch] = useState(touchOnly);
 
     // Poll the module-level hover counter each frame
     useFrame(() => {
@@ -548,8 +606,9 @@ function SceneContent() {
         };
     }, [camera, scene]);
 
+    // Transparent clear: the scene pass's alpha marks the globe, and the ink is added after tone mapping.
     useEffect(() => {
-        scene.background = new Color(CONFIG.background);
+        scene.background = null;
     }, [scene]);
 
     useEffect(() => {
@@ -563,8 +622,24 @@ function SceneContent() {
         gl.toneMappingExposure = CONFIG.light.exposure;
     }, [gl]);
 
+    useEffect(() => {
+        const wake = () => invalidate();
+        window.addEventListener("globe-wake", wake);
+        return () => window.removeEventListener("globe-wake", wake);
+    }, [invalidate]);
+
     useFrame(() => {
-        invalidate();
+        const d = dive.current;
+        if (diveGroup.current) {
+            diveGroup.current.scale.setScalar(base * (dive.boost ?? 1) * (1 + (DIVE_SCALE - 1) * d));
+            // Roll around the line of sight, so the canvas itself never turns and its corners never show.
+            diveGroup.current.quaternion.setFromAxisAngle(viewAxis.copy(camera.position).normalize(), DIVE_ROLL * d);
+        }
+        if (controls.current) {
+            controls.current.enabled = !touch && (dive.interactive ?? d < 0.02);
+            controls.current.autoRotate = !anyNodeHovered && d < 0.6;
+        }
+        if (!dive.hidden) invalidate();
     });
 
     return (
@@ -575,8 +650,12 @@ function SceneContent() {
                 color={CONFIG.light.color}
                 intensity={CONFIG.light.intensity}
             />
-            <Globe />
+            <group ref={diveGroup}>
+                <Globe />
+            </group>
             <OrbitControls
+                ref={controls}
+                enabled={!touch}
                 autoRotate={!anyNodeHovered}
                 autoRotateSpeed={0.3}
                 dampingFactor={0.03}
@@ -592,10 +671,22 @@ function SceneContent() {
 // Exported component
 // ═══════════════════════════════════════════
 
-export default function GlobeVisualizerWebGPU({ className = "" }: { className?: string }) {
+const NO_DIVE: DiveRef = { current: 0 };
+
+/**
+ * A touch screen never drags the globe: a finger on it has to scroll the page (on a phone the globe fills most of the
+ * hero, so a globe that took touches would trap the page). Read once; a device doesn't change its pointer mid-visit.
+ */
+const touchOnly = () => typeof window !== "undefined" && window.matchMedia("(hover: none), (pointer: coarse)").matches;
+
+/** `base` scales the resting globe (the home hero draws it on a full-screen canvas, so it starts small). */
+export default function GlobeVisualizerWebGPU({ className = "", dive = NO_DIVE, base = 1 }: { className?: string; dive?: DiveRef; base?: number }) {
+    const [touch] = useState(touchOnly);
     return (
         <div className={className} style={{ position: "relative", width: "100%", height: "100%", minHeight: 500 }}>
+          <DiveContext.Provider value={{ dive, base }}>
             <Canvas
+                dpr={lowPower() ? 1 : [1, 1.5]}
                 camera={{ position: [0, 1, 5.1], fov: 30 }}
                 gl={async (props: any) => {
                     const renderer = new WebGPURenderer({
@@ -608,7 +699,7 @@ export default function GlobeVisualizerWebGPU({ className = "" }: { className?: 
                     return renderer as any;
                 }}
                 frameloop="demand"
-                style={{ touchAction: "none", userSelect: "none" }}
+                style={touch ? { pointerEvents: "none", touchAction: "pan-y", userSelect: "none" } : { touchAction: "none", userSelect: "none" }}
             >
                 <Suspense fallback={null}>
                     <GlobePostProcessing>
@@ -616,6 +707,7 @@ export default function GlobeVisualizerWebGPU({ className = "" }: { className?: 
                     </GlobePostProcessing>
                 </Suspense>
             </Canvas>
+          </DiveContext.Provider>
         </div>
     );
 }
