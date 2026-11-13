@@ -14,11 +14,15 @@ CREATE TABLE IF NOT EXISTS public.game_events (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   member_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   session_id UUID NOT NULL,
-  kind TEXT NOT NULL CHECK (kind IN ('session_start', 'heartbeat', 'session_end', 'step', 'feature')),
+  -- An id, not a fixed list: a new system (the markets, the login calendar, gem purchases) logs its own kind without a
+  -- migration, and the admin page lists every kind it sees. The route still takes only the kinds in code.
+  kind TEXT NOT NULL CHECK (kind ~ '^[a-z][a-z0-9_]{1,31}$'),
   step TEXT CHECK (step ~ '^[a-z0-9_]{1,40}$'),
   screen TEXT CHECK (screen ~ '^[a-z0-9_]{1,24}$'),
   at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK ((kind IN ('step', 'feature')) = (step IS NOT NULL))
+  -- A step or a feature names one; a session's own events never do; a new kind may carry one (its own detail id).
+  CHECK (kind NOT IN ('step', 'feature') OR step IS NOT NULL),
+  CHECK (kind NOT IN ('session_start', 'heartbeat', 'session_end') OR step IS NULL)
 );
 CREATE INDEX IF NOT EXISTS game_events_member_at ON public.game_events (member_id, at);
 CREATE INDEX IF NOT EXISTS game_events_at ON public.game_events (at);
@@ -114,6 +118,9 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     'steps', COALESCE((SELECT jsonb_agg(jsonb_build_object('m', s.m, 's', s.s, 'at', s.at)) FROM steps s WHERE s.m IN (SELECT id FROM players)), '[]'),
     'sessions', COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM sessions x WHERE x.m IN (SELECT id FROM players)), '[]'),
     'uses', COALESCE((SELECT jsonb_agg(to_jsonb(u)) FROM uses u WHERE u.m IN (SELECT id FROM players)), '[]'),
+    'kinds', COALESCE((SELECT jsonb_agg(jsonb_build_object('kind', kind, 'n', n, 'players', players, 'first', first, 'last', last))
+                        FROM (SELECT kind, COUNT(*) AS n, COUNT(DISTINCT member_id) AS players, MIN(at) AS first, MAX(at) AS last
+                                FROM game_events WHERE at >= p_since GROUP BY kind) k), '[]'),
     'days', COALESCE((SELECT jsonb_agg(jsonb_build_object('m', d.m, 'd', d.d)) FROM (SELECT DISTINCT m, at::date AS d FROM act) d
                        WHERE d.m IN (SELECT id FROM players)), '[]'));
 $$;

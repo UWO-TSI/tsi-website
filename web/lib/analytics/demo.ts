@@ -42,9 +42,21 @@ export function demoSnapshot(now: Date, players = 140, seed = 7): Snapshot {
       snap.sessions.push({ m: id, start: iso(at), end: iso(stop), last_step: v === 0 ? last : null, screen: v === 0 && last !== "first_quest" ? "opening" : SCREENS[Math.floor(r() * SCREENS.length)] });
       snap.days.push({ m: id, d: iso(at).slice(0, 10) });
       for (const f of FEATURES) if (r() < (f === "fishing" || f === "selling" || f === "daily_gift" ? 0.7 : 0.12) * (v ? 1 : 0.5)) snap.uses.push({ m: id, f, d: iso(at).slice(0, 10) });
-      at = stop + (0.3 + r() ** 2 * 6) * DAY;
+      at = stop + (0.3 + r() ** 3 * 14) * DAY;
     }
     snap.players[i].last = snap.sessions.at(-1)!.end;
   }
+  // The log's kinds, as the snapshot counts them; and one made-up new system's kind (a market sale) from five days ago.
+  const who = (rows: { m: string }[]) => new Set(rows.map((x) => x.m)).size;
+  const first = iso(Math.min(...snap.sessions.map((x) => Date.parse(x.start)))), last = iso(end);
+  const beats = snap.sessions.reduce((a, x) => a + Math.floor((Date.parse(x.end) - Date.parse(x.start)) / 180_000), 0);
+  snap.kinds = [
+    { kind: "session_start", n: snap.sessions.length, players: who(snap.sessions), first, last },
+    { kind: "session_end", n: snap.sessions.length, players: who(snap.sessions), first, last },
+    { kind: "heartbeat", n: beats, players: who(snap.sessions), first, last },
+    { kind: "step", n: snap.steps.length, players: who(snap.steps), first, last },
+    { kind: "feature", n: snap.uses.length, players: who(snap.uses), first, last },
+    { kind: "market_sale", n: 37, players: 11, first: iso(end - 5 * DAY), last },
+  ];
   return snap;
 }

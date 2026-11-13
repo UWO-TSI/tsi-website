@@ -1,4 +1,4 @@
--- The game's event log and the admin analytics read (20261106210000_game_events). Throwaway local Postgres after every
+-- The game's event log and the admin analytics read (20261113120000_game_events). Throwaway local Postgres after every
 -- migration, with the pre_* seeds. Never Supabase. Fails before the migration: no game_events.
 \set ON_ERROR_STOP 1
 INSERT INTO auth.users (id, email) VALUES
@@ -46,9 +46,12 @@ BEGIN
     RAISE EXCEPTION 'a heartbeat with a step accepted';
   EXCEPTION WHEN check_violation THEN NULL; END;
   BEGIN
-    INSERT INTO game_events (member_id, session_id, kind) VALUES (B, S1, 'page_view');
-    RAISE EXCEPTION 'an unknown kind accepted';
+    INSERT INTO game_events (member_id, session_id, kind) VALUES (B, S1, 'Page View!');
+    RAISE EXCEPTION 'a kind that is not an id accepted';
   EXCEPTION WHEN check_violation THEN NULL; END;
+
+  -- A new system's kind (the markets, later): an id, kept, and listed in the snapshot's kinds.
+  INSERT INTO game_events (member_id, session_id, kind, step, at) VALUES (B, S2, 'market_sale', 'fish', NOW() - INTERVAL '35 minutes');
 
   snap := game_analytics_snapshot(NOW() - INTERVAL '200 days');
   ASSERT (SELECT COUNT(*) FROM jsonb_array_elements(snap->'players') p WHERE p->>'id' IN (A::text, B::text)) = 2, 'A (member) and B (logged) are players';
@@ -65,12 +68,14 @@ BEGIN
   ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(snap->'uses') u WHERE u->>'m' = A::text AND u->>'f' = 'selling'), 'a sale is a use of selling';
   ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(snap->'uses') u WHERE u->>'m' = B::text AND u->>'f' = 'fishing'), 'a logged feature';
   ASSERT (SELECT COUNT(*) FROM jsonb_array_elements(snap->'days') d WHERE d->>'m' = A::text) = 2, 'A played on two days';
+  ASSERT (SELECT (k->>'n')::int FROM jsonb_array_elements(snap->'kinds') k WHERE k->>'kind' = 'step') = 3, 'kinds: the steps';
+  ASSERT (SELECT (k->>'players')::int FROM jsonb_array_elements(snap->'kinds') k WHERE k->>'kind' = 'market_sale') = 1, 'kinds: a new system''s';
 
   -- 180 days, then gone.
   INSERT INTO game_events (member_id, session_id, kind, at) VALUES (B, S1, 'heartbeat', NOW() - INTERVAL '181 days');
   n := game_events_prune();
   ASSERT n = 1 AND NOT EXISTS (SELECT 1 FROM game_events WHERE at < NOW() - INTERVAL '180 days'), 'pruned: ' || n;
-  ASSERT (SELECT COUNT(*) FROM game_events WHERE member_id = B) = 9, 'the rest stay';
+  ASSERT (SELECT COUNT(*) FROM game_events WHERE member_id = B) = 10, 'the rest stay';
   RAISE NOTICE 'game_events: ids only, history from the tables, sessions and screens, 180-day prune';
 END $$;
 

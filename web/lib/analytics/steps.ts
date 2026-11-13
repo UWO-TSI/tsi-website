@@ -91,6 +91,6 @@ export const SCREENS = [
   "village", "home", "ruins", "hq", "house", "museum", "oracle", "cafe", "shop",
   "counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "path", "settings",
   "missions", "tourney", "posters", "bag", "wallet", "chest", "plaque", "sell", "monument", "vboard", "rods", "outnow",
-  "tasks", "tackle", "chef", "sushi", "opening",
+  "tasks", "tackle", "chef", "sushi", "opening", "id",
 ] as const;
 export type Screen = (typeof SCREENS)[number];

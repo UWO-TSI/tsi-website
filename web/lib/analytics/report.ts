@@ -19,12 +19,34 @@ export interface Snapshot {
   uses: { m: string; f: string; d: string }[];
   /** Days a player did anything (sessions, ledger, catches...): activity from before the log too. */
   days: { m: string; d: string }[];
+  /** Every event kind the log holds since the read began, so a new system's events show before the page knows them. */
+  kinds?: { kind: string; n: number; players: number; first: string; last: string }[];
 }
+
+/** A share of the players it could be true of yet (`of`); null when nobody is old enough. */
+export interface Rate { pct: number | null; of: number }
+/** One headline number this period, and the same number over the period just before it (null: no data that far back). */
+export interface Change { key: string; label: string; now: number; before: number | null; unit: "n" | "pct" | "min" }
 
 export interface Report {
   range: { from: string; to: string };
   totals: { players: number; newInRange: number; activeToday: number; activeWeek: number; gone: number };
-  perDay: { d: string; new: number; active: number }[];
+  /** Per day: players who joined, who played that day, in the 7 days to it, and in the 30 days to it. */
+  perDay: { d: string; new: number; active: number; week: number; month: number }[];
+  /** At the range's end: the average day of the last 7, the last 7 days, the last 30, and the day over the month. */
+  actives: { dau: number; wau: number; mau: number; stickiness: number };
+  /** Of the players who joined in the range: came back on day 1, 7 or 30 or later, and on the very next day. */
+  retention: { d1: Rate; d7: Rate; d30: Rate; nextDay: Rate };
+  /** Of the players who joined in the range: the share who finished the arrival (the tutorial). */
+  tutorial: Rate;
+  /** Typical time from joining to a first (minutes), and how many got there. */
+  firsts: { step: StepId; label: string; medianMin: number | null; reached: number; of: number }[];
+  sessionLengths: { label: string; n: number }[];
+  kinds: { kind: string; label: string; n: number; players: number; first: string; last: string; known: boolean; isNew: boolean }[];
+  /** The headline numbers against the period before. */
+  changes: Change[];
+  /** What the numbers mean, in plain sentences (worked out here from the numbers, no model call). */
+  summary: { tone: "up" | "down" | "warn" | "info"; text: string }[];
   /** Players who joined in the range, since the log began (every step); before it, everyone (log-only steps `of` 0). */
   funnel: { step: StepId; label: string; reached: number; of: number; pct: number; dropPct: number }[];
   /** Players in the range who joined before the log: the steps the tables know (empty when the funnel is them). */
@@ -38,14 +60,24 @@ export interface Report {
   list: { name: string; joined: string; last: string | null; sessions: number; minutes: number; furthest: string; gone: boolean }[];
 }
 
+/** A screen's name on the page ("village" is the member island's id, from before the island had its name). */
+const SCREEN_LABEL: Record<string, string> = { village: "Island", hq: "HQ", id: "Island ID" };
+export const screenLabel = (id: string) => SCREEN_LABEL[id] ?? id[0].toUpperCase() + id.slice(1);
+/** The event log's own kinds (steps.ts and the events route); any other kind is a new system's, shown by its id. */
+const KIND_LABEL: Record<string, string> = { session_start: "Session start", heartbeat: "Heartbeat", session_end: "Session end", step: "Step reached", feature: "Feature used" };
+/** Session length buckets, minutes: [up to, label]. */
+const LENGTHS = [[1, "Under 1 min"], [5, "1 to 5"], [15, "5 to 15"], [30, "15 to 30"], [60, "30 to 60"], [Infinity, "Over an hour"]] as const;
+
 /** The UTC day of a time (any offset) or of a plain date. */
 const dayOf = (iso: string) => (iso.length === 10 ? iso : new Date(iso).toISOString().slice(0, 10));
 
 /** The page's ranges (days back from today); the snapshot always reads the log's whole 180 days and a margin. */
 export const RANGES = [7, 30, 90, 180] as const;
+/** How far back the snapshot reads (the log keeps 180 days). */
+const READ_DAYS = 200;
 export function rangeOf(days: number, now: Date): { from: string; to: string; since: string } {
   const n = (RANGES as readonly number[]).includes(days) ? days : 30;
-  return { from: dayOf(new Date(now.getTime() - (n - 1) * DAY).toISOString()), to: dayOf(now.toISOString()), since: new Date(now.getTime() - 200 * DAY).toISOString() };
+  return { from: dayOf(new Date(now.getTime() - (n - 1) * DAY).toISOString()), to: dayOf(now.toISOString()), since: new Date(now.getTime() - READ_DAYS * DAY).toISOString() };
 }
 const median = (xs: number[]) => {
   if (!xs.length) return 0;
@@ -123,7 +155,7 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
   const sessions = snap.sessions.filter((s) => inRange(s.start));
   const minutes = (s: { start: string; end: string }) => Math.max(0, (Date.parse(s.end) - Date.parse(s.start)) / 60_000);
   const quitKey = (s: { last_step: string | null; screen: string | null }) => s.screen ? `screen:${s.screen}` : s.last_step ? `step:${s.last_step}` : "none";
-  const quitLabel = (k: string) => k === "none" ? "Nothing logged" : k.startsWith("screen:") ? `On ${k === "screen:hq" ? "HQ" : k[7].toUpperCase() + k.slice(8)}` : `After ${STEP_LABEL[k.slice(5) as StepId] ?? k.slice(5)}`;
+  const quitLabel = (k: string) => k === "none" ? "Nothing logged" : k.startsWith("screen:") ? `On ${screenLabel(k.slice(7))}` : `After ${STEP_LABEL[k.slice(5) as StepId] ?? k.slice(5)}`;
   const lastSession = new Map<string, Snapshot["sessions"][number]>();
   for (const s of snap.sessions) if (!(Date.parse(lastSession.get(s.m)?.end ?? "") >= Date.parse(s.end))) lastSession.set(s.m, s);
   const gonePlayers = snap.players.filter((p) => isGone(p.id) && (inRange(p.joined) || lastSession.has(p.id)));
@@ -153,9 +185,11 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
     .sort((a, b) => b.players - a.players || a.label.localeCompare(b.label));
 
   const perDay: Report["perDay"] = [];
+  const dayAt = (t: number) => dayOf(new Date(t).toISOString());
+  const playedIn = (days: string[]) => snap.players.filter((p) => { const a = activeDays.get(p.id); return !!a && days.some((d) => a.has(d)); }).length;
   for (let t = Date.parse(from); t <= Date.parse(to); t += DAY) {
-    const d = dayOf(new Date(t).toISOString());
-    perDay.push({ d, new: snap.players.filter((p) => dayOf(p.joined) === d).length, active: snap.players.filter((p) => activeDays.get(p.id)?.has(d)).length });
+    const d = dayAt(t), back = (n: number) => Array.from({ length: n }, (_, k) => dayAt(t - k * DAY));
+    perDay.push({ d, new: snap.players.filter((p) => dayOf(p.joined) === d).length, active: playedIn([d]), week: playedIn(back(7)), month: playedIn(back(30)) });
   }
   const weekAgo = dayOf(new Date(now - 6 * DAY).toISOString());
 
@@ -174,6 +208,54 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
   const lengths = sessions.map(minutes);
   const players = new Set(sessions.map((s) => s.m)).size;
 
+  // ── The headline numbers, this period and the one before it (same length), for the summary and the tiles. ──
+  const span = perDay.length;
+  const rate = (ps: Snapshot["players"], ok: (p: Snapshot["players"][number]) => boolean): Rate =>
+    ps.length ? { pct: pct(ps.filter(ok).length, ps.length), of: ps.length } : { pct: null, of: 0 };
+  // Old enough for day n: the whole of their day n is over.
+  const ripe = (joined: string, n: number) => Date.parse(dayOf(joined)) + (n + 1) * DAY <= now;
+  const nextDayBack = (p: Snapshot["players"][number]) => !!activeDays.get(p.id)?.has(dayAt(Date.parse(dayOf(p.joined)) + DAY));
+  const period = (a: string, b: string) => {
+    const within = (iso: string) => { const d = dayOf(iso); return d >= a && d <= b; };
+    const joined = snap.players.filter((p) => within(p.joined));
+    const ss = snap.sessions.filter((s) => within(s.start));
+    let played = 0;
+    for (const days of activeDays.values()) for (const d of days) if (d >= a && d <= b) played++;
+    return {
+      newPlayers: joined.length, avgDaily: round1(played / span), sessions: ss.length, medianMin: round1(median(ss.map(minutes))),
+      nextDay: rate(joined.filter((p) => ripe(p.joined, 1)), nextDayBack),
+      tutorial: rate(joined, (p) => reachedStep(p.id, p.joined, "arrived")),
+    };
+  };
+  const cur = period(from, to);
+  const prevFrom = dayAt(Date.parse(from) - span * DAY), prevTo = dayAt(Date.parse(from) - DAY);
+  // Before the read window there's no activity to count; sessions need the log running the whole earlier period.
+  const prev = Date.parse(prevFrom) >= now - READ_DAYS * DAY ? period(prevFrom, prevTo) : null;
+  const logBefore = !!prev && loggedAt <= Date.parse(prevFrom);
+  const changes: Change[] = [
+    { key: "new", label: "New players", now: cur.newPlayers, before: prev?.newPlayers ?? null, unit: "n" as const },
+    { key: "daily", label: "Players a day", now: cur.avgDaily, before: prev?.avgDaily ?? null, unit: "n" as const },
+    { key: "sessions", label: "Sessions", now: cur.sessions, before: logBefore ? prev!.sessions : null, unit: "n" as const },
+    { key: "length", label: "Typical session", now: cur.medianMin, before: logBefore ? prev!.medianMin : null, unit: "min" as const },
+    { key: "tutorial", label: "Finished the tutorial", now: cur.tutorial.pct, before: prev?.tutorial.pct ?? null, unit: "pct" as const },
+    { key: "nextDay", label: "Came back the next day", now: cur.nextDay.pct, before: prev?.nextDay.pct ?? null, unit: "pct" as const },
+  ].flatMap((c) => c.now === null ? [] : [{ ...c, now: c.now }]);
+
+  const firsts = (["first_catch", "first_sale", "first_quest"] as const).map((step) => {
+    const waits = cohort.flatMap((p) => {
+      const t = firstAt.get(p.id)?.get(step), j = Date.parse(p.joined);
+      return t !== undefined && !Number.isNaN(t) && t >= j ? [(t - j) / 60_000] : [];
+    });
+    return { step, label: STEP_LABEL[step], medianMin: waits.length ? round1(median(waits)) : null, reached: cohort.filter((p) => firstAt.get(p.id)?.has(step)).length, of: cohort.length };
+  });
+  const last7 = perDay.slice(-7);
+  const dau = round1(last7.reduce((a, d) => a + d.active, 0) / (last7.length || 1));
+  const wau = perDay.at(-1)?.week ?? 0, mau = perDay.at(-1)?.month ?? 0;
+  const kinds = (snap.kinds ?? []).map((k) => ({ ...k, label: KIND_LABEL[k.kind] ?? k.kind, known: k.kind in KIND_LABEL, isNew: !(k.kind in KIND_LABEL) && inRange(k.first) }))
+    .sort((a, b) => b.n - a.n || a.kind.localeCompare(b.kind));
+  const quitGone = ranked(gonePlayers.map(goneKey), quitLabel).slice(0, 10);
+  const summary = summarize({ changes, span, prev: !!prev, funnel, cohorts, quitGone, perDay, kinds });
+
   return {
     range: { from, to },
     totals: {
@@ -184,11 +266,24 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
       gone: snap.players.filter((p) => isGone(p.id)).length,
     },
     perDay,
+    actives: { dau, wau, mau, stickiness: mau ? Math.round((dau / mau) * 100) : 0 },
+    retention: {
+      d1: rate(cohort.filter((p) => ripe(p.joined, 1)), (p) => cameBack(p.id, p.joined, 2)),
+      d7: rate(cohort.filter((p) => ripe(p.joined, 7)), (p) => cameBack(p.id, p.joined, 8)),
+      d30: rate(cohort.filter((p) => ripe(p.joined, 30)), (p) => cameBack(p.id, p.joined, 31)),
+      nextDay: cur.nextDay,
+    },
+    tutorial: cur.tutorial,
+    firsts,
+    sessionLengths: LENGTHS.map(([top, label], i) => ({ label, n: lengths.filter((m) => m < top && m >= (i ? LENGTHS[i - 1][0] : 0)).length })),
+    kinds,
+    changes,
+    summary,
     funnel,
     history,
     logSince: logged,
     quitSession: ranked(sessions.map(quitKey), quitLabel).slice(0, 10),
-    quitGone: ranked(gonePlayers.map(goneKey), quitLabel).slice(0, 10),
+    quitGone,
     engagement: {
       sessions: sessions.length,
       medianMin: round1(median(lengths)),
@@ -208,4 +303,69 @@ export function buildReport(snap: Snapshot, opts: { from: string; to: string; no
       gone: isGone(p.id),
     })),
   };
+}
+
+const md = (d: string) => new Date(dayOf(d)).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" });
+const lower = (s: string) => s[0].toLowerCase() + s.slice(1);
+const num = (c: Change, v: number) => c.unit === "pct" ? `${v}%` : c.unit === "min" ? `${v} min` : `${v}`;
+
+/**
+ * The summary card: the numbers read out in plain sentences, on the server, with no model call. In order: the biggest
+ * moves against the period before, the worst drop in the funnel, day-7 retention moving, where people quit most, and
+ * anything unusual (a spike, a silence, an event kind the page hasn't seen before).
+ */
+export function summarize(r: Pick<Report, "changes" | "funnel" | "cohorts" | "quitGone" | "perDay" | "kinds"> & { span: number; prev: boolean }): Report["summary"] {
+  const out: Report["summary"] = [];
+  const before = `the ${r.span} days before`;
+  // Percentages move in points, counts in percent; a count needs a few players behind it to mean anything.
+  const moves = r.changes.filter((c) => c.before !== null).map((c) => {
+    const b = c.before!, d = c.unit === "pct" ? c.now - b : b ? ((c.now - b) / b) * 100 : c.now ? 100 : 0;
+    return { c, d, size: c.unit === "pct" ? Math.abs(d) * 2 : Math.abs(d) };
+  }).filter((m) => m.c.unit === "pct" ? Math.abs(m.d) >= 5 : Math.abs(m.d) >= 15 && Math.max(m.c.now, m.c.before!) >= 3)
+    .sort((a, b) => b.size - a.size).slice(0, 3);
+  for (const { c, d } of moves) {
+    const way = d > 0 ? "rose" : "fell", by = c.unit === "pct" ? `${Math.round(Math.abs(d))} points` : `${Math.round(Math.abs(d))}%`;
+    out.push({ tone: d > 0 ? "up" : "down", text: c.before || c.unit === "pct"
+      ? `${c.label} ${way} ${by}: ${num(c, c.now)}, against ${num(c, c.before!)} in ${before}.`
+      : `${c.label}: ${num(c, c.now)}, where ${before} had none.` });
+  }
+  if (!moves.length) out.push({ tone: "info", text: r.prev ? `Nothing moved much against ${before}.` : `There's no earlier ${r.span} days in the log to compare with yet.` });
+
+  // The worst step: the biggest share lost between two steps of the opening and the tutorial (the returns are retention's).
+  let worst: { label: string; from: string; lost: number; of: number; drop: number } | null = null;
+  let last: Report["funnel"][number] | null = null;
+  for (const f of r.funnel) {
+    if (!f.of || f.step.startsWith("day_")) continue;
+    if (last) {
+      const lost = last.reached - f.reached;
+      if (lost >= 2 && (!worst || f.dropPct > worst.drop)) worst = { label: f.label, from: last.label, lost, of: last.reached, drop: f.dropPct };
+    }
+    last = f;
+  }
+  if (worst) out.push({ tone: "warn", text: `The worst drop is at "${worst.label}": ${worst.lost} of the ${worst.of} who got to "${worst.from}" went no further (${worst.drop}%).` });
+
+  // Day 7: the newest week old enough, against the weeks before it.
+  const ripe = r.cohorts.filter((c) => c.d7 !== null && c.size >= 3);
+  if (ripe.length >= 2) {
+    const [newest, ...rest] = ripe, avg = Math.round(rest.reduce((a, c) => a + c.d7!, 0) / rest.length), d = newest.d7! - avg;
+    const way = Math.abs(d) < 3 ? "is steady" : d > 0 ? "is up" : "is down";
+    out.push({ tone: Math.abs(d) < 3 ? "info" : d > 0 ? "up" : "down", text: `Day 7 retention ${way}: ${newest.d7}% of the week of ${md(newest.week)} came back a week on, against ${avg}% for the weeks before.` });
+  }
+
+  const gone = r.quitGone.reduce((a, q) => a + q.n, 0);
+  if (gone && r.quitGone[0].key !== "none") {
+    const q = r.quitGone[0];
+    out.push({ tone: "warn", text: `Most players who went quiet stopped ${lower(q.label)}: ${q.n} of ${gone} (${Math.round((q.n / gone) * 100)}%).` });
+  }
+
+  // Unusual: a day far above a usual one, days of nobody, a new kind of event.
+  const usual = median(r.perDay.map((d) => d.active).filter(Boolean));
+  const peak = r.perDay.reduce<Report["perDay"][number] | null>((a, d) => (!a || d.active > a.active ? d : a), null);
+  if (peak && peak.active >= 5 && peak.active >= 2.5 * Math.max(usual, 1)) {
+    out.push({ tone: "info", text: `${md(peak.d)} stood out: ${peak.active} played, about ${Math.round(peak.active / Math.max(usual, 1))} times a usual day.` });
+  }
+  const silent = r.perDay.length - 1 - r.perDay.findLastIndex((d) => d.active > 0);
+  if (usual && silent >= 3) out.push({ tone: "warn", text: `Nobody has played in the last ${silent} days.` });
+  for (const k of r.kinds.filter((k) => k.isNew)) out.push({ tone: "info", text: `A new kind of event, "${k.kind}", started on ${md(k.first)}: ${k.n} so far, from ${k.players} players.` });
+  return out;
 }

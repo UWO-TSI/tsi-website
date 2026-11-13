@@ -1,8 +1,8 @@
 #!/bin/zsh
 # Throwaway Postgres 16 smoke for the analytics lane's migration (never Supabase, never prod).
-#   zsh specs/evidence/analytics/r1/sql-smoke.sh [snapshot.json]
+#   zsh specs/evidence/analytics/r2/sql-smoke.sh [snapshot.json]
 # Chain: supabase_stub.sql; every migration through 20260926130000 (the legacy ones' known errors tolerated); every
-# later migration before ours with ON_ERROR_STOP and the pre_* seeds. Then 20261106210000_game_events.sql with
+# later migration before ours with ON_ERROR_STOP and the pre_* seeds. Then 20261113120000_game_events.sql with
 # tests/game_events_smoke.sql run BEFORE it (must fail) and after it (must pass), and game_security_smoke.sql still
 # passing. With a path: backfill.sql's made-up players, and game_analytics_snapshot() written there as JSON (the
 # /dev/analytics?source=backfill page's input, ANALYTICS_SNAPSHOT).
@@ -11,7 +11,7 @@ PG=/opt/homebrew/opt/postgresql@16/bin
 W=${0:A:h}/../../../../web/supabase
 D=${TMPDIR:-/tmp}/uwotsi-analytics-smoke-pg
 PORT=55498
-OURS=20261106210000_game_events.sql
+OURS=20261113120000_game_events.sql
 rm -rf $D && $PG/initdb -D $D -U postgres -A trust >/dev/null || exit 1
 $PG/pg_ctl -D $D -o "-p $PORT -k /tmp" -l $D.log start >/dev/null || exit 1
 trap '$PG/pg_ctl -D $D stop >/dev/null 2>&1; rm -rf $D $D.*' EXIT
