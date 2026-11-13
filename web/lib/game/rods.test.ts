@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { RODS, STAT_KEYS, STAT_MAX, TACKLE, TRAINING, awakened, awakenedLook, bestOwnedRod, heldRig, inPlay, nextAwakening, ownedRig, ownsRod, biteWindowMs, canHook, castLuck, hookCap,
-  onShopShelf, rig, rodByKey, rodByTier, secretAwakenings, stageAt, trainingQuest, type Stats } from "./rods";
+  AWAKEN_AT, onShopShelf, rig, rodByKey, rodByTier, secretAwakenings, stageAt, trainingQuest, type Stats } from "./rods";
 import { TOOLS, checkHeld } from "./tools";
 import { CATALOGUE, onSale } from "@/lib/wallet/catalogue";
 import { advanceFishingReel, createFishingReel } from "./fishingReel";
@@ -172,34 +172,39 @@ describe("awakenings (David 2026-11-04: no levels, only awakenings)", () => {
   it("epic and up awaken in the open; rare and below (but the Training rod) never do", () => {
     for (const r of RODS) expect(r.awakenings.length > 0, r.key).toBe(r.key === TRAINING.key || r.rarity === "epic");
     const tide = rodByKey("rod_tidewarden")!;
-    expect(nextAwakening(tide, 120)?.at).toBe(300);
-    expect(nextAwakening(tide, 1300)).toBeNull();
-    expect(awakened(tide, 1200).passive?.text).toContain("luck");
-    expect(awakened(tide, 300).passive).toBe(tide.passive);
+    expect(nextAwakening(tide, 120)?.at).toBe(AWAKEN_AT);
+    expect(nextAwakening(tide, AWAKEN_AT)).toBeNull();
+    expect(awakened(tide, AWAKEN_AT).passive?.text).toContain("luck");
+    expect(awakened(tide, AWAKEN_AT - 1).passive).toBe(tide.passive);
     expect(awakened(rodByKey("rod_glass")!, 5000)).toBe(rodByKey("rod_glass"));
   });
-  it("each epic awakens its own way (David 2026-11-04: \"its not all 200 800 some have solo awakenings\")", () => {
+  it("each epic awakens once, at about 600 fish (David 2026-11-06: \"only have 1 awakenings ... very high cap at 600 ish\")", () => {
     const epics = RODS.filter(r => r.rarity === "epic");
-    expect(new Set(epics.map(r => r.awakenings.map(a => a.at).join())).size).toBe(epics.length);
-    expect(rodByKey("rod_titanium")!.awakenings).toHaveLength(1);
+    for (const r of epics) expect(r.awakenings.map(a => a.at), r.key).toEqual([AWAKEN_AT]);
     // Only what the rod is for grows: Titanium's line, never its luck.
-    const ti = rodByKey("rod_titanium")!, woke = awakened(ti, 400);
+    const ti = rodByKey("rod_titanium")!, woke = awakened(ti, AWAKEN_AT);
     expect(woke.base.strength).toBeGreaterThan(ti.base.strength);
     expect(woke.base.luck).toBe(ti.base.luck);
   });
   it("wears its awakening's own model once it reaches it, and keeps the one it was bought with until then (rod-titanium round 1)", () => {
     const ti = rodByKey("rod_titanium")!;
-    expect(awakenedLook(awakened(ti, 399))).toBeNull();
-    const look = awakenedLook(awakened(ti, 400))!;
+    expect(awakenedLook(awakened(ti, AWAKEN_AT - 1))).toBeNull();
+    const look = awakenedLook(awakened(ti, AWAKEN_AT))!;
     expect(look).toEqual({ model: "/assets/game/tools/rod-titanium-a1.glb", icon: "rod_titanium_a1" });
     expect(existsSync(join(__dirname, "../../public", look.model))).toBe(true);
     expect(existsSync(join(__dirname, "../../public/assets/icons", `${look.icon}.webp`))).toBe(true);
+    // The Tidewarden and the Tempest awaken into their own models too (round 11).
+    for (const key of ["rod_tidewarden", "rod_tempest"]) {
+      const l = awakenedLook(awakened(rodByKey(key)!, AWAKEN_AT))!;
+      expect(existsSync(join(__dirname, "../../public", l.model))).toBe(true);
+      expect(existsSync(join(__dirname, "../../public/assets/icons", `${l.icon}.webp`))).toBe(true);
+    }
     // A rod whose awakenings have no model of their own keeps its own (the cutscene's stand-in recolour stays).
     expect(awakenedLook(awakened(training, 1000))).toBeNull();
   });
   it("takes the rarity its stats now match (David 2026-11-04: \"when awakened, rarity change\")", () => {
     expect([0, 50, 250, 1000].map(n => awakened(training, n).rarity)).toEqual(["common", "rare", "epic", "legendary"]);
-    expect(awakened(rodByKey("rod_tempest")!, 600).rarity).toBe("epic");
+    expect(awakened(rodByKey("rod_tempest")!, AWAKEN_AT).rarity).toBe("epic");
   });
 });
 

@@ -84,7 +84,7 @@ export function RodSlots({ rows, busy, onEquip }: { rows: readonly InventoryRow[
 }
 
 /** How far the tackle hangs below the tip, and each piece's size (stage units: the rod spans 1.7). */
-const LINE = 0.34, LEADER = 0.1, SIZE: Record<TackleSlot, number> = { bobber: 0.13, bait: 0.1 };
+const LINE = 0.34, LEADER = 0.1, SIZE: Record<TackleSlot, number> = { bobber: 0.09, bait: 0.07 };
 // A light, fine line (David 10-29: "make the line not black and thinner more subtle").
 const lineMat = new THREE.MeshBasicMaterial({ color: 0xb4bcc4 });
 const lineGeo = new THREE.CylinderGeometry(0.0035, 0.0035, 1, 5).translate(0, -0.5, 0);

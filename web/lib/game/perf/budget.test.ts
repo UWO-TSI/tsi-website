@@ -166,7 +166,7 @@ describe("effect budgets (budget.ts PARTICLE_POOLS, JUICE_EVENT_PARTICLES; fx/co
   /** Each file's particle pool capacities, from its `new ParticlePool(<capacity>` calls (a literal, a const in the file, or FX_POOLS.<pool>). */
   function poolsIn(file: string): number[] {
     const src = readFileSync(file, "utf8"), out: number[] = [];
-    for (const m of src.matchAll(/new ParticlePool\(\s*([A-Za-z_.0-9]+)/g)) {
+    for (const m of src.matchAll(/new (?:ParticlePool|HolderPool)\(\s*([A-Za-z_.0-9]+)/g)) {
       const arg = m[1];
       if (/^\d+$/.test(arg)) out.push(Number(arg));
       else if (arg.startsWith("FX_POOLS.")) out.push(FX_POOLS[arg.slice(9) as keyof typeof FX_POOLS] as number);

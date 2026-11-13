@@ -161,7 +161,7 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
     <FlyIn icon={<Coins size={52} />} name="Coins" text="For things on the island" to={['[data-hud-slot="coins"]']} onDone={done} /></>}</Loop> },
   { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
   { id: "printed-card", title: "Printed card as the overlay (CardOverlay, PrintedCard, PaperField)", render: () => <PrintedShow /> },
-  { id: "awakening", title: "An awakening (Awakening): glow, pulse, burst, show, reveal", render: () => <Loop ms={11000}>{done => <Awakening label="Awakened" from="common" rarity="rare" rarityLabel="Rare rod"
+  { id: "awakening", title: "An awakening (Awakening): glow, pulse, hush, impact frames and burst, show, reveal", render: () => <Loop ms={12000}>{done => <Awakening label="Awakened" from="common" rarity="rare" rarityLabel="Rare rod"
     lead="Your Training rod is glowing…" eyebrow="Awakened!" name="Training rod" text="It fishes like a rare rod now." onClose={done}
     thing={after => <img src="/assets/icons/rod_training.webp" alt="" style={{ objectFit: "contain", imageRendering: "pixelated", filter: after ? "hue-rotate(160deg)" : undefined }} />}
     action={<DarkButton onClick={done}>Nice!</DarkButton>} />}</Loop> },

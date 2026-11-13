@@ -7,6 +7,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { mergeHeld } from "@/lib/game/character/heldMesh";
 import { rodTip } from "@/lib/game/rodTip";
 import { rodFxUrl } from "./RodAura";
+import { fxAt } from "@/lib/game/fx/library";
 
 const PUBLIC = join(__dirname, "../../../public");
 const load = (url: string) => new Promise<THREE.Object3D>((resolve, reject) => {
@@ -17,15 +18,28 @@ const load = (url: string) => new Promise<THREE.Object3D>((resolve, reject) => {
 const rods = readdirSync(join(PUBLIC, "assets/game/tools")).filter(f => f.startsWith("rod-")).map(f => `/assets/game/tools/${f}`);
 
 describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", () => {
-  it("names its effect on the epic and the rare rods, through the held merge", async () => {
+  it("names its effect on the epic and the rare rods (and the Cedar, whose foliage sways), through the held merge", async () => {
     const named = new Map<string, string | null>();
     for (const url of rods) named.set(url.split("/").pop()!, rodFxUrl(mergeHeld(await load(url), url)));
     expect(named.get("rod-tempest.glb")).toBe("/assets/game/props/rodfx-tempest.glb");
     expect(named.get("rod-5.glb")).toBe("/assets/game/props/rodfx-tidewarden.glb");
+    expect(named.get("rod-2.glb")).toBe("/assets/game/props/rodfx-cedar.glb");
     expect(named.get("rod-titanium.glb")).toBeNull();
     expect(named.get("rod-titanium-a1.glb")).toBe("/assets/game/props/rodfx-titanium-a1.glb");
-    expect([...named.values()].filter(Boolean)).toHaveLength(4);
+    expect(named.get("rod-tidewarden-a1.glb")).toBe("/assets/game/props/rodfx-tidewarden-a1.glb");
+    expect(named.get("rod-tempest-a1.glb")).toBe("/assets/game/props/rodfx-tempest-a1.glb");
+    expect([...named.values()].filter(Boolean)).toHaveLength(6);
     expect(named.get("rod-1.glb")).toBeNull();
+  });
+
+  it("gives the Cedar's foliage to its effect as the library's Sway, the rod itself left plain (David 2026-11-06)", async () => {
+    const fx = await load("/assets/game/props/rodfx-cedar.glb"), rod = await load("/assets/game/tools/rod-2.glb");
+    const soft = fx.children.filter(n => n.userData.sway);
+    expect(soft).toHaveLength(1);
+    const mats = new Set<string>();
+    fx.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) mats.add((m.material as THREE.Material).name); });
+    expect([...mats].sort()).toEqual(["Leaves_Fresh", "Leaves_Leaf"]);
+    rod.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) expect((m.material as THREE.Material).name).not.toMatch(/Leaf|Fresh/); });
   });
 
   it("builds the Tempest from the effects library: no discs of light, a trail, a hugging aura", async () => {
@@ -34,6 +48,25 @@ describe("rods' effects (art/pipeline/build_rods.py, fx_library.py, RodAura)", (
     expect(names.some(n => n.startsWith("Halo"))).toBe(false);
     expect(parts.getObjectByName("Gust")?.userData.trail).toBeGreaterThan(0);
     expect(names.some(n => n.startsWith("Aura"))).toBe(true);
+  });
+
+  it("builds the Tidewarden from the library: its veins as Glow and no water as bought; awakened, the Water type wound on down the shaft (round 11)", async () => {
+    const mats = async (url: string) => { const m: string[] = [], n: string[] = []; (await load(url)).traverse(o => { n.push(o.name); const x = (o as THREE.Mesh).material as THREE.Material | undefined; if (x) m.push(x.name); }); return { m, n }; };
+    const base = await mats("/assets/game/props/rodfx-tidewarden.glb"), woke = await mats("/assets/game/props/rodfx-tidewarden-a1.glb");
+    expect([...base.n, ...woke.n].some(n => n.startsWith("Halo"))).toBe(false);
+    expect([...base.m, ...woke.m].some(m => /Aura/.test(m))).toBe(false);
+    expect(base.m.every(m => m.endsWith("Glow"))).toBe(true);
+    for (const kind of ["Water", "Foam", "Spray", "Glow"]) expect(woke.m.some(m => m.endsWith(kind))).toBe(true);
+    // the wrap gated from the head (0) down the shaft, all of it shown at the strength the effect is drawn at as made
+    const parts = await load("/assets/game/props/rodfx-tidewarden-a1.glb"), tide = parts.getObjectByName("Tide") as THREE.Mesh, gate = tide.geometry.getAttribute("color");
+    expect(tide.geometry.getAttribute("uv")).toBeDefined();
+    expect(Number(tide.userData.spin)).toBeGreaterThan(0);
+    let lo = 1, hi = 0;
+    for (let i = 0; i < gate.count; i++) { lo = Math.min(lo, gate.getY(i)); hi = Math.max(hi, gate.getY(i)); }
+    expect(lo).toBe(0);
+    const made = Number(parts.userData.fxStrength);
+    expect(hi).toBeGreaterThan(0.2);
+    expect(hi).toBeLessThanOrEqual(Math.min(1, fxAt("water", "wrap", made) - 1));
   });
 
   it("keeps the Titanium plain and opens it when it awakens (rod-titanium round 2)", async () => {

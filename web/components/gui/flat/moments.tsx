@@ -19,8 +19,8 @@
  *   PaperField   a field written on paper: a write-in line, for a card being filled in
  *   Awakening    a thing changing into its better self, as a Pokémon evolves (David 2026-11-04): large in the middle
  *                over a deep scrim, a glow gathers on it in its old rung's colour, it pulses between its two forms
- *                faster and faster, the glow flares into the new rung's colour, it shows its new form alone, then
- *                steps aside for a card of what changed
+ *                faster and faster as the scrim closes in, everything holds its breath, the hit lands in impact frames,
+ *                the glow flares into the new rung's colour, it shows its new form alone, then steps aside for a card
  * Colours: the theme's --ui-* tokens only. Plain props; nothing here knows the game.
  */
 import { useEffect, useRef, useState, type CSSProperties, type InputHTMLAttributes, type PointerEvent, type ReactNode } from "react";
@@ -245,11 +245,13 @@ export function PaperField(props: InputHTMLAttributes<HTMLInputElement>) {
 }
 
 /** An Awakening's beats (ms), in order; the reveal stays until it's closed. */
-export const AWAKEN_MS = { frame: 900, glow: 1100, pulse: 2600, burst: 650, show: 1900 } as const;
+export const AWAKEN_MS = { frame: 900, glow: 1300, pulse: 2800, hush: 500, burst: 700, show: 1900 } as const;
 export type AwakenPhase = keyof typeof AWAKEN_MS | "reveal";
 const AWAKEN_ORDER = Object.keys(AWAKEN_MS) as (keyof typeof AWAKEN_MS)[];
 /** How much bigger than its stage the thing's box is: room for its glow and its motion, so neither meets an edge. */
 export const AWAKEN_ROOM = 1.6;
+/** Painted frames each impact frame holds (three of them as the burst lands). */
+const IMPACT_FRAMES = 5;
 /** When the card has landed after the reveal (ms): what changed moves only then, one thing at a time. */
 export const AWAKEN_CARD_MS = 900;
 
@@ -257,8 +259,12 @@ export const AWAKEN_CARD_MS = 900;
  * A thing changing into its better self (a rod's awakening; David 2026-11-04: "like how when pokemon evlolve"). It plays
  * on mount (a new React `key` plays it again): `frame` it comes in large over a deep scrim with `lead` above it, `glow`
  * a glow gathers on it (on the thing itself, no light behind it: David 2026-11-05) in the colour of the rung it had
- * (`from`), `pulse` it swells between its old form and its new one faster and faster, `burst` the glow flares and turns
- * the new rung's colour (`rarity`), `show` the new form plays its own motion alone in the middle, then `reveal` it
+ * (`from`), `pulse` it swells between its old form and its new one faster and faster, flashing up on each beat, as the
+ * scrim deepens and the stage pushes in, `hush` everything holds its breath (dim, still, the lead gone: a strike from
+ * outside gathers here), `burst` the hit lands in impact frames (David 2026-11-06: "more flash and almost impact flash
+ * frames": the screen in the new rung's colour with the thing cut out dark, then dark with the thing lit, then the
+ * colour again), the stage shakes, the glow flares and turns the new rung's colour (`rarity`), `show` the new form
+ * plays its own motion alone in the middle, then `reveal` it
  * steps aside, a faint edge of its rung's colour on it, and a card comes in beside it (under it on a phone): `eyebrow`,
  * `name`, the rung's pill (`rarityLabel`), `text`, `children` (what changed; move them after `AWAKEN_CARD_MS`) and
  * `action`. `thing(after, phase)` draws it: its old form until the burst (`after` false), its new one on the pulse's up
@@ -271,13 +277,13 @@ export function Awakening({ label, thing, from, rarity, rarityLabel, lead, eyebr
   eyebrow: ReactNode; name: ReactNode; text?: ReactNode; children?: ReactNode; action?: ReactNode;
   onPhase?: (phase: AwakenPhase | "beat") => void; onClose: () => void; ready?: boolean; testId?: string;
 }) {
-  const [phase, setPhase] = useState<AwakenPhase>("frame"), [after, setAfter] = useState(false);
+  const [phase, setPhase] = useState<AwakenPhase>("frame"), [after, setAfter] = useState(false), [impact, setImpact] = useState(0);
   const ref = useWorldDialog<HTMLElement>(true, onClose, [], true);
   const cb = useRef(onPhase);
   useEffect(() => { cb.current = onPhase; }, [onPhase]);
   useEffect(() => {
     if (!ready) return;
-    const ts: number[] = [], go = (p: AwakenPhase) => { setPhase(p); if (p === "burst" || p === "reveal") setAfter(true); cb.current?.(p); };
+    const ts: number[] = [], go = (p: AwakenPhase) => { setPhase(p); if (p === "hush") setAfter(false); if (p === "burst" || p === "reveal") setAfter(true); cb.current?.(p); };
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { const t = window.setTimeout(() => go("reveal"), 0); return () => window.clearTimeout(t); }
     let at = 0;
     for (const p of AWAKEN_ORDER) { const t = at; ts.push(window.setTimeout(() => go(p), t)); at += AWAKEN_MS[p]; }
@@ -290,14 +296,32 @@ export function Awakening({ label, thing, from, rarity, rarityLabel, lead, eyebr
     }
     return () => ts.forEach(t => window.clearTimeout(t));
   }, [ready]);
+  // The impact frames as the hit lands: three, each held for IMPACT_FRAMES painted frames and 80 ms (on a slow device,
+  // at least one frame and 160 ms), so every one is seen; they end with the burst whatever happens.
+  useEffect(() => {
+    if (phase !== "burst") return;
+    let raf = 0, step = 1, frames = 0, since = performance.now();
+    const tick = (now: number) => {
+      frames++;
+      if ((frames >= IMPACT_FRAMES && now - since >= 80) || now - since >= 160) { step++; frames = 0; since = now; }
+      setImpact(step > 3 ? 0 : step);
+      if (step <= 3) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(raf); setImpact(0); };
+  }, [phase]);
   return <div className={`${m.layer} gui`} data-gui-flat="">
     <div className={m.awScrim} aria-hidden="true" />
     <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.awaken} data-phase={phase} data-ready={ready || undefined} data-after={after || undefined}
+      data-impact={impact || undefined}
       style={{ "--edge": `var(--ui-rarity-${rarity})`, "--from": `var(--ui-rarity-${from})`, "--room": AWAKEN_ROOM } as CSSProperties} data-testid={testId}>
+      <div className={m.awDeep} aria-hidden="true" />
+      <div className={m.awImpact} aria-hidden="true" />
       <p className={m.awLead} aria-live="polite">{phase === "reveal" ? null : lead}</p>
       <div className={m.awStage}>
         <div className={m.awThing}>{thing(after, phase)}</div>
       </div>
+      <div className={m.awImpactTint} aria-hidden="true" />
       {phase === "reveal" && <div className={m.awCard}>
         <p className={m.eyebrow}>{eyebrow}</p>
         <h2 className={m.title}>{name}</h2>
@@ -307,6 +331,6 @@ export function Awakening({ label, thing, from, rarity, rarityLabel, lead, eyebr
         {action}
       </div>}
     </section>
-    <div className={m.awFlash} data-phase={phase} aria-hidden="true" />
+    <div className={m.awFlash} data-phase={phase} data-impact={impact || undefined} aria-hidden="true" />
   </div>;
 }

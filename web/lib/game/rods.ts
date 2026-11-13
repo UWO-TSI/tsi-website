@@ -117,6 +117,8 @@ const rod = (tier: RodTier["tier"], key: string, name: string, rarity: Rarity, s
 const passive = (name: string, text: string, gains: Partial<Stats>, when: Passive["when"]): Passive => ({ name, text, gains, when });
 
 const TIDEWARDEN = stats(56, 64, 56, 50, 50, 50), TITANIUM = stats(46, 50, 68, 56, 44, 48), TEMPEST = stats(60, 52, 54, 64, 58, 46);
+/** Where each epic awakens, once (David 2026-11-06: "they are all very high cap at 600 ish"). */
+export const AWAKEN_AT = 600;
 
 /**
  * Weakest to strongest (by their stats as bought): the wheel's default is the last one owned (`bestOwnedRod`). Rescaled
@@ -141,24 +143,22 @@ export const RODS: readonly RodTier[] = [
     { passive: passive("Current", "+10 reel speed in the sea.", { reel: 10 }, { water: ["sea"] }) }),
   rod(4, "rod_lighthouse", "Lighthouse rod", "rare", "crafted", stats(44, 46, 38, 36, 40, 34),
     { passive: passive("Beacon", "+10 luck after dark (8 pm to 6 am).", { luck: 10 }, { night: true }) }),
-  // The epics' awakenings, each its own (proposed for David's OK, 2026-11-04: "epic awaken depends, stats change also
-  // depend on the rod ... some have solo awakenings"): what grows is what the rod is for.
-  // Titanium: one awakening, late; its line and its hold.
+  // The epics' awakenings (David 2026-11-06, rg8-table: "tide warden titanium and tempes only have 1 awakenings, and
+  // they are all very high cap at 600 ish"): one each, at 600 fish; what grows is what the rod is for.
+  // Titanium: its line and its hold.
   rod(5, "rod_titanium", "Titanium rod", "epic", "crafted", TITANIUM, {
     passive: passive("Steel line", "+10 line strength in rivers and ponds.", { strength: 10 }, { water: ["river", "pond"] }),
-    awakenings: [{ at: 400, base: up(TITANIUM, { strength: 14, control: 6, reel: 4 }), looks: "epic", model: "/assets/game/tools/rod-titanium-a1.glb" }] }),
-  // Tidewarden: two, slow; the widest bite window grows wider, and its last widens its passive.
+    awakenings: [{ at: AWAKEN_AT, base: up(TITANIUM, { strength: 14, control: 6, reel: 4 }), looks: "epic", model: "/assets/game/tools/rod-titanium-a1.glb" }] }),
+  // Tidewarden: the widest bite window grows wider, and its passive widens.
   rod(5, "rod_tidewarden", "Tidewarden rod", "epic", "crafted", TIDEWARDEN, {
     passive: passive("Tide keeper", "+10 line strength in the sea.", { strength: 10 }, { water: ["sea"] }),
-    awakenings: [{ at: 300, base: up(TIDEWARDEN, { bite: 8, luck: 6, strength: 4 }), looks: "epic" },
-      { at: 1200, base: up(TIDEWARDEN, { bite: 16, luck: 12, strength: 4, lure: 8, reel: 6 }), looks: "epic",
-        passive: passive("Tide keeper", "+10 line strength and +10 luck in the sea.", { strength: 10, luck: 10 }, { water: ["sea"] }) }] }),
-  // Tempest: two, quick (it is found, not made); its reel first, then its luck, and its last brings the storm in on cloud.
+    awakenings: [{ at: AWAKEN_AT, base: up(TIDEWARDEN, { bite: 16, luck: 12, strength: 4, lure: 8, reel: 6 }), looks: "epic",
+      passive: passive("Tide keeper", "+10 line strength and +10 luck in the sea.", { strength: 10, luck: 10 }, { water: ["sea"] }), model: "/assets/game/tools/rod-tidewarden-a1.glb" }] }),
+  // Tempest: its reel and its luck, and it brings the storm in on cloud.
   rod(5, "rod_tempest", "Tempest rod", "epic", "found", TEMPEST, {
     passive: passive("Storm born", "+10 reel speed and +10 luck in the rain.", { reel: 10, luck: 10 }, { weather: ["rain"] }),
-    awakenings: [{ at: 150, base: up(TEMPEST, { reel: 8, lure: 6 }), looks: "epic" },
-      { at: 600, base: up(TEMPEST, { reel: 16, lure: 6, luck: 10, control: 6 }), looks: "epic",
-        passive: passive("Storm born", "+10 reel speed and +10 luck in rain or cloud.", { reel: 10, luck: 10 }, { weather: ["rain", "cloudy"] }) }] }),
+    awakenings: [{ at: AWAKEN_AT, base: up(TEMPEST, { reel: 16, lure: 6, luck: 10, control: 6 }), looks: "epic",
+      passive: passive("Storm born", "+10 reel speed and +10 luck in rain or cloud.", { reel: 10, luck: 10 }, { weather: ["rain", "cloudy"] }), model: "/assets/game/tools/rod-tempest-a1.glb" }] }),
 ];
 /** The rod seller at the tackle shop (David 2026-11-04: "rod seller will be named Gary"). */
 export const ROD_SELLER = "Gary";

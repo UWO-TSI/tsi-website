@@ -61,7 +61,7 @@ async function seed(): Promise<EconomyTransport> {
       description: "An epic rod with the widest bite window on the island." };
     m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
   }
-  // ?ti=<fish>: a Titanium rod in the bag with that many fish landed (400 awakens it: it wears its awakened model).
+  // ?ti=<fish>: a Titanium rod in the bag with that many fish landed (AWAKEN_AT, 600, awakens it: it wears its awakened model).
   if (q.get("ti") !== null) {
     const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-titanium", slug: "rod-titanium", display_name: "Titanium rod", catalogue_ref: "rod_titanium",
       description: "An epic rod that never gives. Crafted at a workbench.", sprite_url: null };

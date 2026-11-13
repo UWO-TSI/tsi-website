@@ -53,7 +53,7 @@ const BANG_Y = 2.1;
 /** A faint ring as it floats, this often (s); rings in the reel's wake no closer than this (s) and this far (u) apart. */
 const BOB_EVERY = 1.7, WAKE_EVERY = 0.14, WAKE_STEP = 0.05;
 /** The bobber's eye, where the line is tied (build_bobber.py `line_eye`, in its own space). */
-const EYE = new THREE.Vector3(0, 0.118, 0);
+const EYE = new THREE.Vector3(0, 0.0826, 0);
 /** How far the bobber hangs below the tip while you wind up (u), and the line's width on screen (drawing-buffer pixels). */
 const DANGLE = 0.34, LINE_PX = 1.2;
 const UP = new THREE.Vector3(0, 1, 0);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AWAKEN_MS } from "@/components/gui/flat";
 import { RODS } from "@/lib/game/rods";
-import { BEAT, MOVES, auraAt, moveOf } from "./rodMotion";
+import { AWAKEN_FX, BEAT, MOVES, auraAt, gatherAt, moveOf } from "./rodMotion";
 
 const awakening = RODS.filter(r => r.awakenings.length);
 const at = (t: number, e: number, key: string) => moveOf(key)(t, e);
@@ -20,7 +20,7 @@ describe("each rod's awakening motion (David 2026-11-05)", () => {
       for (const v of [p.x, p.y, p.roll, p.tip, p.twirl, p.flash]) expect(Math.abs(v)).toBeLessThan(1e-9);
       expect(p.sheen).toBeNull();
     }
-    expect(BEAT.reveal).toEqual({ energy: 0, glow: 0, aura: 0 });
+    expect(BEAT.reveal).toEqual({ energy: 0, glow: 0, aura: 0, shake: 0, gather: 0 });
   });
 
   it("never stands still on the Tidewarden: it rides a swell up and down and rolls with it", () => {
@@ -40,6 +40,33 @@ describe("each rod's awakening motion (David 2026-11-05)", () => {
     expect(AWAKEN_MS.show).toBeGreaterThan(1000);
     expect(BEAT.show.glow).toBe(0);
     expect(BEAT.show.energy).toBeGreaterThan(0.5);
+  });
+
+  it("builds suspense: trembling harder and drawing more light in through the pulse, then still and dim in the hush before the hit", () => {
+    expect(BEAT.pulse.shake).toBeGreaterThan(BEAT.glow.shake);
+    expect(BEAT.pulse.gather).toBeGreaterThan(BEAT.glow.gather);
+    expect(BEAT.hush.energy).toBeLessThan(0.1);
+    expect(BEAT.hush.glow).toBeLessThan(BEAT.pulse.glow);
+    expect(AWAKEN_MS.hush).toBeGreaterThan(300);
+  });
+
+  it("strikes the Tempest with lightning; winds the Tidewarden's water on instead (round 11: its wave strike is gone)", () => {
+    expect(AWAKEN_FX.rod_tempest).toMatchObject({ strike: "lightning", sound: "aw-thunder" });
+    expect(AWAKEN_FX.rod_tempest.wears).toContain("electricity");
+    const tide = AWAKEN_FX.rod_tidewarden;
+    expect(tide.strike).toBeUndefined();
+    // a little further on each beat of the pulse, drawn off in the hush, crashing on at the hit, settling at the reveal
+    expect(tide.strength!("pulse", 12)).toBeGreaterThan(tide.strength!("pulse", 0));
+    expect(tide.strength!("hush", 20)).toBeLessThan(tide.strength!("pulse", 20));
+    expect(tide.strength!("burst", 20)).toBeGreaterThan(tide.strength!("reveal", 20));
+    expect(tide.strength!("reveal", 20)).toBe(1);
+    expect(AWAKEN_FX.rod_training).toBeUndefined();
+  });
+
+  it("gathers light in small and slow, building on every beat of the pulse (round 11)", () => {
+    expect(gatherAt("glow", 0)).toBeLessThan(0.5);
+    expect(gatherAt("pulse", 20)).toBeGreaterThan(2 * gatherAt("pulse", 2));
+    expect(gatherAt("hush", 20)).toBe(0);
   });
 
   it("grows the aura with each awakening", () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { STARTER_WEAPONS } from "@/lib/combat/weapons";
 import { EMPTY_HANDS, WHEEL_SLOTS, clickAction, equip, flick, flickPick, heldItem, newFlick, pinItem, quickSwap, reconcile, slotAt, slotPosition, toolNeeded, wheelContents, wheelWeapons, type WheelContext } from "./toolWheel";
 import { TOOLS, bestTool } from "./tools";
+import { AWAKEN_AT } from "./rods";
 
 const base: WheelContext = { site: "village", owned: [], weapons: STARTER_WEAPONS, armed: false, pins: [], stock: {} };
 const ids = (ctx: Partial<WheelContext>) => wheelContents({ ...base, ...ctx }).map(i => i.id);
@@ -12,7 +13,7 @@ describe("the tool wheel's contents (specs/game-ui.md §1)", () => {
     const rod = (catches: Record<string, number>) => wheelContents({ ...base, owned: ["rod_titanium"], catches }).find(i => i.kind === "rod")!;
     expect(rod({ rod_titanium: 120 })).toMatchObject({ key: "rod_titanium", icon: "/assets/icons/rod_titanium.webp" });
     expect(rod({ rod_titanium: 120 }).model).toBeUndefined();
-    expect(rod({ rod_titanium: 400 })).toMatchObject({ key: "rod_titanium", icon: "/assets/icons/rod_titanium_a1.webp", model: "/assets/game/tools/rod-titanium-a1.glb" });
+    expect(rod({ rod_titanium: AWAKEN_AT })).toMatchObject({ key: "rod_titanium", icon: "/assets/icons/rod_titanium_a1.webp", model: "/assets/game/tools/rod-titanium-a1.glb" });
   });
   it("holds everyone's tier-1 rod, net and shovel, and the best owned once you have more", () => {
     expect(ids({})).toEqual(["rod:rod_flimsy", "net:net-basic", "shovel:shovel-basic"]);
