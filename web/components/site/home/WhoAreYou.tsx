@@ -99,7 +99,7 @@ function MarkGlyph({ path, box, word, open }: { path: string; box: readonly numb
 }
 
 /**
- * Three ways in, one panel each. The panel you point at (or tab to) opens wide: its mark, written in characters,
+ * One way in for each audience, one panel each. The panel you point at (or tab to) opens wide: its mark, written in characters,
  * flickers awake, and its line and link come up; the others narrow to their name and a dim mark. On narrow screens they
  * stack, all open.
  */
@@ -108,7 +108,7 @@ export default function WhoAreYou() {
   return (
     <section className="ts-section" data-tone="dark" id="audiences" aria-labelledby="audiences-title">
       <div className="ts-wrap">
-        <Reveal delay={0.08}><h2 className="ts-h2" id="audiences-title" style={{ maxWidth: "16em" }}>Three ways in, depending on who you are.</h2></Reveal>
+        <Reveal delay={0.08}><h2 className="ts-h2" id="audiences-title" style={{ maxWidth: "16em" }}>Where do you fit in?</h2></Reveal>
         <Reveal delay={0.12} className="wy-panels">
           {CARDS.map((c, i) => (
             <Link key={c.who} href={c.href} className="wy-panel" data-open={open === i || undefined}
