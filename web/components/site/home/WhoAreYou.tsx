@@ -112,7 +112,8 @@ export default function WhoAreYou() {
         <Reveal delay={0.12} className="wy-panels">
           {CARDS.map((c, i) => (
             <Link key={c.who} href={c.href} className="wy-panel" data-open={open === i || undefined}
-              onPointerEnter={() => setOpen(i)} onFocus={() => setOpen(i)}>
+              onPointerEnter={(e) => { if (e.pointerType === "mouse") setOpen(i); }} onFocus={() => setOpen(i)}
+              onClick={(e) => { if (open !== i) { e.preventDefault(); setOpen(i); } }}>
               <span className="wy-panel__num">{String(i + 1).padStart(2, "0")}</span>
               <MarkGlyph path={c.path} box={c.box} word={c.who} open={open === i} />
               <span className="wy-panel__text">

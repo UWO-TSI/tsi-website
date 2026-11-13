@@ -34,7 +34,7 @@ export default function CopyEmail({ email }: { email: string }) {
   return (
     <button type="button" className="ct-email" onClick={copy} aria-label={`Copy ${email}`} data-copied={copied || undefined}>
       <span ref={text} className="ct-email__text">{email}</span>
-      <span className="ct-email__hint" aria-live="polite">{copied ? "On your clipboard" : "Click to copy"}</span>
+      <span className="ct-email__hint" aria-live="polite">{copied ? "On your clipboard" : <><span className="ts-hover-only">Click</span><span className="ts-touch-only">Tap</span> to copy</>}</span>
     </button>
   );
 }

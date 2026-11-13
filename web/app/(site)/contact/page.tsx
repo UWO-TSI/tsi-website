@@ -2,6 +2,7 @@ import "../pages.css";
 import type { Metadata } from "next";
 import Reveal from "@/components/site/Reveal";
 import GlyphField from "@/components/site/GlyphField";
+import GlyphSeam from "@/components/site/GlyphSeam";
 import CopyEmail from "@/components/site/contact/CopyEmail";
 import { TETHOS } from "@/lib/site/config";
 
@@ -16,6 +17,7 @@ const CONTACT_FIELD = "SAY HI · ";
 /** One thing on the page: the address (David, 2026-11-12: "only info@tethos.ca, very clear"). */
 export default function ContactPage() {
   return (
+    <>
     <section className="ts-section gx-hero ct-hero" data-tone="dark" id="contact" aria-labelledby="contact-title">
       <div className="gx-aura" aria-hidden="true" />
       <div className="gx-hero__field" aria-hidden="true">
@@ -32,5 +34,7 @@ export default function ContactPage() {
         </div>
       </div>
     </section>
+    <GlyphSeam from="dark" to="light" seed={41} />
+    </>
   );
 }

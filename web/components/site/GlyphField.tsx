@@ -142,7 +142,7 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
       if (img && pixelCells && w >= 1200) {
         // Right of the middle, far enough left that the whole sphere (the first ~110 columns) stays on
         // screen while the hand runs off the right edge; a few rows down from the top of the box.
-        const x0 = Math.round(Math.min(w * 0.46, w - 800) / cw), y0 = Math.max(0, Math.min(6, rows - img.h));
+        const x0 = Math.round(Math.min(w * 0.46, w - 800) / cw), y0 = Math.max(0, Math.min(Math.ceil(104 / ch), rows - img.h));
         region = { x: x0 * cw, y: y0 * ch, w: img.w * cw, h: img.h * ch };
         for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
           const u = c - x0, v = r - y0;
@@ -157,11 +157,13 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
           const clear = copy.getBoundingClientRect().right - canvas.getBoundingClientRect().left + 40;
           maxW = Math.max(Math.min(maxW, w - clear - w * 0.025), Math.min(360, maxW));
         }
-        const fitH = Math.min(h, window.innerHeight) * 0.96;
+        // Beside the copy the figure starts below the nav pill; stacked under the copy it has the whole box.
+        const top = layout === "right" && w > 820 ? 104 : 0;
+        const fitH = (Math.min(h, window.innerHeight) - top) * 0.94;
         let rh = fitH, rw = rh * aspect;
         if (rw > maxW) { rw = maxW; rh = rw / aspect; }
         const x = layout === "right" && w > 820 ? w - rw - w * 0.025 : (w - rw) / 2;
-        region = { x, y: Math.max(0, Math.min((h - rh) / 2, 72)), w: rw, h: rh };
+        region = { x, y: top + Math.max(0, Math.min((h - top - rh) / 2, 48)), w: rw, h: rh };
         // Each cell takes the average of the picture under it (4 x 4 samples), so the figure keeps its shape.
         for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
           let sum = 0;

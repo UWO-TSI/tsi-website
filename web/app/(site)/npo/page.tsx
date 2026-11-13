@@ -100,7 +100,7 @@ export default function NpoPage() {
       <section className="ts-section np-questions" data-tone="dark" id="questions" aria-labelledby="questions-title">
         <div className="ts-wrap">
           <Reveal delay={0.06}><h2 className="ts-h2" id="questions-title">Before you apply</h2></Reveal>
-          <Reveal delay={0.08}><p className="np-questions__hint">Click a question to open it.</p></Reveal>
+          <Reveal delay={0.08}><p className="np-questions__hint"><span className="ts-hover-only">Click</span><span className="ts-touch-only">Tap</span> a question to open it.</p></Reveal>
           <Reveal delay={0.1}><FaqAscii items={FAQ} /></Reveal>
         </div>
       </section>

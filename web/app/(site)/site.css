@@ -62,7 +62,7 @@
 
 .ts-wrap { width: 100%; max-width: var(--max); margin: 0 auto; padding-inline: var(--gutter); }
 
-.ts-section { position: relative; padding-block: clamp(96px, 16vh, 180px); }
+.ts-section { position: relative; padding-block: clamp(80px, min(16vh, 13vw), 180px); }
 .ts-section[data-tone="dark"] { background: var(--ink); color: var(--on-dark); }
 .ts-section[data-tone="deep"] { background: var(--ink-deep); color: var(--on-dark); }
 .ts-section[data-tone="light"] { background: var(--paper); color: var(--on-light); }
@@ -161,7 +161,7 @@
 .ts-nav[data-compact="true"] .ts-nav__links-wrap { grid-template-columns: 0fr; opacity: 0; }
 .ts-nav[data-compact="true"] .ts-nav__icons-wrap { grid-template-columns: 1fr; }
 .ts-nav__links { display: flex; align-items: center; gap: 30px; }
-.ts-nav__link { font-size: 13px; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(241, 255, 255, 0.74); white-space: nowrap; transition: color 0.3s var(--ease-ui); }
+.ts-nav__link { display: inline-flex; align-items: center; min-height: var(--item); font-size: 13px; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(241, 255, 255, 0.74); white-space: nowrap; transition: color 0.3s var(--ease-ui); }
 .ts-nav__link:hover, .ts-nav__link[aria-current="page"] { color: var(--on-dark); }
 .ts-nav__link:focus-visible { outline: 2px solid var(--signal); outline-offset: 4px; border-radius: 4px; }
 
@@ -264,7 +264,14 @@
 
 .ts-footer { background: var(--paper); color: var(--on-light); padding: 48px 0 40px; }
 .ts-footer__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; }
-.ts-footer__links { display: flex; flex-wrap: wrap; gap: 24px; font-size: 14px; color: var(--on-light-2); }
+.ts-footer__links { display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: 14px; color: var(--on-light-2); }
+.ts-footer__links a { display: inline-block; padding-block: 11px; }
+/* Small controls get a tap area of at least 40 px around them (the pill's icons, logo and menu button). */
+.ts-nav__icon, .ts-nav__logo, .ts-nav__menu-btn, .ts-nav__cta { position: relative; }
+.ts-nav__icon::after, .ts-nav__logo::after, .ts-nav__menu-btn::after, .ts-nav__cta::after { content: ""; position: absolute; inset: -8px; }
+/* Words for the input in hand: "click" with a mouse, "tap" on a touch screen. */
+.ts-touch-only { display: none; }
+@media (hover: none) { .ts-hover-only { display: none; } .ts-touch-only { display: inline; } }
 .ts-footer__links a:hover { color: var(--on-light); }
 .ts-footer__small { margin-top: 32px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--on-light-3); }
 .ts-footer__small a { color: var(--on-light-2); }

@@ -21,7 +21,7 @@ function Figure({ value, state }: { value: string; state: "before" | "on" | "aft
       {Array.from(value).map((ch, i) => {
         const d = DIGITS.indexOf(ch);
         return (
-          <span key={i} className="nm__reel" style={{ ["--i" as string]: i }} data-digit={d >= 0 || undefined}>
+          <span key={i} className="nm__reel" style={{ ["--i" as string]: i }} data-digit={d >= 0 || undefined} data-one={d === 1 || undefined}>
             {d >= 0 ? (
               <span className="nm__strip" style={{ ["--to" as string]: 10 + d }}>
                 {Array.from(DIGITS + DIGITS.slice(0, d + 1), (g, k) => <span key={k}>{g}</span>)}

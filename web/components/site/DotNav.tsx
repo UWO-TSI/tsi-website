@@ -27,12 +27,12 @@ export default function DotNav({ sections }: { sections: DotSection[] }) {
       className="ts-dotnav"
     >
       {sections.map((s, i) => (
-        <a key={s.id} href={`#${s.id}`} aria-label={s.label} aria-current={i === active ? "true" : undefined} className="ts-dotnav__item" style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, color: "#fff" }}>
-          <span className="ts-dotnav__label" style={{ fontFamily: "var(--mono)", fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}>{s.label}</span>
+        <a key={s.id} href={`#${s.id}`} aria-label={s.label} aria-current={i === active ? "true" : undefined} className="ts-dotnav__item" style={{ position: "relative", display: "grid", placeItems: "center", width: 24, height: 24, margin: "-9px -9px -9px 0", color: "#fff" }}>
+          <span className="ts-dotnav__label" style={{ position: "absolute", right: "100%", top: "50%", marginTop: -7, whiteSpace: "nowrap", pointerEvents: "none", fontFamily: "var(--mono)", fontSize: 10.5, letterSpacing: "0.08em", textTransform: "uppercase" }}>{s.label}</span>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff", opacity: i === active ? 1 : 0.35, transform: i === active ? "scale(1.4)" : "none", transition: "opacity 0.3s, transform 0.3s" }} />
         </a>
       ))}
-      <style>{`.ts-dotnav__label{opacity:0;transform:translateX(4px);transition:opacity .25s,transform .25s}.ts-dotnav__item:hover .ts-dotnav__label,.ts-dotnav__item:focus-visible .ts-dotnav__label{opacity:1;transform:none}@media (max-width:820px){.ts-dotnav{display:none!important}}`}</style>
+      <style>{`.ts-dotnav__label{opacity:0;transform:translateX(4px);transition:opacity .25s,transform .25s}.ts-dotnav__item:hover .ts-dotnav__label,.ts-dotnav__item:focus-visible .ts-dotnav__label{opacity:1;transform:none}@media (max-width:820px),(hover:none){.ts-dotnav{display:none!important}}`}</style>
     </nav>
   );
 }

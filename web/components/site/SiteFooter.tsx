@@ -14,6 +14,7 @@ export default function SiteFooter({ site }: { site: SiteConfig }) {
           <nav className="ts-footer__links" aria-label="Footer">
             <Link href="/npo">Nonprofits</Link>
             <Link href="/genesis">GENESIS</Link>
+            <Link href="/students">Students</Link>
             <Link href="/contact">Contact</Link>
           </nav>
         </div>
@@ -23,7 +24,7 @@ export default function SiteFooter({ site }: { site: SiteConfig }) {
             <a href={site.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
             {" · "}
             <a href={site.github} target="_blank" rel="noopener noreferrer">GitHub</a>
-            {" · "}© {new Date().getFullYear()} Tethos Association
+            {" · "}<span style={{ whiteSpace: "nowrap" }}>© {new Date().getFullYear()} Tethos Association</span>
           </span>
         </div>
       </div>
