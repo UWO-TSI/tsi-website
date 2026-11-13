@@ -8,6 +8,7 @@ import GlobeVisualizer from "@/components/ui/GlobeVisualizer";
 import AsciiGrain from "@/components/site/AsciiGrain";
 import type { DiveRef } from "@/components/ui/GlobeVisualizerWebGPU";
 import { canvasDpr } from "@/lib/site/perf";
+import { PLAY_ORIGIN } from "@/lib/hosts";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
@@ -204,7 +205,8 @@ export default function HeroDive() {
           <div className="hd-actions">
             <Link href="/npo" className="ts-btn ts-btn--primary">For nonprofits <span className="ts-btn__arrow">→</span></Link>
             <Link href="/genesis" className="ts-btn ts-btn--ghost">For sponsors</Link>
-            <Link href="/students" className="ts-btn ts-btn--ghost">For students</Link>
+            {/* Members go straight into the game portal (David, 2026-11-12); new students find /students in the nav. */}
+            <a href={`${PLAY_ORIGIN}/`} className="ts-btn ts-btn--ghost">Student sign in <span className="ts-btn__arrow" aria-hidden="true">↗</span></a>
           </div>
         </div>
 
