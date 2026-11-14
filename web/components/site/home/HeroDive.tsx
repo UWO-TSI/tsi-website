@@ -6,6 +6,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import GlobeVisualizer from "@/components/ui/GlobeVisualizer";
 import AsciiGrain from "@/components/site/AsciiGrain";
+import MissionMap from "@/components/site/home/MissionMap";
 import type { DiveRef } from "@/components/ui/GlobeVisualizerWebGPU";
 import { canvasDpr } from "@/lib/site/perf";
 import { PLAY_ORIGIN } from "@/lib/hosts";
@@ -222,9 +223,10 @@ export default function HeroDive() {
         <canvas ref={wipe} className="hd-wipe" aria-hidden="true" />
 
         <div className="hd-reveal" data-tone="light" id="about">
+          <MissionMap />
           <div className="ts-wrap hd-reveal__inner">
-            <h2 className="ts-h2 hd-mission">We put student teams on real software for nonprofits, at no cost to them.</h2>
-            <p className="ts-body hd-mission__body">
+            <h2 className="hd-mission">We put student teams on real software for nonprofits, at no cost to them.</h2>
+            <p className="ts-lede hd-mission__body">
               Tethos runs Tech for Social Impact (TSI), our first branch, with chapters at Western and UBC. Each year its teams build for nonprofits and show the work at GENESIS.
             </p>
           </div>
