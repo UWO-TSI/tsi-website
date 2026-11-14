@@ -116,7 +116,7 @@ const LATER: AwakenPhase[] = ["burst", "show", "reveal"];
  * How shut an awakened model that opens is (its morph target is the form it awakens from, rods.ts `Awakening.model`):
  * shut, a crack of its light on the pulse, opening at the burst (the Titanium's plates parting round its core).
  */
-const SHUT: Record<AwakenPhase, number> = { frame: 1, glow: 1, pulse: 0.85, burst: 0, show: 0, reveal: 0 };
+const SHUT: Record<AwakenPhase, number> = { frame: 1, glow: 1, pulse: 0.85, hush: 0.85, burst: 0, show: 0, reveal: 0 };
 /** Module scope (the react compiler forbids writing through hook values): one frame of Motion. */
 type Live = { e: number; glow: number; twirl: number; shake: number; shut: number; colour: THREE.Color; from: THREE.Color; to: THREE.Color; lit: Map<THREE.MeshStandardMaterial, THREE.Color>; burst: boolean;
   phase: AwakenPhase; since: number; unlock: Unlock | null };
