@@ -18,8 +18,9 @@ import * as THREE from "three";
 import styles from "./Lanyard.module.css";
 import { PEOPLE } from "@/components/site/marks";
 
-// The card is 1.6 x 2.25 world units (the physics box below); its faces and the strap are drawn on canvases, so the
-// lanyard needs no model or image files.
+// The card is 1.6 x 2.25 world units (the physics box below); its faces are drawn on canvases. The strap is the real
+// GENESIS lanyard: one repeat of its outside print (references/merch/tsi-lanyard), in the strap's navy.
+const STRAP = "/images/site/genesis-lanyard-strap.webp";
 const CARD_W = 1.6;
 const CARD_H = 2.25;
 const INK = "#0f0f10";
@@ -109,13 +110,6 @@ function paintBack(g: CanvasRenderingContext2D) {
   drawMark(g, W / 2 - 300, 420, 600, PAPER);
   g.font = `500 34px "Sohne Mono", ui-monospace, monospace`; g.fillStyle = PAPER; g.globalAlpha = 0.6;
   g.textAlign = "center"; g.fillText("TETHOS.CA", W / 2, 1300); g.textAlign = "left"; g.globalAlpha = 1;
-}
-
-/** The strap: blue, printed with the event, repeating. */
-function paintStrap(g: CanvasRenderingContext2D) {
-  g.fillStyle = BLUE; g.fillRect(0, 0, 1024, 96);
-  g.font = `600 44px "Sohne Mono", ui-monospace, monospace`; g.fillStyle = PAPER; g.textBaseline = "middle";
-  g.fillText("GENESIS 2027 · TETHOS · ", 24, 50);
 }
 
 extend({ MeshLineGeometry, MeshLineMaterial });
@@ -228,7 +222,13 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
 
   const [front] = useState(() => canvasTexture(1024, 1440, paintFront));
   const [back] = useState(() => canvasTexture(1024, 1440, paintBack));
-  const [texture] = useState(() => canvasTexture(1024, 96, paintStrap));
+  const [texture] = useState(() => {
+    const t = new THREE.TextureLoader().load(STRAP);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 8;
+    return t;
+  });
 
   const [curve] = useState(
     () =>
@@ -304,7 +304,6 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
   });
 
   curve.curveType = "chordal";
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
 
   const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
     const target = event.target as unknown as HTMLElement;
@@ -356,13 +355,17 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
               <planeGeometry args={[CARD_W, CARD_H]} />
               <meshPhysicalMaterial map={back} transparent alphaTest={0.5} roughness={0.35} clearcoat={isMobile ? 0 : 1} clearcoatRoughness={0.12} />
             </mesh>
-            {/* The clip: a metal clamp through the slot, up to where the strap is tied. */}
-            <mesh position={[0, CARD_H / 2 + 0.05, 0]}>
-              <boxGeometry args={[0.2, 0.16, 0.05]} />
-              <meshStandardMaterial color="#c9ced3" metalness={1} roughness={0.28} />
+            {/* The clip, as on the real lanyard: a lobster claw through the slot, a swivel, and the D-ring the strap is sewn to. */}
+            <mesh position={[0, CARD_H / 2 + 0.07, 0]} scale={[1, 1.7, 1]}>
+              <torusGeometry args={[0.075, 0.022, 12, 32]} />
+              <meshStandardMaterial color="#c9ced3" metalness={1} roughness={0.25} />
             </mesh>
-            <mesh position={[0, CARD_H / 2 + 0.24, 0]} rotation={[0, 0, Math.PI / 2]}>
-              <torusGeometry args={[0.1, 0.022, 12, 32]} />
+            <mesh position={[0, CARD_H / 2 + 0.26, 0]}>
+              <cylinderGeometry args={[0.035, 0.035, 0.09, 16]} />
+              <meshStandardMaterial color="#c9ced3" metalness={1} roughness={0.25} />
+            </mesh>
+            <mesh position={[0, CARD_H / 2 + 0.36, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[0.07, 0.016, 12, 32]} />
               <meshStandardMaterial color="#c9ced3" metalness={1} roughness={0.25} />
             </mesh>
           </group>
@@ -378,7 +381,8 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
           resolution={isMobile ? [1000, 2000] : [1000, 1000]}
           useMap
           map={texture}
-          repeat={[-4, 1]}
+          // One print repeat is about 7.3 strap widths long, as on the real strap.
+          repeat={[isMobile ? -1.6 : -2, 1]}
           lineWidth={1}
         />
       </mesh>
