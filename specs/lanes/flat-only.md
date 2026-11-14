@@ -111,6 +111,8 @@ Ten lanes are open and unmerged: sfx-library, analytics, title-r2, club, daily-r
 
 ## Status
 
+- **Review page (2026-11-14):** Flat UI Only 1, https://claude.ai/artifact/QoFX7c6WjEG2d6KToBNUMC (collection `approvals`, 20 cards). Waiting on David's marks; main moved to 3297d5aa5 (row 335 and the one-UI lane rule), merge it before the next round.
+
 - **Done, waiting on review.** Build commit `9649cda10`; this file updated on top of it. Steps 1 to 13 built.
 - **Gates:** tsc clean; vitest one run, new world (`NEXT_PUBLIC_GAME_WORLD=new`, lane rules: once): 415 files, 3856 tests pass, 4 skipped; eslint on the 52 touched files: 0; the cream grep finds only the guard itself and one quoted design note (`flat/flat.module.css` 285, David 10-28 on the reward pop). Guard and lint proven to fail on a scratch cream import and a cream hex, then reverted (`specs/evidence/flat-only/guard-proof.txt`).
 - **0 px:** `/student/apply` (desktop, phone), `/student/apply/ui-preview`, the applicant portal on a phone, the applicant creator and collection (desktop, phone), the marketing home (desktop, phone). Inside the paper sheets (notice board with its club goal and HQ notice, mailbox, journal): 0 px. The member closet: 0 px; the member first creator differs only in its name field (the kit's own Field).
