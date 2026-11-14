@@ -111,7 +111,7 @@ Ten lanes are open and unmerged: sfx-library, analytics, title-r2, club, daily-r
 
 ## Status
 
-- **Done, waiting on review** (head: see `git log -1 game/flat-only`; build commit named in the report). Steps 1 to 13 built.
+- **Done, waiting on review.** Build commit `9649cda10`; this file updated on top of it. Steps 1 to 13 built.
 - **Gates:** tsc clean; vitest one run, new world (`NEXT_PUBLIC_GAME_WORLD=new`, lane rules: once): 415 files, 3856 tests pass, 4 skipped; eslint on the 52 touched files: 0; the cream grep finds only the guard itself and one quoted design note (`flat/flat.module.css` 285, David 10-28 on the reward pop). Guard and lint proven to fail on a scratch cream import and a cream hex, then reverted (`specs/evidence/flat-only/guard-proof.txt`).
 - **0 px:** `/student/apply` (desktop, phone), `/student/apply/ui-preview`, the applicant portal on a phone, the applicant creator and collection (desktop, phone), the marketing home (desktop, phone). Inside the paper sheets (notice board with its club goal and HQ notice, mailbox, journal): 0 px. The member closet: 0 px; the member first creator differs only in its name field (the kit's own Field).
 - **What changed:**
