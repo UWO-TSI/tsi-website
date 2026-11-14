@@ -9,10 +9,9 @@ import { markLowPower } from "@/lib/site/perf";
 const SEEN = "tethos-loaded";
 // Around the ring from the top, clockwise.
 const ORDER = [5, 2, 3, 4, 0, 1];
-const STEP = 60;
-// The people light up only after the mark has assembled, one at a time at most every LIGHT_MS, as the page loads.
-const ASSEMBLE_MS = ORDER.length * STEP + 260;
-const LIGHT_MS = 150;
+// A person comes in with each part of the page that finishes loading, at most one every IN_MS, so each one is seen.
+const IN_MS = 220;
+const TICK_MS = 60;
 // The longest the screen waits, however slow the connection.
 const MAX_MS = 9000;
 const CLICK_MS = 560;
@@ -24,7 +23,7 @@ const SPRAY_N = 24;
 
 /**
  * The loading screen (David, 2026-11-12: "just the logo, centred, simple", and "it should actually load so each guy
- * turns blue", "it needs to load during the loading screen so that everything runs super smooth"): on black, the
+ * turns blue"; 2026-11-14: each person comes in per load step with the pop and the spray), "it needs to load during the loading screen so that everything runs super smooth"): on black, the
  * Tethos mark alone in the middle. Its six people arrive one by one, then each turns blue as the page really loads:
  * the document, the fonts, every image on the page (lazy ones too, decoded), the load event and the globe's first
  * frame, so the sixth lights only when all of it is done (or after MAX_MS). Then the mark clicks: it presses in, plays the game's UI click,
@@ -35,7 +34,7 @@ export default function LoadingScreen() {
   // The applicant island, the member island (/student/dashboard) and the portal's title screen (/student) have their own.
   const recruitment = /^\/student(\/(apply|dashboard\/?$)|\/?$)/.test(usePathname());
   const [phase, setPhase] = useState<"loading" | "click" | "lift" | "gone">("loading");
-  const [lit, setLit] = useState(0);
+  const [shownCount, setShownCount] = useState(0);
   const mark = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -49,24 +48,23 @@ export default function LoadingScreen() {
 
     const timers: number[] = [];
     const later = (fn: () => void, ms: number) => { timers.push(window.setTimeout(fn, ms)); };
-    const t0 = performance.now();
     const audio = new Audio(CLICK_SRC);
     audio.preload = "auto";
     audio.volume = 0.55;
     let fonts = false, loaded = document.readyState === "complete", done = false;
 
-    // Blue characters thrown out of the mark, the way a click on the site sprays them.
-    const spray = () => {
-      const r = mark.current?.getBoundingClientRect();
-      if (!r) return;
+    // Blue characters thrown out from a point, the way a click on the site sprays them: a few as each person comes in,
+    // the full burst out of the whole mark at the click.
+    const burstAt = (x: number, y: number, n: number, reach: number, aim?: number) => {
       const burst = document.createElement("div");
       burst.className = "tl-burst";
-      burst.style.left = `${r.left + r.width / 2}px`;
-      burst.style.top = `${r.top + r.height / 2}px`;
-      for (let i = 0; i < SPRAY_N; i++) {
+      burst.style.left = `${x}px`;
+      burst.style.top = `${y}px`;
+      for (let i = 0; i < n; i++) {
         const s = document.createElement("span");
-        const a = (i / SPRAY_N) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-        const d = 90 + Math.random() * 110;
+        // Around a full circle, or fanned out the way the person came from.
+        const a = aim === undefined ? (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5 : aim + (Math.random() - 0.5) * 1.9;
+        const d = reach * (0.45 + Math.random() * 0.55);
         s.textContent = SPRAY[Math.floor(Math.random() * SPRAY.length)];
         s.style.setProperty("--dx", `${(Math.cos(a) * d * 1.4).toFixed(1)}px`);
         s.style.setProperty("--dy", `${(Math.sin(a) * d).toFixed(1)}px`);
@@ -76,6 +74,28 @@ export default function LoadingScreen() {
       }
       document.body.appendChild(burst);
       later(() => burst.remove(), 1000);
+    };
+    const spray = () => {
+      const r = mark.current?.getBoundingClientRect();
+      if (r) burstAt(r.left + r.width / 2, r.top + r.height / 2, SPRAY_N, 200);
+    };
+    // Where each person sits in the mark (its centre, from the mark's centre, as a fraction of the mark).
+    const svg = mark.current!;
+    const centres = Array.from(svg.querySelectorAll("path")).map((path) => {
+      const b = path.getBBox();
+      return { x: (b.x + b.width / 2) / 1410 - 0.5, y: (b.y + b.height / 2) / 1352 - 0.5 };
+    });
+    centres.forEach((c, i) => {
+      const path = svg.querySelectorAll("path")[i] as SVGPathElement;
+      // It flies in from a little outside its place.
+      path.style.setProperty("--ox", `${(c.x * 46).toFixed(1)}px`);
+      path.style.setProperty("--oy", `${(c.y * 46).toFixed(1)}px`);
+    });
+    const comeIn = (k: number) => {
+      const i = ORDER[k], c = centres[i], r = svg.getBoundingClientRect();
+      setShownCount(k + 1);
+      // The small spray, once it has landed (the pop's peak), fanned out the way it came from.
+      later(() => burstAt(r.left + r.width * (0.5 + c.x), r.top + r.height * (0.5 + c.y), 9, 70, Math.atan2(c.y, c.x)), 150);
     };
 
     const click = () => {
@@ -109,14 +129,15 @@ export default function LoadingScreen() {
       };
       requestAnimationFrame(f);
     });
-    // One more person turns blue each tick while the progress is ahead of them; the sixth means done.
-    let shown = 0;
+    // One more person comes in each time the progress passes another sixth (one every IN_MS at most); the sixth
+    // means done, and the mark clicks.
+    let shown = 0, lastIn = -1e9;
     const tick = window.setInterval(() => {
-      if (performance.now() - t0 < ASSEMBLE_MS) return;
+      const now = performance.now();
       const target = Math.floor(progress() * ORDER.length + 1e-6);
-      if (shown < target) { shown += 1; setLit(shown); }
-      if (shown === ORDER.length && !done) { done = true; clearInterval(tick); probe().then(() => later(click, 120)); }
-    }, LIGHT_MS);
+      if (shown < target && now - lastIn >= IN_MS) { comeIn(shown); shown += 1; lastIn = now; }
+      if (shown === ORDER.length && !done) { done = true; clearInterval(tick); later(() => probe().then(() => later(click, 80)), 360); }
+    }, TICK_MS);
     const onLoad = () => { loaded = true; };
     window.addEventListener("load", onLoad);
     if (document.fonts) document.fonts.ready.then(() => { fonts = true; }, () => { fonts = true; });
@@ -141,7 +162,7 @@ export default function LoadingScreen() {
       <span className="tl-ring tl-ring--late" />
       <svg ref={mark} className="tl-mark" viewBox="0 0 1410 1352">
         {PEOPLE.map((p, i) => (
-          <path key={i} d={p.d} fillRule={p.evenodd ? "evenodd" : undefined} className={ORDER.indexOf(i) < lit ? "is-lit" : undefined} style={{ animationDelay: `${ORDER.indexOf(i) * STEP}ms` }} />
+          <path key={i} d={p.d} fillRule={p.evenodd ? "evenodd" : undefined} className={ORDER.indexOf(i) < shownCount ? "is-in" : undefined} />
         ))}
       </svg>
     </div>
@@ -151,13 +172,11 @@ export default function LoadingScreen() {
 const CSS = `
 [data-ts-loader]{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:#0f0f10;transition:transform ${LIFT_MS}ms cubic-bezier(.7,0,.3,1)}
 [data-ts-loader][data-phase=lift]{transform:translateY(-100%)}
-.tl-mark{position:relative;z-index:1;width:72px;height:69px;fill:#f1ffff;transition:fill .2s ease}
-.tl-mark path{opacity:0;transform-box:fill-box;transform-origin:center;transition:fill .25s ease;animation:tl-arrive .22s cubic-bezier(.25,1,.5,1) forwards}
-.tl-mark path.is-lit{fill:#1d9bf0;animation:tl-arrive .22s cubic-bezier(.25,1,.5,1) forwards,tl-lit .42s cubic-bezier(.34,1.56,.64,1)}
-@keyframes tl-lit{40%{scale:1.22}}
-@keyframes tl-arrive{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:none}}
-[data-phase=loading] .tl-mark{animation:tl-breathe 3.2s ease-in-out .6s infinite}
-@keyframes tl-breathe{50%{opacity:.55}}
+.tl-mark{position:relative;z-index:1;width:72px;height:69px;overflow:visible;fill:#f1ffff}
+.tl-mark path{transform-box:fill-box;transform-origin:center;opacity:.1;animation:tl-ghost 1.6s ease-in-out infinite}
+.tl-mark path.is-in{opacity:1;fill:#1d9bf0;animation:tl-in .5s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes tl-ghost{50%{opacity:.18}}
+@keyframes tl-in{0%{opacity:0;transform:translate(var(--ox),var(--oy)) scale(.35)}55%{opacity:1;transform:translate(0,0) scale(1.24)}100%{opacity:1;transform:none}}
 [data-phase=click] .tl-mark{fill:#1d9bf0;animation:tl-press .42s cubic-bezier(.34,1.56,.64,1)}
 [data-phase=lift] .tl-mark{fill:#1d9bf0}
 @keyframes tl-press{30%{transform:scale(.86)}}
