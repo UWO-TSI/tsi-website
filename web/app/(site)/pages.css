@@ -1,38 +1,5 @@
 /* /npo and /genesis. Shares the .ts tokens from site.css and the rolling rows (.dt-*) from home.css. */
 
-/* ── /npo hero ─────────────────────────────────────────── */
-
-@media (max-width: 820px) { .np-hero__grid { grid-template-columns: 1fr; gap: 36px; } }
-
-/* ── Numbered list ─────────────────────────────────────── */
-
-@media (max-width: 820px) {
-  .np-list { grid-template-columns: 1fr; }
-  .np-list__item, .np-list__item:not(:nth-child(3n + 1)) { padding: 22px 0; border-left: 0; }
-}
-
-/* ── Ticket ($0) ───────────────────────────────────────── */
-
-@media (max-width: 820px) {
-  .ticket { grid-template-columns: 1fr; }
-  .ticket::before, .ticket::after { display: none; }
-  .ticket__list { border-left: 0; border-top: 1px dashed rgba(241, 255, 255, 0.2); }
-}
-
-/* ── FAQ ───────────────────────────────────────────────── */
-
-@media (max-width: 820px) { .np-faq { grid-template-columns: 1fr; gap: 28px; } }
-.faq { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line-dark); }
-.faq__item { border-bottom: 1px solid var(--line-dark); }
-.faq__q { margin: 0; font-size: 16px; font-weight: 400; }
-.faq__q button { width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) 24px; gap: 12px; align-items: baseline; padding: 20px 0; background: none; border: 0; color: inherit; text-align: left; font: inherit; }
-.faq__q button:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
-.faq__num { font-family: var(--mono); font-size: 12px; color: var(--on-dark-3); }
-.faq__text { font-size: 17px; color: var(--on-dark); }
-.faq__sign { font-family: var(--mono); color: var(--signal); text-align: right; }
-.faq__a { padding: 0 0 22px 68px; max-width: 46em; }
-@media (max-width: 820px) { .faq__a { padding-left: 0; } }
-
 /* ── Apply form ────────────────────────────────────────── */
 
 .np-apply { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 48px; align-items: start; }
