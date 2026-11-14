@@ -21,7 +21,7 @@ const LOGIN = { label: "Student portal", href: "/student" };
 const ACCOUNT = memberWorldIsAvailable()
   ? { label: "Student portal", href: "/student" }
   : { label: "Applicant portal", href: "/student/apply/portal" };
-const ADMIN = { label: "Admin dashboard", href: "/admin/recruit" };
+const ADMIN = { label: "Admin dashboard", href: "/admin" };
 
 /* Spring configs */
 const SPRING_SNAPPY = { type: "spring" as const, stiffness: 500, damping: 30, mass: 0.8 };
