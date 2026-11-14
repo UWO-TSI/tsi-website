@@ -131,13 +131,13 @@ function step(st: State, rod: THREE.Object3D, dust: MoveParticles, t: number, dt
 /** A section cracking open: a puff of grey smoke out of each split, and a latch's click. */
 function crack(st: State, rod: THREE.Object3D, dust: MoveParticles, i: number, y: number, scale: number) {
   const L = 0.86 * scale, smoke: Recipe = { sprite: "dust", count: [2, 3], life: [0.55, 0.9], size: [0.06 * L, 0.1 * L], grow: 2.4, speed: [0.25 * L, 0.5 * L],
-    spread: 0.35, up: [0.02 * L, 0.08 * L], gravity: 0, drag: 3, wind: 0.1, lift: 0.06 * L, alpha: 0.85, face: FACE.billboard, jitter: 0.01 * L };
+    spread: 0.35, up: [0.02 * L, 0.08 * L], gravity: 0, drag: 3, wind: 0.1, lift: 0.06 * L, alpha: 0.75, face: FACE.billboard, jitter: 0.01 * L };
   for (let k = 0; k < 3; k++) {
     // each split between plates, the section's turn (30 degrees a section, art/pipeline/build_rods.py) plus a third of a turn
     const a = -(i * Math.PI / 6 + k * Math.PI * 2 / 3) + st.turn[i];
     const p = rod.localToWorld(v.set(Math.cos(a) * 0.03, y, Math.sin(a) * 0.03));
     const d = dir.set(Math.cos(a), 0, Math.sin(a)).transformDirection(rod.matrixWorld);
-    dust.pool.burst(smoke, p.x, p.y, p.z, p.y - 50, d.x, d.z, 1, 0xc9ced6, ++st.seed);
+    dust.pool.burst(smoke, p.x, p.y, p.z, p.y - 50, d.x, d.z, 1, 0xa4a9b1, ++st.seed);
   }
   AudioManager.playSFX("keyswitch", { rate: 0.55 + 0.05 * i, gain: 0.45 });
 }

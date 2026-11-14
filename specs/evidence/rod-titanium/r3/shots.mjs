@@ -50,7 +50,7 @@ async function record(name, w, h, go, until, crop) {
   const list = kept.map((f, i) => { const file = join(dir, `${String(i).padStart(5, "0")}.jpg`); writeFileSync(file, Buffer.from(f.data, "base64"));
     return `file '${file}'\nduration ${((kept[i + 1]?.t ?? f.t + 0.04) - Math.max(f.t, start)).toFixed(4)}`; });
   writeFileSync(join(dir, "list.txt"), `${list.join("\n")}\nfile '${join(dir, `${String(kept.length - 1).padStart(5, "0")}.jpg`)}'\n`);
-  const mp4 = join(OUT, `${name}.mp4`), vf = [box ? `crop=${box.map(Math.round).join(":")}` : null, "fps=30", "scale=trunc(iw/2)*2:trunc(ih/2)*2"].filter(Boolean).join(",");
+  const mp4 = join(OUT, `${name}.mp4`), vf = [box ? `crop=${[box[2], box[3], box[0], box[1]].map(Math.round).join(":")}` : null, "fps=30", "scale=trunc(iw/2)*2:trunc(ih/2)*2"].filter(Boolean).join(",");
   ff("-f", "concat", "-safe", "0", "-i", join(dir, "list.txt"), "-vf", vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "22", "-movflags", "+faststart", mp4);
   rmSync(dir, { recursive: true });
   const dur = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp4]).toString());
@@ -122,7 +122,7 @@ if (want("awaken")) {
   await record("rti3-awaken-phone", 390, 844, go, until);
 }
 
-if (want("hand")) {
+if (want("hand") || want("walk")) {
   // In hand on the island: the Flimsy rod's GLB answered with the Titanium's (shut and awakened), as the game holds it;
   // stills (desktop and phone) and a clip of the awakened rod held while walking about and casting.
   const LOOK = { skin: 3, hair: 2, eyes: "F1.1", mouth: "M1.1", brows: "brow_soft", extras: [], bangs: "bangs_straight", back: "back_bob",
@@ -144,7 +144,7 @@ if (want("hand")) {
     await p.addStyleTag({ content: "#island-options, [aria-controls='island-options'], nextjs-portal { display: none !important; } main > :not(:has(canvas)), nav { visibility: hidden !important; }" });
     await p.waitForTimeout(7000);
   }
-  for (const [dev, w, h, clip] of [["desktop", 1280, 800, { x: 440, y: 250, width: 400, height: 420 }], ["phone", 390, 844, null]]) {
+  for (const [dev, w, h, clip] of (want("hand") ? [["desktop", 1280, 800, { x: 440, y: 250, width: 400, height: 420 }], ["phone", 390, 844, null]] : [])) {
     for (const [tag, file] of [["shut", "rod-titanium.glb"], ["awakened", "rod-titanium-a1.glb"]]) {
       const p = await page(w, h);
       await island(p, file);
@@ -155,12 +155,15 @@ if (want("hand")) {
   const keys = async (p, k, ms) => { await p.keyboard.down(k); await p.waitForTimeout(ms); await p.keyboard.up(k); };
   const { mp4 } = await record("rti3-a1-walk-cast", 1280, 800, (p) => island(p, "rod-titanium-a1.glb", [140, 10, 0.35]), async (p) => {
     const start = Date.now() / 1000;
-    await p.waitForTimeout(1500);
-    await keys(p, "w", 1800); await p.waitForTimeout(700);
-    await keys(p, "a", 1200); await p.waitForTimeout(600);
-    await keys(p, "s", 1400); await p.waitForTimeout(900);
-    await p.mouse.move(640, 300); await p.mouse.down(); await p.waitForTimeout(1100); await p.mouse.up();
-    await p.waitForTimeout(3500);
+    await p.waitForTimeout(1200);
+    await keys(p, "w", 1900); await p.waitForTimeout(500);          // out to the pier's edge, the sections trailing
+    // and cast: the world's "Click" prompt (headless has no pointer capture), held a second, then let go
+    console.log("cast prompt:", await p.evaluate(() => { const b = document.querySelector("[data-use]"); b?.dispatchEvent(new PointerEvent("pointerdown", { pointerType: "mouse", bubbles: true, button: 0 })); return b?.textContent ?? null; }));
+    await p.waitForTimeout(1000);
+    await p.evaluate(() => window.dispatchEvent(new PointerEvent("pointerup", { pointerType: "mouse", bubbles: true, button: 0 })));
+    await p.waitForTimeout(3200);
+    await keys(p, "Escape", 100); await p.waitForTimeout(600);
+    await keys(p, "s", 1300); await keys(p, "a", 900); await p.waitForTimeout(1200);
     return start;
   }, [240, 100, 800, 640]);
   poster(mp4, 2.0, join(OUT, "rti3-a1-walk-cast-poster.png"));

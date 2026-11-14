@@ -179,7 +179,7 @@ export type MaterialPreset = keyof typeof MATERIAL_PRESETS;
  * edge-on. In the shared chunk, so every iridescent material has it however it was made or cloned (the stages'
  * prepareModel, a hand's merged copy, an effect's parts); only the Titanium's GLBs carry a film.
  */
-export const FILM_GRAZE = "0.03 + 0.97 * pow(1.0 - dotNVi, 2.6)";
+export const FILM_GRAZE = "0.03 + 0.97 * pow(1.0 - dotNVi, 1.8)";
 ShaderChunk.lights_fragment_begin = ShaderChunk.lights_fragment_begin.replace(
   "material.iridescence = saturate( material.iridescence );", `material.iridescence = saturate( material.iridescence ) * (${FILM_GRAZE});`);
 const PRESET = /^P_(Wood|Stone|Metal|Polished|Paint|Glass|Cloth|Leather|Velvet)(?:\.\d+)?$/;

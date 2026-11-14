@@ -768,8 +768,8 @@ def ti_plate(pc, i, k, hollow):
             f([foot[j], foot[j + 1], lo_in[j + 1], lo_in[j]], "Body")
             if not top:
                 f([rim[j], rim[j + 1], hi_in[j + 1], hi_in[j]], "Body")
-        for e in (0, -1):
-            f([lo_in[e]] + [rg[e] for rg in rings] + ([apex] if top else [hi_in[e]]), "Cut")
+        for e in (0, -1):                        # lighter than the shut rod's groove: seen whole once it floats
+            f([lo_in[e]] + [rg[e] for rg in rings] + ([apex] if top else [hi_in[e]]), "Edge")
         ti_fin(f, pc, r, ac, z0, z1)
     else:
         a_lo, a_hi = pc.v(V((0, 0, z0))), (apex if top else pc.v(V((0, 0, z1))))
@@ -875,7 +875,7 @@ def metal(ob, colour, deg=14.0):
     return ob
 
 
-TI_STEEL = {"Body": "#A7ADB4", "Seam": "#40444B", "Cut": "#1F2228", "Inner": "#5E636B", "Fin": "#C4C9CF", "Grip": "#363A41",
+TI_STEEL = {"Body": "#A7ADB4", "Seam": "#40444B", "Cut": "#1F2228", "Edge": "#5A6068", "Inner": "#7A8088", "Fin": "#C4C9CF", "Grip": "#363A41",
             "Pommel": "#80868D", "Reel": "#8F959C", "Claw": "#9CA2A9", "Line": "#E6ECF0"}
 
 
@@ -939,7 +939,7 @@ def titanium_a1():
                     [0.0022] * 6, sides=3, closed_loop=True)
     fx = [sections,
           glow("Core", "#C8F7FF", core),
-          light("Beam", "#2F86FF", beam, pulse=0.05),
+          light("Beam", "#2F86FF", beam),
           glow("Rings", "#7FE6FF", rings, spin=1.1)]
     return rod, fx, {"rodFx": "titanium-a1", "fxRoom": 0.0}, {}   # the beam is inside it: it takes the stage as the shut rod does
 
