@@ -51,6 +51,7 @@ for (const [name, path, viewport, what, scheme] of shots) {
     }
     const x = Math.max(0, Math.min(...boxes.map((b) => b.x)) - 8), y = Math.min(...boxes.map((b) => b.y)) - 8;
     const r = Math.max(...boxes.map((b) => b.x + b.width)) + 8, bottom = Math.max(...boxes.map((b) => b.y + b.height)) + 8;
+    await page.evaluate(() => window.scrollTo(0, 0)); // fixed bars (the lab's nav) stay at the top, off the crop
     await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true, clip: { x, y, width: r - x, height: bottom - y } });
   }
   console.log("shot", name, wide ? "(wide)" : "");

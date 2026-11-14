@@ -18,7 +18,7 @@ Approved: none.
 
 All eight cards are redo; the one note covers the page.
 
-**Main moved:** merge `origin/main` first (59 commits; the site revamp).
+**Main moved:** merged (done in round 2).
 
 Build (coordinator):
 1. **The new UI.** Rebuild the page in the newest admin look on origin/main. Check `git log origin/main -- web/app/student/dashboard web/components/portal` for the latest dashboard restyle and match it; if the game's flat kit (row 320) is the better fit, say so. Name which look you used on the questions card.
@@ -55,49 +55,49 @@ Evidence `an1-*` in `specs/evidence/analytics/r1/`.
 
 **Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, the SQL smoke chain with the new migration, headless shots. Show that the tracking adds no work per frame.
 
-## Status (round 1 built, awaiting review)
+## Status (round 2 built, awaiting review)
 
-Head: see `git log -1` on game/analytics. Not merged, migration not applied.
+Head: see `git log -1` on game/analytics. Not merged, migration not applied. origin/main merged (to 25ffc2a4f's line, 129 commits).
 
-- **Event log:** `web/lib/analytics/steps.ts` (the one list), `track.ts` (tab side: batched, beacon on pagehide, 3-min heartbeat while visible, no-op until the member island calls `startSession`), `POST /api/analytics/events` (session checked, ids only, 25 a request, 40 a member a minute).
-- **Hooks:** `DefaultIslandWorld` (session, screen, arrival phases and walk stops through `subscribeArrival`), `hq/store.ts` (HQ beats), `lookStore.saveMyLook` (creator), `collections.ts` catchRequest (fishing, foraging). Features also come from `API_WRITE`.
-- **Page:** `/student/dashboard/admin/game` ("Players" on the admin hub), `components/portal/GameAnalytics.tsx`. It reads `GET /api/admin/game-analytics?days=` (adminContext), and `lib/analytics/report.ts` adds it up on the server. The dev twin is `/dev/analytics` (made-up players, or `?source=backfill` with `ANALYTICS_SNAPSHOT=<json>`).
-- **Migration** `20261106210000_game_events.sql` (unapplied):
-  - the `game_events` table, with RLS on, no policies, and access revoked from anon and authenticated;
-  - `game_events_prune` (180 days; daily pg_cron job `game-events-prune` where pg_cron exists);
-  - `game_analytics_snapshot(p_since)` (service_role only).
-  - Smoke: `web/supabase/tests/game_events_smoke.sql`, added to the canonical chain.
-- **Spec:** `specs/analytics.md` covers what's collected, privacy and the history sources.
-- **Gates (r1):**
-  - tsc clean;
-  - vitest 3805 passed, both with and without `NEXT_PUBLIC_GAME_WORLD=new`;
-  - eslint clean on the changed files;
-  - the lane's SQL smoke fails before the migration and passes after, applies twice, and the security smoke still passes;
-  - the canonical chain passes except `world_chat_smoke` "the rest", which also fails with this migration cut (pre-existing).
+- **Round 2:**
+  - **The look:** the game's flat kit (design bible UI, row 320), not a dashboard restyle: none has landed on origin/main (the admin pages still wear the cream kit through `--gui-*`; `/admin/npo` is a bare dark table). The page wraps itself in `data-gui-flat` and wears `data-ui-theme` clean or dark from `prefers-color-scheme`.
+  - **Charts are kit pieces:** `components/gui/flat/charts.tsx` (+ `charts.module.css`): `StatTile`, `Delta`, `ChartCard`, `TimeChart` (bars and lines, crosshair read-out), `BarRows` (funnel, quits, features, kinds), `Columns`, `Heatmap`, `Segmented` (the range), `Legend`. In the showroom at `/lab/gui#charts`. Colours: `--ui-chart` and `--ui-chart-gain` (validated with the dataviz script, light passes; dark.css's two values changed to `#5f88e6` and `#22a596` so dark passes the lightness band: dev-only theme, the rod radar in dark shifts a little), a new `--ui-good` token in clean, cream and dark.
+  - **New numbers** (`lib/analytics/report.ts`): per day the week and month actives; `actives` (a day, week, month, stickiness), `retention` (day 1, 7, 30, the very next day), `tutorial`, `firsts` (time to first fish, sale, chapter), `sessionLengths`, `kinds` (every event kind in the log), `changes` (this period against the one before), `summary` (`summarize`, sentences from the numbers; no model call).
+  - **Migration** renamed `20261106210000_game_events.sql` to `20261113120000_game_events.sql` (still unapplied; main now has 20261111 and 20261112 migrations). The kind check is now an id shape, so a new system logs its own kind without a migration (the route still takes only the code's kinds); the snapshot returns `kinds`. Smoke updated; the canonical chain lists the two site migrations and this one.
+  - "Village" shows as Island (`screenLabel`); the ID card's new `id` sheet is a screen ("Island ID").
+  - Scripts moved to `specs/evidence/analytics/r2/` (`sql-smoke.sh`, `backfill.sql`, `shoot.sh`, `shoot.mjs`).
+- **Round 1** (still true): event log (`steps.ts`, `track.ts`, `POST /api/analytics/events`), hooks in `DefaultIslandWorld`, `hq/store.ts`, `lookStore.saveMyLook`, `collections.ts`; page `/student/dashboard/admin/game`, read route `GET /api/admin/game-analytics?days=`; dev twin `/dev/analytics` (now 30 days by default); privacy in `specs/analytics.md`.
 
-- **Evidence** (`specs/evidence/analytics/r1/`):
-  - `an1-demo-desktop.png` and `an1-demo-phone.png`: the whole page on 140 made-up players (`/dev/analytics`), desktop and phone.
-  - `an1-backfill-funnel.png`: the funnel from the local backfill (90 made-up players in the game's tables, the log for the last three weeks), with the "Joined before the log" history.
-  - `an1-backfill-quit.png`: where sessions end, and where people stop for good, from the backfill.
-  - `an1-backfill-phone.png`: the backfill page on a phone.
-  - `an1-gate-signed-out.png`: the page signed out shows "Admins only". Both routes answered 503 in dev with Supabase blanked; route tests cover 401 and 403.
-  - `an1-no-per-frame.txt`: the tracking adds no per-frame work.
-  - Scripts: `sql-smoke.sh`, `backfill.sql`, `shoot.sh`, `shoot.mjs`.
+- **Evidence** (`specs/evidence/analytics/r2/`, made-up data, dev `now` 2026-11-13):
+  - `an2-summary.png`: the summary card.
+  - `an2-tiles.png`: this period (with changes) and active and coming back.
+  - `an2-over-time.png`: players over time.
+  - `an2-funnel.png`: the funnel as bars with the drop under each step.
+  - `an2-quit.png`: where people stop for good, and where sessions end.
+  - `an2-retention.png`: the cohort heatmap, session lengths and time to the firsts.
+  - `an2-features.png`: features (used, came back) and time between steps.
+  - `an2-kinds.png`: every kind of event, with a made-up `market_sale` as a new system's.
+  - `an2-desktop.png`, `an2-phone.png`: the whole page; `an2-dark.png`, `an2-dark-phone.png`: dark.
+  - `an2-backfill.png`: the summary and funnel from the local backfill of the game's tables.
+  - `an2-kit.png`: the chart pieces in the showroom.
+  - `an2-gate-signed-out.png`: signed out gets "Admins only".
 
 ## Next
 
-1. The coordinator reviews and publishes the an1 page with the questions below. David answers.
-2. Apply his answers: cut or rename funnel steps (`steps.ts`), the quiet window (`GONE_DAYS`), the retention window (180 days in the migration's prune, while the migration is still unapplied), and who counts as a player.
-3. The coordinator applies the migration after David approves the page. Until then, the route answers 503 and the tab stops sending (`off`).
+1. The coordinator publishes "Player Analytics 2" and David answers the questions card.
+2. Apply his answers (funnel steps in `steps.ts`, `GONE_DAYS`, the 180-day prune while unapplied, the summary's rules in `summarize`).
+3. The coordinator applies `20261113120000_game_events.sql` after David approves. Until then the routes answer 503 and the tab stops sending.
 
-Questions for David: Are these the funnel steps he wants (28 rows: every opening phase, walk stop and HQ beat), or a shorter list? Is 7 days the right "never came back" mark? Should events be kept 180 days? Is a player a member, or anyone who played? Anything to cut?
+Questions for David (round 2): the look is the game's flat kit, since no newer admin look exists on main: keep it, or match something else? Should the summary later be written by Claude (a small cost per view, or once a day) instead of the fixed rules? Are 28 funnel rows right, or a shorter list? Is 7 days the right "never came back" mark, and 180 days the right keep? Dark mode follows the viewer's setting: keep it?
 
 ## Tools and gotchas
 
-- SQL: `zsh specs/evidence/analytics/r1/sql-smoke.sh [out.json]`. With a path, it also loads `backfill.sql` (90 made-up players) and writes the snapshot JSON there. Postgres port 55498.
-- Shots: `LANE=game/analytics withlock.sh devserver zsh specs/evidence/analytics/r1/shoot.sh <snapshot.json>` (dev :3498, headless). The devserver lock is heavily contended: a wait can time out (exit 75), so retry.
+- SQL: `zsh specs/evidence/analytics/r2/sql-smoke.sh [out.json]`. With a path, it also loads `backfill.sql` (90 made-up players) and writes the snapshot JSON there. Postgres port 55498.
+- Shots: `LANE=game/analytics withlock.sh devserver zsh specs/evidence/analytics/r2/shoot.sh <snapshot.json>` (dev :3498, headless; `ONLY=an2-funnel,...` for some). The devserver lock is heavily contended: a wait can time out (exit 75), so retry.
 - `member_identity` needs `world_name_key` with `world_name` (check constraint).
 - `catch_rolls` rows are pruned after a day, so they're no history. Use `member_collections.first_collected_at`.
+- The gui kit's `Tabs` inside `data-gui-flat` draws its highlighter marker in `--ui-highlight` (black), which reads as a strike through the picked tab: use the flat `Segmented` instead.
+- Chart colours: run `node <dataviz skill>/scripts/validate_palette.js "<hex,hex>" --mode light|dark --surface <card>` before changing them.
 - `player_positions` is never written, and `profiles.last_login_at` and `first_seen_at` are never written either: don't use them.
 
 ## Rules

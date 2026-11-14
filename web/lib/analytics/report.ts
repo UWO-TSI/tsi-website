@@ -349,7 +349,7 @@ export function summarize(r: Pick<Report, "changes" | "funnel" | "cohorts" | "qu
   if (ripe.length >= 2) {
     const [newest, ...rest] = ripe, avg = Math.round(rest.reduce((a, c) => a + c.d7!, 0) / rest.length), d = newest.d7! - avg;
     const way = Math.abs(d) < 3 ? "is steady" : d > 0 ? "is up" : "is down";
-    out.push({ tone: Math.abs(d) < 3 ? "info" : d > 0 ? "up" : "down", text: `Day 7 retention ${way}: ${newest.d7}% of the week of ${md(newest.week)} came back a week on, against ${avg}% for the weeks before.` });
+    out.push({ tone: Math.abs(d) < 3 ? "info" : d > 0 ? "up" : "down", text: `Day 7 retention ${way}: ${Math.round(newest.d7!)}% of the week of ${md(newest.week)} came back a week on, against ${avg}% for the weeks before.` });
   }
 
   const gone = r.quitGone.reduce((a, q) => a + q.n, 0);
