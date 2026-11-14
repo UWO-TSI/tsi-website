@@ -3,12 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Canvas, extend, useFrame, type ThreeEvent } from "@react-three/fiber";
-import {
-  Environment,
-  Lightformer,
-  useGLTF,
-  useTexture,
-} from "@react-three/drei";
+import { Environment, Lightformer, RoundedBox } from "@react-three/drei";
 import {
   BallCollider,
   CuboidCollider,
@@ -21,9 +16,107 @@ import { MeshLineGeometry, MeshLineMaterial } from "meshline";
 import * as THREE from "three";
 
 import styles from "./Lanyard.module.css";
+import { PEOPLE } from "@/components/site/marks";
 
-const cardGLB = "/assets/lanyard/card.glb";
-const lanyardTexture = "/assets/lanyard/lanyard.png";
+// The card is 1.6 x 2.25 world units (the physics box below); its faces and the strap are drawn on canvases, so the
+// lanyard needs no model or image files.
+const CARD_W = 1.6;
+const CARD_H = 2.25;
+const INK = "#0f0f10";
+const PAPER = "#f1ffff";
+const BLUE = "#1d9bf0";
+
+/** A canvas texture redrawn once the site's fonts have loaded (the faces are set in Söhne). */
+function canvasTexture(w: number, h: number, paint: (g: CanvasRenderingContext2D) => void) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const g = c.getContext("2d")!;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  const draw = () => { g.clearRect(0, 0, w, h); paint(g); tex.needsUpdate = true; };
+  draw();
+  document.fonts?.ready.then(draw, () => {});
+  return tex;
+}
+
+/** The Tethos mark (the six people), drawn at (x, y) to a width. */
+function drawMark(g: CanvasRenderingContext2D, x: number, y: number, width: number, color: string) {
+  g.save();
+  g.translate(x, y);
+  g.scale(width / 1410, width / 1410);
+  g.fillStyle = color;
+  for (const p of PEOPLE) g.fill(new Path2D(p.d), p.evenodd ? "evenodd" : "nonzero");
+  g.restore();
+}
+
+/** A faint field of characters over a face, on the site's grid. */
+function drawField(g: CanvasRenderingContext2D, w: number, h: number, words: string, alpha: number) {
+  g.save();
+  g.font = `500 22px "Sohne Mono", ui-monospace, monospace`;
+  g.fillStyle = PAPER;
+  g.globalAlpha = alpha;
+  const cw = 14, ch = 26;
+  let k = 0;
+  for (let y = ch; y < h; y += ch) for (let x = 0; x < w; x += cw) {
+    const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    if (s - Math.floor(s) < 0.42) g.fillText(words[k++ % words.length], x, y);
+  }
+  g.restore();
+}
+
+function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  g.beginPath();
+  g.roundRect(x, y, w, h, r);
+}
+
+/** The front: the mark, GENESIS 2027, a name line and the GUEST tag, on ink with the site's grain. */
+function paintFront(g: CanvasRenderingContext2D) {
+  const W = 1024, H = 1440;
+  roundRect(g, 0, 0, W, H, 56); g.fillStyle = INK; g.fill();
+  g.save(); roundRect(g, 0, 0, W, H, 56); g.clip();
+  drawField(g, W, H, "GENESIS · ", 0.07);
+  // A glow behind the title.
+  const glow = g.createRadialGradient(W * 0.7, H * 0.42, 40, W * 0.7, H * 0.42, 640);
+  glow.addColorStop(0, "rgba(29,155,240,0.28)"); glow.addColorStop(1, "rgba(29,155,240,0)");
+  g.fillStyle = glow; g.fillRect(0, 0, W, H);
+  g.restore();
+  // The slot the clip goes through.
+  roundRect(g, W / 2 - 90, 44, 180, 30, 15); g.fillStyle = "#000"; g.fill();
+  drawMark(g, 80, 150, 130, PAPER);
+  g.fillStyle = PAPER; g.font = `500 30px "Sohne Mono", ui-monospace, monospace`; g.globalAlpha = 0.6;
+  g.fillText("TETHOS", 236, 210); g.fillText("TECH FOR SOCIAL IMPACT", 236, 250); g.globalAlpha = 1;
+  g.font = `700 196px "Sohne", sans-serif`; g.fillStyle = PAPER;
+  g.save(); g.translate(76, 690); g.scale(1, 1); g.fillText("GENESIS", 0, 0); g.restore();
+  g.font = `700 196px "Sohne", sans-serif`; g.fillStyle = BLUE; g.fillText("2027", 76, 880);
+  g.font = `500 32px "Sohne Mono", ui-monospace, monospace`; g.fillStyle = PAPER; g.globalAlpha = 0.66;
+  g.fillText("PROJECT SHOWCASE · MARCH 2027", 80, 960); g.globalAlpha = 1;
+  // The name line and the tag.
+  g.strokeStyle = "rgba(241,255,255,0.35)"; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(80, 1190); g.lineTo(W - 80, 1190); g.stroke();
+  g.font = `500 28px "Sohne Mono", ui-monospace, monospace`; g.fillStyle = PAPER; g.globalAlpha = 0.5;
+  g.fillText("NAME", 80, 1232); g.globalAlpha = 1;
+  roundRect(g, 80, 1270, 230, 76, 38); g.fillStyle = BLUE; g.fill();
+  g.font = `600 34px "Sohne Mono", ui-monospace, monospace`; g.fillStyle = INK; g.fillText("GUEST", 132, 1320);
+}
+
+/** The back: the mark, big, and the address. */
+function paintBack(g: CanvasRenderingContext2D) {
+  const W = 1024, H = 1440;
+  roundRect(g, 0, 0, W, H, 56); g.fillStyle = INK; g.fill();
+  g.save(); roundRect(g, 0, 0, W, H, 56); g.clip(); drawField(g, W, H, "TETHOS · BUILT FOR PURPOSE · ", 0.08); g.restore();
+  roundRect(g, W / 2 - 90, 44, 180, 30, 15); g.fillStyle = "#000"; g.fill();
+  drawMark(g, W / 2 - 300, 420, 600, PAPER);
+  g.font = `500 34px "Sohne Mono", ui-monospace, monospace`; g.fillStyle = PAPER; g.globalAlpha = 0.6;
+  g.textAlign = "center"; g.fillText("TETHOS.CA", W / 2, 1300); g.textAlign = "left"; g.globalAlpha = 1;
+}
+
+/** The strap: blue, printed with the event, repeating. */
+function paintStrap(g: CanvasRenderingContext2D) {
+  g.fillStyle = BLUE; g.fillRect(0, 0, 1024, 96);
+  g.font = `600 44px "Sohne Mono", ui-monospace, monospace`; g.fillStyle = PAPER; g.textBaseline = "middle";
+  g.fillText("GENESIS 2027 · TETHOS · ", 24, 50);
+}
 
 extend({ MeshLineGeometry, MeshLineMaterial });
 
@@ -32,6 +125,8 @@ type LanyardProps = {
   gravity?: [number, number, number];
   fov?: number;
   transparent?: boolean;
+  /** false: the scene stops drawing (off screen). */
+  active?: boolean;
 };
 
 export default function Lanyard({
@@ -39,7 +134,10 @@ export default function Lanyard({
   gravity = [0, -40, 0],
   fov = 20,
   transparent = true,
+  active = true,
 }: LanyardProps) {
+  // Touch screens can't drag the card (it would fight the page scroll); it still swings in and hangs.
+  const [touch] = useState(() => typeof window !== "undefined" && window.matchMedia("(hover: none), (pointer: coarse)").matches);
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.innerWidth < 768
   );
@@ -53,6 +151,8 @@ export default function Lanyard({
   return (
     <div className={styles.lanyardWrapper}>
       <Canvas
+        frameloop={active ? "always" : "never"}
+        style={touch ? { pointerEvents: "none", touchAction: "pan-y" } : undefined}
         camera={{ position, fov }}
         dpr={[1, isMobile ? 1.5 : 2]}
         gl={{ alpha: transparent }}
@@ -126,11 +226,9 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
     linearDamping: 4,
   } as const;
 
-  const { nodes, materials } = useGLTF(cardGLB) as unknown as {
-    nodes: Record<string, any>;
-    materials: Record<string, any>;
-  };
-  const texture = useTexture(lanyardTexture);
+  const [front] = useState(() => canvasTexture(1024, 1440, paintFront));
+  const [back] = useState(() => canvasTexture(1024, 1440, paintBack));
+  const [texture] = useState(() => canvasTexture(1024, 96, paintStrap));
 
   const [curve] = useState(
     () =>
@@ -241,29 +339,32 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
         >
           <CuboidCollider args={[0.8, 1.125, 0.01]} />
           <group
-            scale={2.25}
-            position={[0, -1.2, -0.05]}
             onPointerOver={() => hover(true)}
             onPointerOut={() => hover(false)}
             onPointerUp={handlePointerUp}
             onPointerDown={handlePointerDown}
           >
-            <mesh geometry={nodes.card.geometry}>
-              <meshPhysicalMaterial
-                map={materials.base.map}
-                map-anisotropy={16}
-                clearcoat={isMobile ? 0 : 1}
-                clearcoatRoughness={0.15}
-                roughness={0.9}
-                metalness={0.8}
-              />
+            {/* The card: a thin rounded slab with its two printed faces, glossy like a laminated pass. */}
+            <RoundedBox args={[CARD_W, CARD_H, 0.016]} radius={0.007} smoothness={2}>
+              <meshPhysicalMaterial color={INK} roughness={0.5} clearcoat={isMobile ? 0 : 1} clearcoatRoughness={0.2} />
+            </RoundedBox>
+            <mesh position={[0, 0, 0.0085]}>
+              <planeGeometry args={[CARD_W, CARD_H]} />
+              <meshPhysicalMaterial map={front} transparent alphaTest={0.5} roughness={0.35} clearcoat={isMobile ? 0 : 1} clearcoatRoughness={0.12} />
             </mesh>
-            <mesh
-              geometry={nodes.clip.geometry}
-              material={materials.metal}
-              material-roughness={0.3}
-            />
-            <mesh geometry={nodes.clamp.geometry} material={materials.metal} />
+            <mesh position={[0, 0, -0.0085]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[CARD_W, CARD_H]} />
+              <meshPhysicalMaterial map={back} transparent alphaTest={0.5} roughness={0.35} clearcoat={isMobile ? 0 : 1} clearcoatRoughness={0.12} />
+            </mesh>
+            {/* The clip: a metal clamp through the slot, up to where the strap is tied. */}
+            <mesh position={[0, CARD_H / 2 + 0.05, 0]}>
+              <boxGeometry args={[0.2, 0.16, 0.05]} />
+              <meshStandardMaterial color="#c9ced3" metalness={1} roughness={0.28} />
+            </mesh>
+            <mesh position={[0, CARD_H / 2 + 0.24, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <torusGeometry args={[0.1, 0.022, 12, 32]} />
+              <meshStandardMaterial color="#c9ced3" metalness={1} roughness={0.25} />
+            </mesh>
           </group>
         </RigidBody>
       </group>
@@ -273,7 +374,7 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false }: BandProps) {
         {/* @ts-expect-error - meshline extends R3F */}
         <meshLineMaterial
           color="white"
-          depthTest={false}
+          depthTest={true}
           resolution={isMobile ? [1000, 2000] : [1000, 1000]}
           useMap
           map={texture}

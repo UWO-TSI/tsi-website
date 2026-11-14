@@ -2,6 +2,7 @@ import "../pages.css";
 import type { Metadata } from "next";
 import GlyphField from "@/components/site/GlyphField";
 import Reveal from "@/components/site/Reveal";
+import GenesisLanyard from "@/components/site/genesis/GenesisLanyard";
 import DotNav from "@/components/site/DotNav";
 import GlyphSeam from "@/components/site/GlyphSeam";
 import SponsorForm from "@/components/site/genesis/SponsorForm";
@@ -55,6 +56,7 @@ const SECTIONS = [
   { id: "projects", label: "Projects" },
   { id: "where", label: "Where it goes" },
   { id: "glance", label: "2026" },
+  { id: "pass", label: "The pass" },
   { id: "thanks", label: "Thank you" },
   { id: "sponsor", label: "Sponsor us" },
 ];
@@ -140,6 +142,17 @@ export default function GenesisPage() {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="ts-section gx-lanyard" data-tone="deep" id="pass" aria-labelledby="pass-title">
+        <div className="ts-wrap gx-lanyard__grid">
+          <div className="gx-lanyard__copy">
+            <Reveal delay={0.06}><h2 className="ts-h2" id="pass-title">The GENESIS pass.</h2></Reveal>
+            <Reveal delay={0.12}><p className="ts-lede">The card and lanyard for GENESIS 2027.</p></Reveal>
+            <Reveal delay={0.18}><p className="gx-lanyard__hint"><span className="ts-hover-only">Grab the card and swing it.</span><span className="ts-touch-only">It drops in as you arrive.</span></p></Reveal>
+          </div>
+          <GenesisLanyard />
         </div>
       </section>
 
