@@ -30,7 +30,7 @@ David's words: "we are going to close off the game title page and make it a prer
 ### 4. The reward
 
 - Granted once per account on first entry to the island, only to accounts with a pre-registration time before opening.
-- The item is David's pick (pending). Proposed: a rod skin and a title that are never sold or given again.
+- David's pick (2026-11-14): "coins, gems, and limited edition rare rod". A bundle of coins, a handful of gems, and a rare rod made only for pre-registration, never sold or given again. Amounts and the rod's design are David's to set; the rod goes through the tool pipeline.
 - Honest scarcity only (row 326): the countdown is the real opening time and the reward really ends then.
 
 ### 5. Footer on the title screen
@@ -59,4 +59,8 @@ David's words: "we are going to close off the game title page and make it a prer
 
 ## Friends clips
 
-David: "playing with friends just use bots with real game handel for now". For recording, test accounts with real-looking island names stand in for friends. They are for capture only and never count toward the registered total.
+David: "playing with friends just use bots with real game handel for now", and clips are recorded by headless capture from scenes David describes. For recording, test accounts with real-looking island names stand in for friends. They are for capture only and never count toward the registered total.
+
+## How it is pitched
+
+David (2026-11-14): the game has parts of Minecraft, Roblox, Animal Crossing and Stardew, "so pitch it like that, like a free browser mmorpg or free animal crossing like". Page and post copy lead with: free, in your browser, no download, play with friends.
