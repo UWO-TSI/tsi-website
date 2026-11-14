@@ -17,10 +17,10 @@ export const GENESIS_FIELD = "GENESIS · ";
 export default function GenesisHome() {
   return (
     <section className="ts-section gn" data-tone="dark" id="genesis" aria-labelledby="genesis-title">
-      {/* As the /genesis hero: the aura, then the field filling the section with the hand and sphere on the right. */}
-      <div className="gx-aura" aria-hidden="true" />
+      {/* The hand and sphere on the right, on the page's own ground and grain (no aura or field of its own, so the
+          section runs on from the dates above without a change of tone). */}
       <div className="gn-bg" aria-hidden="true">
-        <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} backgroundPhrase={GENESIS_FIELD} layout="right" pixelCells />
+        <GlyphField src="/images/site/genesis-sphere.png" phrase={GENESIS_PHRASE} backgroundPhrase={GENESIS_FIELD} layout="right" pixelCells field={false} />
       </div>
       <div className="ts-wrap gn-content">
         <div className="gn-copy">

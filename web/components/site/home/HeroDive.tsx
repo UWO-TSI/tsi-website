@@ -226,6 +226,7 @@ export default function HeroDive() {
           <MissionMap />
           <div className="ts-wrap hd-reveal__inner">
             <h2 className="hd-mission">We put student teams on real software for nonprofits, at no cost to them.</h2>
+            <div className="hd-mission__map" aria-hidden="true" />
             <p className="ts-lede hd-mission__body">
               Tethos runs Tech for Social Impact (TSI), our first branch, with chapters at Western and UBC. Each year its teams build for nonprofits and show the work at GENESIS.
             </p>

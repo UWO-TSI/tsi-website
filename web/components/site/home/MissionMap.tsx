@@ -14,8 +14,8 @@ const BLUE = "#1d9bf0";
 const MAP_W = 360, MAP_H = 138, LAT0 = 80, LAT1 = -58;
 // What each screen shows, and where: on wide screens North America (both chapters, nearly every partner) in the right part of the sheet, beside
 // the words; on narrow ones North America (both chapters) across the bottom, under them.
-const WIDE_VIEW = { lng0: -134, lng1: -52, lat0: 64, lat1: 12, left: 0.4 };
-const NARROW_VIEW = { lng0: -132, lng1: -66, lat0: 62, lat1: 20, left: 0 };
+const WIDE_VIEW = { lng0: -134, lng1: -52, lat0: 64, lat1: 12 };
+const NARROW_VIEW = { lng0: -132, lng1: -66, lat0: 62, lat1: 20 };
 // Where each chapter is, in words (the data has the coordinates).
 const CITY: Record<string, string> = { "ch-western": "London, ON", "ch-ubc": "Vancouver, BC" };
 
@@ -46,19 +46,16 @@ export default function MissionMap() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
       const view = w <= 820 ? NARROW_VIEW : WIDE_VIEW;
-      // The view fills its share of the width, in its own proportions (a degree of longitude as wide as one of latitude).
+      // The map fills its slot in the mission's grid (.hd-mission__map: the column beside the words on wide screens,
+      // the band under them on narrow ones), in its own proportions, centred in it.
       const vw = view.lng1 - view.lng0, vh = view.lat0 - view.lat1;
-      // Beside the words: the map starts just past wherever the mission's text ends (their boxes, unscaled).
-      let left = w * view.left;
       const inner = canvas.closest(".hd-reveal")?.querySelector<HTMLElement>(".hd-reveal__inner");
-      if (view.left && inner) {
-        let right = 0;
-        for (const el of Array.from(inner.children) as HTMLElement[]) right = Math.max(right, el.offsetLeft + el.offsetWidth);
-        left = Math.max(left, inner.offsetLeft + right + w * 0.03);
-      }
-      const scale = Math.min((w - left) / vw, (h * 0.86) / vh);
+      const slot = inner?.querySelector<HTMLElement>(".hd-mission__map");
+      const sx = slot && inner ? inner.offsetLeft + slot.offsetLeft : 0, sy = slot && inner ? inner.offsetTop + slot.offsetTop : 0;
+      const sw = slot?.offsetWidth || w, sh = slot?.offsetHeight || h;
+      const scale = Math.min(sw / vw, sh / vh);
       const mapW = vw * scale, mapH = vh * scale;
-      const ox = view.left ? w - mapW : (w - mapW) / 2, oy = w <= 820 ? h - mapH - 24 : (h - mapH) / 2 + h * 0.03;
+      const ox = sx + (sw - mapW) / 2, oy = sy + (sh - mapH) / 2;
       const project = (lat: number, lng: number) => ({ x: ox + (lng - view.lng0) * scale, y: oy + (view.lat0 - lat) * scale });
       const sample = (x: number, y: number) => {
         const lng = view.lng0 + (x - ox) / scale, lat = view.lat0 - (y - oy) / scale;
@@ -89,6 +86,7 @@ export default function MissionMap() {
       // The nonprofits teams have built for: a blue cell each.
       ctx.fillStyle = BLUE;
       for (const p of (globeData.partners ?? []) as Node[]) {
+        if (p.lng < view.lng0 || p.lng > view.lng1 || p.lat > view.lat0 || p.lat < view.lat1) continue;
         const { x, y } = project(p.lat, p.lng);
         const cx = Math.floor(x / CW) * CW + CW / 2, cy = Math.floor(y / CH) * CH + CH / 2;
         ctx.globalAlpha = 0.85;
