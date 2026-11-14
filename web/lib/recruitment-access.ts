@@ -29,13 +29,13 @@ export function sameOriginPath(input: string | null | undefined): string | null 
   return url.origin === ORIGIN ? `${url.pathname}${url.search}${url.hash}` : null;
 }
 
-/** Only recruitment destinations, the account landing and password recovery can override ordinary account entry. */
+/** Only recruitment destinations, the club admin (/admin), the account landing and password recovery can override ordinary account entry. */
 export function recruitmentReturnPath(input: string | null | undefined) {
   const safe = sameOriginPath(input);
   if (!safe) return APPLICANT_PORTAL;
   const path = new URL(safe, ORIGIN).pathname.replace(/\/+$/, "");
   if (path === "/student/dashboard/admin/recruitment") return RECRUITMENT_ADMIN;
-  if (path === RECRUITMENT_ADMIN || path === "/student/go" || path.startsWith("/admin/preview/") || path === "/student/reset-password" || path.startsWith("/student/apply/")) {
+  if (path === "/admin" || path.startsWith("/admin/") || path === "/student/go" || path === "/student/reset-password" || path.startsWith("/student/apply/")) {
     return safe;
   }
   return APPLICANT_PORTAL;

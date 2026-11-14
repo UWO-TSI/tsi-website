@@ -5,9 +5,7 @@ import { signedInUser } from "@/lib/server/clubAdmin";
 import AdminSignIn, { SignOutButton } from "./AdminSignIn";
 
 const LINKS = [
-  { href: "/admin", label: "Home" },
-  { href: "/admin/recruit", label: "Recruitment" },
-  { href: "/admin/npo", label: "Nonprofits" },
+  { href: "/admin", label: "Dashboard" },
   { href: "/admin/attendance", label: "Attendance" },
 ];
 

@@ -8,6 +8,11 @@ vi.mock("@/lib/server/memberContext", async (original) => ({
   memberContext: async () => mock.ctx,
 }));
 
+// after() runs at once here, and the attendance sheet records what it would have appended.
+const sheet = vi.hoisted(() => ({ calls: [] as string[][] }));
+vi.mock("next/server", async (original) => ({ ...(await original<typeof import("next/server")>()), after: (fn: () => unknown) => { void fn(); } }));
+vi.mock("@/lib/attendance-sheet", () => ({ appendCheckIn: async (event: string, user: string) => { sheet.calls.push([event, user]); } }));
+
 import { GET, POST } from "./route";
 
 const ME = "00000000-0000-4000-8000-0000000000aa";
@@ -25,6 +30,12 @@ beforeEach(() => {
 });
 
 describe("POST /api/events/:id/check-in (#26)", () => {
+  it("copies a new check-in to the attendance sheet, and not a repeat scan", async () => {
+    sheet.calls = [];
+    expect((await post({ code: CODE })).status).toBe(200);
+    expect((await post({ code: CODE })).status).toBe(200);
+    expect(sheet.calls).toEqual([[E, ME]]);
+  });
   it("passes auth failures through, and is for members only", async () => {
     mock.ctx = NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     expect((await post({ code: CODE })).status).toBe(401);

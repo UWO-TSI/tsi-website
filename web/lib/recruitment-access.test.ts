@@ -26,7 +26,7 @@ describe("applicant and member-world routing", () => {
   it.each([null, "", "/student/dashboard", "/student/onboarding", "/student/apply", "https://other.example/", "//other.example/", "/\\other.example/", "/student/apply/../../dashboard", "/student/apply/../dashboard", "/student/apply/portal\n"])("uses applicant entry for unsafe or obsolete return path %s", path => {
     expect(recruitmentReturnPath(path)).toBe(APPLICANT_PORTAL);
   });
-  it.each(["/student/apply/director-external", "/student/apply/developer?source=email", "/student/apply/dashboard", "/admin/recruit", "/admin/preview/application-id", "/student/reset-password", "/student/go"])("preserves explicit recruitment/recovery destination %s", path => {
+  it.each(["/student/apply/director-external", "/student/apply/developer?source=email", "/student/apply/dashboard", "/admin/recruit", "/admin/preview/application-id", "/admin", "/admin/attendance", "/student/reset-password", "/student/go"])("preserves explicit recruitment/recovery destination %s", path => {
     expect(recruitmentReturnPath(path)).toBe(path);
   });
 });

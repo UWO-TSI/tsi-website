@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { badRequest, memberContext } from "@/lib/server/memberContext";
 import { adminContext } from "@/lib/server/adminContext";
 import { checkInUrl } from "@/lib/portal/checkIn";
+import { appendCheckIn } from "@/lib/attendance-sheet";
 
 const Id = z.string().uuid();
 const Body = z.object({ code: z.string().uuid() });
@@ -36,6 +37,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     ? await ctx.db.from("event_attendance").update({ status: "attended" }).eq("id", row.id).neq("status", "attended")
     : await ctx.db.from("event_attendance").insert({ event_id: id, user_id: ctx.userId, status: "attended" });
   if (write.error) return write.error.code === "23505" ? done(true) : unavailable(); // another scan got there first
+  // The club admin's attendance sheet gets the new row once the member has their answer (lib/attendance-sheet.ts).
+  after(() => appendCheckIn(id, ctx.userId).catch(() => {}));
   return done(false);
 }
 

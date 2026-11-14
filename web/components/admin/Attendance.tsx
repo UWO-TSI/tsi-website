@@ -43,6 +43,7 @@ export default function Attendance() {
       </div>
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <div className="space-y-6 print:hidden">
+          <SheetCard />
           <NewEventForm onMade={(e) => { setEvents((list) => [e, ...(list ?? [])]); setPicked(e.id); }} />
           <section>
             <p className="font-mono text-[11px] tracking-[0.2em] uppercase text-[#9CA3AF]">Events</p>
@@ -67,6 +68,61 @@ export default function Attendance() {
           : <p className="text-sm text-[#9CA3AF] print:hidden">Pick an event to show its QR code.</p>}
       </div>
     </>
+  );
+}
+
+/** The Google Sheet check-ins are copied to: paste a link to connect it, sync it, or swap it for another. */
+function SheetCard() {
+  const [state, setState] = useState<{ url: string | null; account: string | null } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    fetch("/api/admin/attendance/sheet", { cache: "no-store" }).then((r) => r.json()).then((b) => { if (live && !b.error) setState(b); }, () => {});
+    return () => { live = false; };
+  }, []);
+
+  const send = async (link?: string) => {
+    setBusy(true); setNote(null);
+    const res = await fetch("/api/admin/attendance/sheet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(link === undefined ? {} : { link }) }).catch(() => null);
+    const body = await res?.json().catch(() => null);
+    setBusy(false);
+    if (!res?.ok || !body?.url) { setNote({ ok: false, text: body?.error ?? "That didn't go through. Try again." }); return; }
+    setState((s) => ({ account: s?.account ?? null, url: body.url }));
+    setEditing(false);
+    setNote({ ok: true, text: `The sheet has every check-in so far (${body.rows}). New ones are added as people scan.` });
+  };
+
+  const connected = !!state?.url && !editing;
+  return (
+    <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5 space-y-3">
+      <p className="font-semibold">Google Sheet</p>
+      {connected ? (
+        <>
+          <p className="text-sm text-[#9CA3AF]">Check-ins are copied to <a href={state!.url!} target="_blank" rel="noopener noreferrer" className="text-[#1D9BF0] underline underline-offset-4">the attendance sheet</a>, in its Attendance tab.</p>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" disabled={busy} onClick={() => send()} className={`${BTN} bg-white/5 border border-white/10 hover:bg-white/10`}>{busy ? "Syncing…" : "Sync now"}</button>
+            <button type="button" onClick={() => { setEditing(true); setNote(null); }} className="text-sm text-[#9CA3AF] hover:text-[#F1FFFF] underline underline-offset-4">Use a different sheet</button>
+          </div>
+        </>
+      ) : (
+        <form onSubmit={(e) => { e.preventDefault(); void send(String(new FormData(e.currentTarget).get("link") ?? "")); }} className="space-y-3">
+          <p className="text-sm text-[#9CA3AF]">
+            Paste a Google Sheet link and every check-in is copied into it. The site&apos;s Google account
+            {state?.account ? <> (<span className="text-[#F1FFFF]">{state.account}</span>)</> : null} has to be able to edit the sheet:
+            make it in that account&apos;s Drive, or share it with that account as an editor.
+          </p>
+          <input name="link" required placeholder="https://docs.google.com/spreadsheets/d/…" className={INPUT} aria-label="Google Sheet link" />
+          <div className="flex flex-wrap gap-3 items-center">
+            <button type="submit" disabled={busy} className={`${BTN} bg-[#1D9BF0] hover:bg-[#1a8cd8] text-white`}>{busy ? "Connecting…" : "Connect sheet"}</button>
+            {state?.url && <button type="button" onClick={() => setEditing(false)} className="text-sm text-[#9CA3AF] hover:text-[#F1FFFF] underline underline-offset-4">Cancel</button>}
+          </div>
+        </form>
+      )}
+      {note && <p className={`text-sm ${note.ok ? "text-emerald-300" : "text-amber-300"}`}>{note.text}</p>}
+    </section>
   );
 }
 
