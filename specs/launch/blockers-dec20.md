@@ -20,7 +20,7 @@ Note: the recruitment Sheets delivery uses the same Google project with Drive an
 
 ## 2. Verify tethos.ca in Resend [David for DNS, coordinator for the check]
 
-**Status (2026-11-14):** not started. DNS today: no DMARC record, and no SPF on the root domain for Google Workspace (worth adding: TXT `@` `v=spf1 include:_spf.google.com ~all`).
+**Status (2026-11-14):** tethos.ca **verified** in Resend (us-east-1). DNS live on both Namecheap nameservers: `resend._domainkey` TXT, `send` and `rsend` CNAMEs, root SPF `v=spf1 include:_spf.google.com ~all`, `_dmarc` (p=none, reports to info@tethos.ca), Workspace DKIM `google._domainkey`, and the MX typo fixed (alt3). Resend's receiving MX not added (it would take over info@tethos.ca). Coordinator checks: the production `RESEND_API_KEY` is a send-only key on the account that holds the verified domain (two sends from noreply@tethos.ca to Resend's test inbox accepted). Its stored value ends in a newline; harmless today, tidy it when the key is next rotated. Still open: one test to a real Gmail and Outlook inbox for spam placement; Supabase Auth on Resend SMTP before the pre-registration page; the paid tier before launch day (David's call). The finalround follow-up and `RECRUITMENT_EMAILS_ENABLED` stay off.
 
 Without this no launch email, no "email me the link" on phones.
 
