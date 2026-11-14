@@ -1,6 +1,6 @@
 # Terms of Service
 
-Draft for David's approval. Page: `/terms` on play.tethos.ca, linked from the title screen footer. Effective December 20, 2026.
+Approved by David 2026-11-14. Page: `/terms` on play.tethos.ca, linked from the title screen footer. Effective December 20, 2026.
 
 ---
 
@@ -49,10 +49,10 @@ Chat and letters are not private from us. We may review them to keep players saf
 ## 6. Buying gems
 
 - Prices are shown in dollars before you pay. Payments are handled by Stripe.
-- **Where the money goes.** All proceeds from gem sales go to Tethos Association, a nonprofit, to fund its work. Tethos is not a registered charity. A purchase is not a donation, and we cannot issue tax receipts for it.
+- **Where the money goes.** All proceeds from gem sales go to Tethos Association, a nonprofit. The money is used to run Tethos's nonprofit activities: student teams that build free software and hardware for other nonprofits, the events and programs that support them, and the cost of running this game. Tethos is not a registered charity. A purchase is not a donation, and we cannot issue tax receipts for it.
 - **Under 18.** You need a parent's or guardian's permission for every purchase.
 - **Spending limit.** Each account has a monthly spending limit. Every purchase asks you to confirm before it goes through. We don't store your card for one-tap purchases.
-- **Refunds.** You can ask for a refund of a gem purchase within 14 days if you have not spent the gems. Email info@tethos.ca from the address on your account. If a child made a purchase without permission, a parent or guardian can contact us and we will sort it out. Nothing here limits refund rights the law gives you.
+- **Refunds.** You can ask for a refund of a gem purchase within 7 days if you have not spent the gems. Email info@tethos.ca from the address on your account. If a child made a purchase without permission, a parent or guardian can contact us and we will sort it out. Nothing here limits refund rights the law gives you.
 - If a payment is reversed or charged back, we may remove the gems or the items bought with them.
 
 ## 7. The game changes

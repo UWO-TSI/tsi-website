@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Draft for David's approval. Page: `/privacy` on play.tethos.ca, linked from the title screen footer. Effective December 20, 2026.
+Approved by David 2026-11-14. Page: `/privacy` on play.tethos.ca, linked from the title screen footer. Effective December 20, 2026.
 
 ---
 
