@@ -1,9 +1,11 @@
 /* ===========================================================================================================
-   The GUI sheet: our cream kit for the member game, portal and phone companion (specs/polish/gui-sheet.md),
-   drawn from the Animal Crossing UI kit David supplied (warm paper, sage, wood, Tethos accents). Imported once,
-   by the root layout. `:root` holds the tokens (inert until used); the `.gui` scope, set on the member world, the
-   portal shell and the companion, puts them to work and maps the legacy portal tokens onto them. Recruitment never
-   sets `.gui`, so the applicant flow keeps its own look. Every text pair here is AA (lib/gui/contrast.test.ts).
+   The GUI kit's tokens (specs/design-bible.md UI; ledger rows 320, 334 and 335): one look, clean flat, for the member
+   game, the portal and the phone companion. Imported once, by the root layout.
+   - The colours, shapes and type come from the UI theme, or pack (styles/themes: clean on :root, a pack under
+     <body data-ui-theme>). The --gui-* names below are the kit's aliases for them, re-read wherever a theme is worn.
+   - The rest here (accents, status, rarity, type sizes, motion) is the same in every pack.
+   - Paper, the material, is styles/paper.css. Recruitment and the applicant island keep their own look in their own code
+     (components/recruit) and never set `.gui`.
    =========================================================================================================== */
 
 @font-face {
@@ -15,17 +17,11 @@
 }
 
 :root {
-  /* ── The paper, ink, sage and focus colours come from the theme (the rule below this one). ── */
-  --gui-stripe-a: #f6d32d;      /* the chosen row's stripes */
-  --gui-stripe-b: #f7e43f;
 
   /* ── Accents ── */
   --gui-teal: #04afa6;          /* checks and pips (no text on it) */
   --gui-teal-ink: #1b766c;      /* teal text, teal buttons */
   --gui-teal-pill: #73c7ba;     /* the name pill (ink text) */
-  --gui-wood: #946429;          /* the wood button */
-  --gui-wood-light: #bb813f;
-  --gui-bark: #725c4e;          /* keycaps */
   --gui-coral: #e2826a;         /* the name tag (ink text) */
   --gui-coral-ink: #b4513a;
   --gui-amber: #ffb400;         /* the continue chevron */
@@ -49,10 +45,9 @@
   --gui-rarity-epic: #b77dee;
   --gui-rarity-legendary: #f7cd67;
   --gui-rarity-divine: #b26bff;       /* the crown tier (was Sea King): --ui-rarity-divine's purple; holographic (--ui-holo) on every badge and tile */
-  --gui-rarity-contraband: #3b2436;   /* mods and T0/T1 only, shut behind a flag (lib/rarity.ts); cream text on it */
+  --gui-rarity-contraband: #3b2436;   /* mods and T0/T1 only, shut behind a flag (lib/rarity.ts); light text on it */
 
-  /* ── Type: one rounded face, 12 px at the smallest ── */
-  --gui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* ── Type sizes: 12 px at the smallest (the face and the weights are the pack's: --ui-font, below) ── */
   --gui-text-xs: 12px;
   --gui-text-sm: 13px;
   --gui-text-md: 15px;
@@ -60,26 +55,13 @@
   --gui-text-xl: 22px;
   --gui-text-2xl: 28px;
   --gui-text-3xl: 36px;
-  --gui-weight: 600;
-  --gui-weight-strong: 800;
   --gui-leading: 1.45;
 
-  /* ── Radii: round, and a little irregular, like cut paper ── */
+  /* ── Radii (the shaped ones are the pack's: --ui-r-*, below) ── */
   --gui-r-sm: 10px;
   --gui-r-md: 16px;
   --gui-r-lg: 24px;
   --gui-r-pill: 999px;
-  --gui-r-paper: 30px 36px 28px 34px / 32px 28px 36px 30px;
-  --gui-r-card: 18px 22px 17px 21px / 20px 17px 22px 18px;
-  --gui-r-blob: 46% 50% 44% 48% / 54% 50% 46% 52%;
-  --gui-r-tag: 40% 43% 38% 40% / 45% 42% 45% 43%;
-
-  /* ── Shadows: flat and offset, restrained ── */
-  --gui-shadow-sm: 0 2px 0 rgb(114 92 78 / 0.14);
-  --gui-shadow-md: 0 4px 0 rgb(114 92 78 / 0.16), 0 10px 24px rgb(79 63 49 / 0.1);
-  --gui-shadow-lg: 0 6px 0 rgb(114 92 78 / 0.18), 0 22px 48px rgb(79 63 49 / 0.18);
-  --gui-shadow-press: 0 1px 0 rgb(114 92 78 / 0.2);
-  --gui-shadow-inset: inset 0 2px 0 rgb(114 92 78 / 0.08);
 
   /* ── Motion ── */
   --gui-ease: cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -87,35 +69,21 @@
   --gui-t-fast: 120ms;
   --gui-t: 200ms;
   --gui-t-slow: 320ms;
-
-  /* ── Focus: a honey ring, 3:1 against every cream ── */
-
-  /* ── Painted paper ── */
-  /* paper:start */
-  /* Painted by scripts/gui-paper.mjs (seeded; rerun to regenerate). Masks: the shape is where the mask is opaque. */
-  --gui-grain: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27160%27 height%3D%27160%27%3E%3Cfilter id%3D%27g%27 x%3D%270%27 y%3D%270%27%3E%3CfeTurbulence type%3D%27fractalNoise%27 baseFrequency%3D%270.85%27 numOctaves%3D%273%27 seed%3D%277%27 stitchTiles%3D%27stitch%27%2F%3E %3CfeColorMatrix values%3D%270 0 0 0 0.36 0 0 0 0 0.29 0 0 0 0 0.21 0 0 0 0.55 -0.2%27%2F%3E%3C%2Ffilter%3E%3Crect width%3D%27160%27 height%3D%27160%27 filter%3D%27url(%23g)%27%2F%3E%3C%2Fsvg%3E");
-  --gui-confetti: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27220%27 height%3D%27220%27%3E%3Crect x%3D%2715.3%27 y%3D%2715.8%27 width%3D%2714%27 height%3D%2714%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(53.1 22.3 22.8)%27%2F%3E%3Crect x%3D%2716.2%27 y%3D%2748.1%27 width%3D%2713.7%27 height%3D%2713.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(54.7 23 54.9)%27%2F%3E%3Crect x%3D%2714.9%27 y%3D%27112.5%27 width%3D%2713.1%27 height%3D%2713.1%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(60.3 21.5 119.1)%27%2F%3E%3Crect x%3D%276.9%27 y%3D%27139.3%27 width%3D%2712.4%27 height%3D%2712.4%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(35.6 13 145.5)%27%2F%3E%3Crect x%3D%2717.2%27 y%3D%27181.2%27 width%3D%2714%27 height%3D%2714%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(51.9 24.2 188.2)%27%2F%3E%3Crect x%3D%2767.7%27 y%3D%2744.6%27 width%3D%2714.8%27 height%3D%2714.8%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(28.6 75.1 52.1)%27%2F%3E%3Crect x%3D%2752.1%27 y%3D%2768.9%27 width%3D%2714.7%27 height%3D%2714.7%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(88 59.4 76.3)%27%2F%3E%3Crect x%3D%2750.3%27 y%3D%27132.1%27 width%3D%2712.7%27 height%3D%2712.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(49.8 56.7 138.4)%27%2F%3E%3Crect x%3D%2767.5%27 y%3D%27159%27 width%3D%2715.2%27 height%3D%2715.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(73.8 75.1 166.6)%27%2F%3E%3Crect x%3D%2745.9%27 y%3D%27201.2%27 width%3D%2715.2%27 height%3D%2715.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(44.8 53.5 208.8)%27%2F%3E%3Crect x%3D%2745.9%27 y%3D%27-18.8%27 width%3D%2715.2%27 height%3D%2715.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(44.8 53.5 -11.2)%27%2F%3E%3Crect x%3D%2796.6%27 y%3D%2714.7%27 width%3D%2714.7%27 height%3D%2714.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(8 103.9 22.1)%27%2F%3E%3Crect x%3D%2790.9%27 y%3D%2757.4%27 width%3D%2714.2%27 height%3D%2714.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(88.6 98 64.5)%27%2F%3E%3Crect x%3D%27103.5%27 y%3D%27100.5%27 width%3D%2711.2%27 height%3D%2711.2%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(66 109.1 106.1)%27%2F%3E%3Crect x%3D%27110%27 y%3D%27141.8%27 width%3D%2713.8%27 height%3D%2713.8%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(31.3 116.8 148.7)%27%2F%3E%3Crect x%3D%2794%27 y%3D%27180.9%27 width%3D%2714.2%27 height%3D%2714.2%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(56.1 101 187.9)%27%2F%3E%3Crect x%3D%27142.7%27 y%3D%2732.9%27 width%3D%2715.7%27 height%3D%2715.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(76.8 150.5 40.8)%27%2F%3E%3Crect x%3D%27144.7%27 y%3D%2792.1%27 width%3D%2713.9%27 height%3D%2713.9%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(39.1 151.6 99.1)%27%2F%3E%3Crect x%3D%27146.7%27 y%3D%27111.3%27 width%3D%2715.4%27 height%3D%2715.4%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(27.1 154.4 119)%27%2F%3E%3Crect x%3D%27136.7%27 y%3D%27157.5%27 width%3D%2714.7%27 height%3D%2714.7%27 rx%3D%274%27 fill%3D%27%23f7ec9a%27 transform%3D%27rotate(49 144.1 164.9)%27%2F%3E%3Crect x%3D%27136.5%27 y%3D%27-5.5%27 width%3D%2714.1%27 height%3D%2714.1%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(79.6 143.5 1.6)%27%2F%3E%3Crect x%3D%27136.5%27 y%3D%27214.5%27 width%3D%2714.1%27 height%3D%2714.1%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(79.6 143.5 221.6)%27%2F%3E%3Crect x%3D%27193.7%27 y%3D%2717.8%27 width%3D%2713.9%27 height%3D%2713.9%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(43.8 200.6 24.7)%27%2F%3E%3Crect x%3D%27194%27 y%3D%2762%27 width%3D%2716%27 height%3D%2716%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(63.9 202 70)%27%2F%3E%3Crect x%3D%27180.5%27 y%3D%27105.9%27 width%3D%2715.9%27 height%3D%2715.9%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(30.9 188.4 113.9)%27%2F%3E%3Crect x%3D%27187.6%27 y%3D%27153.7%27 width%3D%2714.3%27 height%3D%2714.3%27 rx%3D%274%27 fill%3D%27%23fff3b0%27 transform%3D%27rotate(6.4 194.7 160.9)%27%2F%3E%3Crect x%3D%27195.3%27 y%3D%27190.7%27 width%3D%2714.1%27 height%3D%2714.1%27 rx%3D%274%27 fill%3D%27%23fbe98c%27 transform%3D%27rotate(20.3 202.3 197.8)%27%2F%3E%3C%2Fsvg%3E");
-  --gui-edge-wave: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27400%27 height%3D%2724%27 viewBox%3D%270 0 400 24%27%3E%3Cpath d%3D%27M0 0H400V7.3L400 7.3L390 7.9L380 8.6L370 9.4L360 10.2L350 10.8L340 11.2L330 11.5L320 11.6L310 11.7L300 11.8L290 11.9L280 12.1L270 12.4L260 12.9L250 13.4L240 13.9L230 14.3L220 14.6L210 14.9L200 15L190 15L180 15L170 15L160 15L150 15L140 15L130 14.9L120 14.8L110 14.5L100 14L90 13.2L80 12.3L70 11.2L60 10L50 8.9L40 7.9L30 7.3L20 6.9L10 6.9L0 7.3Z%27%2F%3E%3C%2Fsvg%3E");
-  --gui-edge-deckle: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27240%27 height%3D%2710%27 viewBox%3D%270 0 240 10%27%3E%3Cpath d%3D%27M0 0H240L240 5L236 7.3L232 7.7L228 5.3L224 6.4L220 6.4L216 4.9L212 6.3L208 7.1L204 6.8L200 5.8L196 5.5L192 5.3L188 5.1L184 7.1L180 5.6L176 4.9L172 3.5L168 5.9L164 5.9L160 6.8L156 6.3L152 6L148 7.2L144 5.4L140 3.2L136 3.2L132 6.5L128 4.9L124 3.9L120 6.5L116 5.1L112 6.7L108 7.5L104 4.6L100 7.2L96 3.3L92 5.7L88 7L84 5.6L80 6.3L76 4.5L72 6.4L68 4.7L64 7.2L60 6.9L56 5.4L52 6.5L48 3.6L44 4.1L40 5.7L36 4.4L32 3.9L28 5.4L24 5.4L20 6.7L16 3.5L12 5.3L8 3.4L4 6.5L0 5Z%27%2F%3E%3C%2Fsvg%3E");
-  --gui-blob-dialogue: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 viewBox%3D%27-1 -1 102 102%27 preserveAspectRatio%3D%27none%27%3E%3Cpath d%3D%27M49.9 -0.1C59.1 -0.1 70.6 0 77.7 0.9C84.9 1.7 89.3 2.1 93 5C96.7 7.8 99 12.9 100 17.8C101.1 22.7 99.7 29.7 99.2 34.3C98.7 39 97.6 42.2 97 45.8C96.5 49.4 96.3 52 95.9 55.8C95.6 59.6 95 64.1 94.9 68.5C94.8 72.9 95.8 77.7 95.2 82.1C94.7 86.5 95.3 92.1 91.4 95C87.5 97.8 78.9 98.4 72 99.3C65.1 100.1 57.5 99.9 50.1 100C42.6 100 34.3 100.5 27.5 99.8C20.7 99.1 13.2 98.9 9.4 96C5.5 93 5.4 86.8 4.6 82.1C3.7 77.4 4.3 72.2 4.2 67.8C4.1 63.4 4.3 59.4 4.1 55.8C3.8 52.1 3.3 49.5 2.8 45.9C2.2 42.4 0.9 39.1 0.6 34.5C0.2 29.9 -0.5 23.2 0.5 18.3C1.5 13.4 3.1 7.8 6.8 4.9C10.4 2.1 15.3 2.2 22.5 1.4C29.7 0.5 40.7 0 49.9 -0.1Z%27%2F%3E%3C%2Fsvg%3E");
-  --gui-blob-menu: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 viewBox%3D%27-1 -1 102 102%27 preserveAspectRatio%3D%27none%27%3E%3Cpath d%3D%27M50.2 0.5C60.6 0.6 73.7 -0.5 81.4 1.8C89.1 4.1 93.3 6.3 96.4 14.4C99.5 22.5 99.9 38.5 99.9 50.4C99.9 62.3 99.4 77.8 96.5 85.7C93.7 93.6 90.7 95.4 82.8 97.7C74.9 100 60.2 99.4 49.2 99.4C38.3 99.5 24.8 100.3 17.2 98C9.6 95.8 6.6 94 3.7 85.9C0.7 77.8 -0.2 61.6 -0.4 49.5C-0.6 37.4 -0.6 21.4 2.6 13.4C5.8 5.3 10.8 3.4 18.7 1.2C26.6 -0.9 39.7 0.4 50.2 0.5Z%27%2F%3E%3C%2Fsvg%3E");
-  --gui-blob-bag: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 viewBox%3D%27-1 -1 102 102%27 preserveAspectRatio%3D%27none%27%3E%3Cpath d%3D%27M49.7 0.7C59.7 0.7 72.1 -0.5 79.8 0.2C87.5 0.9 92.7 0.7 96.1 4.9C99.5 9.2 99.7 18.3 100.1 25.7C100.6 33.2 98.9 41.6 98.8 49.6C98.8 57.5 100.3 66 99.8 73.6C99.4 81.1 99.4 90.2 96.1 94.7C92.7 99.2 87.3 99.7 79.7 100.5C72 101.2 60.2 99.1 50.2 99C40.2 98.8 27.3 100.2 19.6 99.5C11.9 98.9 7.3 99.2 4.1 94.9C0.9 90.7 1 81.8 0.5 74.3C-0.1 66.8 0.8 58 0.7 50C0.7 41.9 -0.5 33.5 0.1 26C0.6 18.5 0.6 9.3 3.8 5C7.1 0.7 12 1.1 19.6 0.4C27.3 -0.4 39.6 0.8 49.7 0.7Z%27%2F%3E%3C%2Fsvg%3E");
-  /* paper:end */
 }
 
-/* ── The UI theme (specs/polish/ui-themes.md): the cream kit's colour tokens read the --ui-* tokens of the theme files
-   (styles/themes). Resolved on <html> (the cream base, styles/themes/cream.css), so the cream menus, the HUD, the portal
-   and recruitment keep the cream look whatever the theme; and again inside a flat menu ([data-gui-flat]), which wears
-   the player's theme (<body data-ui-theme>). ── */
-:root, [data-gui-flat] {
+:root, [data-ui-theme] {
+  /* Surfaces and ink */
   --gui-page: var(--ui-bg);
   --gui-paper: var(--ui-panel);
   --gui-paper-hi: var(--ui-card);
   --gui-paper-warm: var(--ui-card-dim);
+  --gui-paper-hover: var(--ui-card-hover);
   --gui-paper-deep: var(--ui-well);
   --gui-paper-edge: var(--ui-line);
   --gui-paper-line: var(--ui-line-strong);
   --gui-butter: var(--ui-select);
+  --gui-stripe-a: var(--ui-select);
+  --gui-stripe-b: var(--ui-select);
   --gui-highlight: var(--ui-highlight);
   --gui-ink-strong: var(--ui-ink);
   --gui-ink: var(--ui-ink-body);
@@ -125,8 +93,27 @@
   --gui-sage: var(--ui-accent);
   --gui-sage-deep: var(--ui-accent-deep);
   --gui-sage-soft: var(--ui-pill);
+  --gui-wood: var(--ui-accent);
+  --gui-wood-light: var(--ui-quiet);
+  --gui-bark: var(--ui-ink);
   --gui-focus: var(--ui-focus);
   --gui-scrim: var(--ui-scrim);
+  --gui-shade: var(--ui-shade);
+  /* Type, shapes, depth and texture */
+  --gui-font: var(--ui-font);
+  --gui-weight: var(--ui-weight);
+  --gui-weight-strong: var(--ui-weight-strong);
+  --gui-r-paper: var(--ui-r-panel);
+  --gui-r-card: var(--ui-r-card);
+  --gui-r-blob: var(--ui-r-blob);
+  --gui-r-tag: var(--ui-r-tag);
+  --gui-shadow-sm: var(--ui-shadow-sm);
+  --gui-shadow-md: var(--ui-shadow-md);
+  --gui-shadow-lg: var(--ui-shadow-lg);
+  --gui-shadow-press: var(--ui-shadow-press);
+  --gui-shadow-inset: var(--ui-shadow-inset);
+  --gui-grain: var(--ui-panel-texture);
+  --gui-confetti: var(--ui-panel-texture);
 }
 
 /* ── The scope: the member world, the portal shell, the companion ── */
@@ -137,35 +124,13 @@
   color: var(--gui-ink);
   -webkit-font-smoothing: antialiased;
 
-  /* The recruit kit's hooks (components/recruit/ui), so its pieces wear this sheet here and only here. */
-  --app-error: var(--gui-danger);
-  --app-error-bg: var(--gui-danger-soft);
-  --app-success: var(--gui-success);
-  --gui-kit-tag: var(--gui-coral);
-  --gui-kit-tag-ink: var(--gui-ink-strong);
-  --gui-kit-chevron: var(--gui-amber);
-  --gui-kit-blob: block;
-  --gui-kit-dialogue-fill: transparent;
-  --gui-kit-dialogue-shadow: none;
   /* Hooks for components shared with the applicant island (the collection book, the fishing overlay): the sheet's 12 px
      floor and no monospace here; there, their own values. */
   --gui-min-text: var(--gui-text-xs);
   --gui-overlay-zoom: var(--tsi-text-scale, 1);
   --gui-mono: var(--gui-font);
-  /* The first-catch reveal (components/game/FishReveal) on warm paper instead of the dark gacha backdrop. */
-  --gui-reveal-backdrop: radial-gradient(circle at 50% 46%, rgb(255 251 231 / 0.94) 0%, rgb(247 241 218 / 0.92) 60%, rgb(238 233 202 / 0.94) 100%);
-  --gui-reveal-ink: var(--gui-ink-strong);
-  --gui-reveal-soft: var(--gui-ink-2);
-  --gui-reveal-shadow: 0 2px 0 rgb(255 255 247 / 0.9);
-  --gui-reveal-chip-bg: var(--gui-paper-hi);
-  --gui-reveal-chip-ink: var(--gui-ink-strong);
-  --gui-reveal-chip-ring: 2.5px;
-  --gui-reveal-odds-bg: var(--gui-paper-deep);
-  --gui-reveal-radius: 999px;
-  --gui-reveal-tap: 44px;
-  --gui-reveal-weight: 800;
 
-  /* The portal's legacy tokens (styles/tokens.css): the navy terminal look, mapped onto paper. */
+  /* The portal's legacy tokens (styles/tokens.css): the navy terminal look, mapped onto the kit's. */
   --color-bg-main: var(--gui-page);
   --color-bg-alt: var(--gui-paper-warm);
   --color-bg-navy: var(--gui-paper);
@@ -191,8 +156,8 @@
   --glass-border-soft: var(--gui-paper-edge);
   --glass-border-strong: var(--gui-paper-line);
   --glass-border: var(--gui-paper-edge);
-  --surface-hover: rgb(114 92 78 / 0.07);
-  --surface-chip: rgb(114 92 78 / 0.1);
+  --surface-hover: rgb(var(--gui-shade) / 0.07);
+  --surface-chip: rgb(var(--gui-shade) / 0.1);
   --glow-blue: rgb(66 107 91 / 0.18);
   --glow-cyan: rgb(31 127 116 / 0.18);
   --glow-gold: rgb(255 204 0 / 0.25);
@@ -203,8 +168,8 @@
   --gray-400: var(--gui-muted);
   --gray-500: var(--gui-muted);
   --gray-600: var(--gui-paper-line);
-  --gray-700: rgb(114 92 78 / 0.22);
-  --gray-800: rgb(114 92 78 / 0.12);
+  --gray-700: rgb(var(--gui-shade) / 0.22);
+  --gray-800: rgb(var(--gui-shade) / 0.12);
   --gray-900: var(--gui-paper-warm);
   --font-heading: var(--gui-font);
   --font-highlight: var(--gui-font);
@@ -221,93 +186,4 @@
 
 @media (prefers-reduced-motion: reduce) {
   .gui *, .gui *::before, .gui *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
-}
-
-/* The recruit kit's hooks that a flat menu changes, on the cream kit's tokens (a paper thing again inside one). */
-.gui, [data-gui-paper] {
-  --app-surface: var(--gui-paper);
-  --app-raised: var(--gui-paper-hi);
-  --app-soft: var(--gui-paper-warm);
-  --app-ink: var(--gui-ink);
-  --app-muted: var(--gui-muted);
-  --app-line: var(--gui-paper-line);
-  --app-link: var(--gui-sage);
-  --app-focus: var(--gui-focus);
-  --app-accent-ink: var(--gui-ink-strong);
-  --gui-kit-primary: var(--gui-sage);
-  --gui-kit-primary-ink: var(--gui-paper);
-  --gui-kit-primary-hover: #4b7a68;
-  --gui-kit-butter: var(--gui-butter);
-  --gui-kit-keycap: var(--gui-bark);
-}
-
-/* ── Flat menus (specs/polish/flat-ui.md step 7): inside a flat sheet or panel ([data-gui-flat], set by Sheet's flat
-   variant, FlatPanel and the flat creator) the cream pieces follow the theme (the rule above), and change shape here:
-   no paper grain, round corners, soft shadows, the wood and the stripes as the theme's accent and selection. Status
-   colours and the rarity palette stay. ── */
-[data-gui-flat] {
-  --gui-stripe-a: var(--ui-select);
-  --gui-stripe-b: var(--ui-select);
-  --gui-wood: var(--ui-accent);
-  --gui-wood-light: var(--ui-quiet);
-  --gui-bark: var(--ui-ink);
-  --gui-grain: none;
-  --gui-confetti: none;
-  --gui-r-paper: 22px;
-  --gui-r-card: 16px;
-  --gui-r-blob: 14px;
-  --gui-r-tag: 8px;
-  --gui-shadow-sm: none;
-  --gui-shadow-md: 0 8px 22px rgb(var(--ui-shade) / 0.07);
-  --gui-shadow-lg: 0 24px 80px rgb(var(--ui-shade) / 0.28);
-  --gui-shadow-press: none;
-  --gui-shadow-inset: none;
-  --app-surface: var(--ui-panel);
-  --app-raised: var(--ui-card);
-  --app-soft: var(--ui-card-dim);
-  --app-ink: var(--ui-ink-body);
-  --app-muted: var(--ui-muted);
-  --app-line: var(--ui-line);
-  --app-link: var(--ui-ink);
-  --app-focus: var(--ui-focus);
-  --app-accent-ink: var(--ui-ink);
-  --gui-kit-primary: var(--ui-accent);
-  --gui-kit-primary-ink: var(--ui-accent-ink);
-  --gui-kit-primary-hover: var(--ui-accent-deep);
-  --gui-kit-butter: var(--ui-select);
-  --gui-kit-keycap: var(--ui-ink);
-}
-/* Paper things keep their paper inside a flat menu (David: mail and the notice board): the cream base's colours
-   (styles/themes/cream.css; lib/gui/contrast.test.ts keeps them equal) and the paper's own shapes. Not the --ui-* tokens
-   themselves: the flat menu's own buttons on a letter stay the theme's. */
-[data-gui-flat] [data-gui-paper] {
-  --gui-page: #f7f1da;
-  --gui-paper: #fffbe7;
-  --gui-paper-hi: #fffff7;
-  --gui-paper-warm: #f8f4e8;
-  --gui-paper-deep: #eee9ca;
-  --gui-paper-edge: #e3d9b8;
-  --gui-paper-line: #d3c39c;
-  --gui-butter: #ffeea0;
-  --gui-highlight: #ffcc00;
-  --gui-ink-strong: #3a2e22;
-  --gui-ink: #4f3f31;
-  --gui-ink-2: #6b5843;
-  --gui-muted: #726450;
-  --gui-taupe: #8a7b66;
-  --gui-sage: #426b5b;
-  --gui-sage-deep: #2f5143;
-  --gui-sage-soft: #dfe9d9;
-  --gui-focus: #a8722f;
-  --gui-stripe-a: #f6d32d;
-  --gui-stripe-b: #f7e43f;
-  --gui-wood: #946429;
-  --gui-wood-light: #bb813f;
-  --gui-bark: #725c4e;
-  --gui-r-card: 18px 22px 17px 21px / 20px 17px 22px 18px;
-  --gui-r-blob: 46% 50% 44% 48% / 54% 50% 46% 52%;
-  --gui-r-tag: 40% 43% 38% 40% / 45% 42% 45% 43%;
-  --gui-shadow-sm: 0 2px 0 rgb(114 92 78 / 0.14);
-  --gui-shadow-md: 0 4px 0 rgb(114 92 78 / 0.16), 0 10px 24px rgb(79 63 49 / 0.1);
-  color: var(--gui-ink);
 }

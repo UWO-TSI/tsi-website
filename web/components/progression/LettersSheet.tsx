@@ -9,7 +9,7 @@ import { refreshProgression } from "@/lib/progression/useProgression";
 import type { LetterView } from "@/lib/progression/types";
 import ProgressionPanel, { type ProgressionSheetProps } from "./ProgressionPanel";
 import { Button, Empty, ErrorNote, Loading, SignInLink } from "@/components/gui";
-import { BackLink, QuietButton } from "@/components/gui/cream";
+import { BackLink, QuietButton } from "@/components/gui/flat";
 import { Landmark, Mail, MailOpen, PenLine, Reply } from "lucide-react";
 import m from "./menus.module.css";
 
@@ -245,7 +245,7 @@ function LetterComposer({ transport, to: initialTo, onDone }: { transport: Lette
 /** `keys`: the mail key, which closes the mailbox too. */
 export default function LettersSheet({ open, onClose, transport, keys }: ProgressionSheetProps & { transport?: LettersTransport; keys?: string }) {
   return (
-    <ProgressionPanel flat open={open} onClose={onClose} title="Mailbox" keys={keys} icon={<Mail size={20} />}>
+    <ProgressionPanel open={open} onClose={onClose} title="Mailbox" keys={keys} icon={<Mail size={20} />}>
       <LettersBody transport={transport} />
     </ProgressionPanel>
   );

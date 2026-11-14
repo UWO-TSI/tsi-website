@@ -1,6 +1,7 @@
 /* The clean theme: the shop's flat look, black and white type on a light grey, white cards (specs/polish/ui-themes.md).
-   The default: `body` wears it unless <body data-ui-theme> names another. */
-body, [data-ui-theme="clean"] {
+   The base (rows 334, 335): it alone sits on :root, so everything wears it unless <body data-ui-theme> names a pack. A
+   pack sets every token here under its own [data-ui-theme="<name>"] (components/gui/flatOnly.test.ts). */
+:root, [data-ui-theme="clean"] {
   --ui-bg: #f1f1f1;
   --ui-panel: #f1f1f1;
   --ui-card: #ffffff;
@@ -122,4 +123,22 @@ body, [data-ui-theme="clean"] {
   --ui-paper-tray: #2b2622;
   --ui-paper-plate: #faf8f3;
   --ui-paper-washi: url("/assets/ui/washi.png");
+  /* ── The shapes and the type (row 335): a UI pack swaps these with the colours. Read by the kit through the --gui-*
+     aliases (styles/game-tokens.css) or directly. ── */
+  --ui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ui-weight: 600;
+  --ui-weight-strong: 800;
+  --ui-r-panel: 22px;    /* sheets and panels */
+  --ui-r-card: 16px;     /* cards inside them */
+  --ui-r-blob: 14px;     /* icon wells, small rounded boxes */
+  --ui-r-tag: 8px;       /* badges and tags */
+  --ui-r-button: 999px;  /* buttons and the dialogue's name */
+  --ui-r-field: 12px;    /* text fields */
+  --ui-border: 1px;      /* hairlines: a sheet's foot, a card's ring */
+  --ui-shadow-sm: none;
+  --ui-shadow-md: 0 8px 22px rgb(0 0 0 / 0.07);
+  --ui-shadow-lg: 0 24px 80px rgb(0 0 0 / 0.28);
+  --ui-shadow-press: none;
+  --ui-shadow-inset: none;
+  --ui-panel-texture: none;  /* a texture over sheets and panels (a pack's paper grain, say) */
 }

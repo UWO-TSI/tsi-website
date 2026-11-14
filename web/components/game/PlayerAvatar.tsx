@@ -829,7 +829,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
             data-member={member || undefined}
           >
             <div style={{ fontSize: "13px", fontWeight: 800, lineHeight: 1.2, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-              {member && <span aria-label="TSI member" title="TSI member" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--gui-tethos-blue)", boxShadow: "0 0 0 2px #fffbe7", flex: "none" }} />}
+              {member && <span aria-label="TSI member" title="TSI member" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--gui-tethos-blue)", boxShadow: "0 0 0 2px var(--ui-card)", flex: "none" }} />}
               {playerName}
               {playerLevel !== undefined && <span style={{ marginLeft: 2, padding: "0 6px", borderRadius: 999, background: "var(--gui-sage)", color: "var(--gui-paper)", fontSize: "12px", fontWeight: 800 }}>Lv {playerLevel}</span>}
             </div>

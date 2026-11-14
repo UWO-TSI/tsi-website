@@ -8,8 +8,8 @@
  */
 import type { HookTier } from "@/lib/game/fishing";
 
-/** The paper bubble's look (the GUI sheet's tokens, plain values outside its scope). */
-const PAPER = "var(--gui-paper-hi, #fffff7)";
+/** The bubble's look (the kit's tokens; the applicant island's own there). */
+const PAPER = "var(--gui-paper-hi)";
 const FONT = "var(--gui-font, var(--font-highlight, sans-serif))";
 const POP: Keyframe[] = [{ transform: "translateY(10px) scale(0.2) rotate(-14deg)" }, { transform: "translateY(-6px) scale(1.25) rotate(6deg)", offset: 0.55 }, { transform: "translateY(0) scale(1) rotate(-3deg)" }];
 const POP_TIMING: KeyframeAnimationOptions = { duration: 380, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)", fill: "forwards" };

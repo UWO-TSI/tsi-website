@@ -65,7 +65,7 @@ function ClassKitPanel({ kit, view, busy, run }: { kit: ClassKit; view: Progress
  * each opening, so the tab and any half-made choice start fresh as before.
  */
 export default function PathSheet({ open = true, view, onClose, onChanged }: { open?: boolean; view: ProgressionView; onClose: () => void; onChanged: () => void }) {
-  return <IslandSheet open={open} title="Your path" onClose={onClose} testId="path-sheet" keys="p" size="lg" tone="oracle">
+  return <IslandSheet open={open} title="Your path" onClose={onClose} testId="path-sheet" keys="p" size="lg">
     {open && <PathBody view={view} onChanged={onChanged} />}
   </IslandSheet>;
 }

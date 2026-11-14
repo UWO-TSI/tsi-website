@@ -1,26 +1,26 @@
 /* The tool wheel (specs/game-ui.md §1, row 283), in the language of David's Animal Crossing UI kit: cream circles for
    petals round a small centre (a flower, never a thin ring), the chosen one grows and turns butter yellow, a teal
    check on what's in hand, the name in a teal pill under the choice, round brown keycaps. Matte, restrained shadows. */
-.wheel { --cream: #fffae6; --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark); --paper: var(--gui-paper-deep);
+.wheel { --cream: var(--ui-card); --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark); --paper: var(--gui-paper-deep);
   position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: var(--gui-font); }
 .wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a14 0, #1c2a2a38 75%); opacity: 0; transition: opacity 0.16s ease; }
 .wheel[data-shown]::before { opacity: 1; }
 .flower { position: relative; width: 0; height: 0; opacity: 0; transform: scale(0.72); transition: opacity 0.14s ease, transform 0.24s cubic-bezier(0.2, 1.4, 0.4, 1); zoom: var(--tsi-text-scale, 1); }
 .wheel[data-shown] .flower { opacity: 1; transform: scale(1); pointer-events: auto; }
 .petal { position: absolute; left: 0; top: 0; width: 80px; height: 80px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
-  background: var(--cream); box-shadow: 0 3px 0 #725c4e1f, 0 6px 16px #2946411f;
+  background: var(--cream); box-shadow: 0 3px 0 rgb(var(--ui-shade) / 0.12), 0 6px 16px rgb(var(--ui-shade) / 0.12);
   transform: translate(-50%, -50%) translate(var(--x), var(--y)) scale(var(--s, 1)); transition: transform 0.16s cubic-bezier(0.2, 1.6, 0.4, 1), background 0.12s;
   animation: petalIn 0.26s cubic-bezier(0.2, 1.4, 0.4, 1) both; animation-delay: calc(var(--i) * 18ms); }
 @keyframes petalIn { from { opacity: 0; transform: translate(-50%, -50%) translate(calc(var(--x) * 0.4), calc(var(--y) * 0.4)) scale(0.5); } }
-.petal[data-chosen] { --s: 1.22; z-index: 2; background: var(--butter); box-shadow: 0 4px 0 #725c4e26, 0 10px 22px #29464130; }
+.petal[data-chosen] { --s: 1.22; z-index: 2; background: var(--butter); box-shadow: 0 4px 0 rgb(var(--ui-shade) / 0.15), 0 10px 22px rgb(var(--ui-shade) / 0.19); }
 .petal:focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
 .icon { width: 60px; height: 60px; object-fit: contain; pointer-events: none; user-select: none; }
-.check { position: absolute; top: -2px; left: -2px; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--teal); color: #fffbe7; box-shadow: 0 2px 0 #725c4e26; }
+.check { position: absolute; top: -2px; left: -2px; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--teal); color: var(--ui-accent-ink); box-shadow: 0 2px 0 rgb(var(--ui-shade) / 0.15); }
 .pips { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; }
 .pips i { width: 5px; height: 5px; border-radius: 50%; background: #c9b98f; }
 .petal[data-chosen] .pips i { background: #b39a5b; }
-.centre { position: absolute; left: -28px; top: -28px; width: 56px; height: 56px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #80807c; color: #fffae6; cursor: pointer;
-  box-shadow: 0 3px 0 #725c4e26; transition: transform 0.16s cubic-bezier(0.2, 1.6, 0.4, 1), background 0.12s; }
+.centre { position: absolute; left: -28px; top: -28px; width: 56px; height: 56px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--gui-grey); color: var(--ui-card); cursor: pointer;
+  box-shadow: 0 3px 0 rgb(var(--ui-shade) / 0.15); transition: transform 0.16s cubic-bezier(0.2, 1.6, 0.4, 1), background 0.12s; }
 .centre[data-chosen] { transform: scale(1.16); background: var(--butter); color: var(--ink); }
 /* The name: a teal pill under the choice, a little irregular like the kit's, its tail up at the petal. */
 .name { position: absolute; left: var(--lx); top: calc(var(--ly) + 60px); transform: translateX(-50%); margin: 0; display: flex; flex-direction: column; align-items: center; min-width: 96px; padding: 7px 20px 8px;
@@ -33,10 +33,10 @@
 /* Round keycaps, bottom right (the kit's button hints). */
 .hint { position: absolute; right: 22px; bottom: 22px; margin: 0; display: flex; gap: 10px; opacity: 0; transition: opacity 0.14s; zoom: var(--tsi-text-scale, 1); }
 .wheel[data-shown] .hint { opacity: 1; }
-.hint span { display: flex; align-items: center; gap: 7px; padding: 5px 14px 5px 5px; border-radius: 999px; background: var(--cream); color: var(--gui-ink-strong); font-size: var(--gui-text-sm); font-weight: 800; box-shadow: 0 2px 0 #725c4e1f; }
+.hint span { display: flex; align-items: center; gap: 7px; padding: 5px 14px 5px 5px; border-radius: 999px; background: var(--cream); color: var(--gui-ink-strong); font-size: var(--gui-text-sm); font-weight: 800; box-shadow: 0 2px 0 rgb(var(--ui-shade) / 0.12); }
 .hint kbd { min-width: 28px; height: 28px; padding: 0 8px; box-sizing: border-box; display: grid; place-items: center; border-radius: 999px; background: var(--ink); color: var(--cream); font: inherit; font-size: var(--gui-text-xs); }
 /* Touch: the wheel button, bottom right above the stick's corner. */
-.touchButton { position: absolute; right: max(18px, var(--hud-edge, 0px)); bottom: calc(var(--hud-stick-bottom, 56px) + 84px * var(--touch-scale, 1) + 10px); z-index: 12; width: 62px; height: 62px; display: grid; place-items: center; border: 0; border-radius: 50%; background: #fffae6; color: #725c4e; box-shadow: 0 3px 0 #725c4e26, 0 6px 16px #2946411f; }
+.touchButton { position: absolute; right: max(18px, var(--hud-edge, 0px)); bottom: calc(var(--hud-stick-bottom, 56px) + 84px * var(--touch-scale, 1) + 10px); z-index: 12; width: 62px; height: 62px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--ui-card); color: var(--ui-ink); box-shadow: 0 3px 0 rgb(var(--ui-shade) / 0.15), 0 6px 16px rgb(var(--ui-shade) / 0.12); }
 .touchButton .icon { width: 44px; height: 44px; }
 @media (max-height: 640px) { .flower { zoom: 0.8; } }
 @media (prefers-reduced-motion: reduce) { .flower, .petal, .centre, .name, .wheel::before { transition: none; animation: none; } }

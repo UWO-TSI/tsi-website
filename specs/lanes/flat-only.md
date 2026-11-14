@@ -2,6 +2,11 @@
 
 Worktree `.claude/worktrees/flat-only`, branch `game/flat-only`, cut from `feat/game-default-island` (= main) at the commit that adds this file. Agent type `uwotsi-lane`. Dev port 3482.
 
+## David's decisions (newest first)
+
+- 2026-11-13, relayed by the coordinator (ledger row 335): "in the future well design ui packs, which will the entire game ui that ppl can buy with gems" (step 13).
+- 2026-11-13, relayed by the coordinator: "make sure future dont drift back" (step 12).
+
 ## David's decision (2026-11-13, verbatim; ledger row 334)
 
 "im fed up wit hthe game keep trying to use the old animal crossing ui kit, remove that so taht all future ui are the new flat ui"
@@ -62,6 +67,22 @@ Row 320 (2026-10-28) already made clean flat the one look (`specs/design-bible.m
     - Don't edit `next.config.ts`, `middleware.ts`, `web/lib/supabase/*`, nav or footer, or `web/app/student/TitleSplash.tsx`.
     - If a portal page passes a prop you remove, stop and report instead of editing it.
 
+12. **Make a return fail the gates** (coordinator, 2026-11-13, David: "make sure future dont drift back"):
+    - ESLint `no-restricted-imports` in the web config: `@/components/recruit/ui` (and relative paths) forbidden outside `components/recruit/**`, `app/student/apply/**`, `components/admin/**` and wherever the applicant creator's cream CSS lives; any `components/gui/cream` path forbidden. The message names the flat kit, design bible UI and row 334.
+    - A vitest guard (`web/components/gui/flatOnly.test.ts`) reading the tree with fs, failing with file and line when: a file outside those paths imports the recruit kit or a cream path; `components/gui/cream` exists; `UI_THEMES` has "cream" or `styles/themes/cream.css` exists; `variant="cream"`, `variant: "cream"`, `uitheme=cream` or `data-ui-theme="cream"` appears in `web/app`, `web/components`, `web/lib`; a cream palette hex (`#f7f1da #fffbe7 #fffff7 #f8f4e8 #eee9ca #e3d9b8 #d3c39c #ffeea0 #3a2e22 #4f3f31 #6b5843 #726450 #8a7b66 #946429 #bb813f #725c4e`) appears in `.css`, `.tsx`, `.ts` outside the one paper token file and the recruitment/applicant paths. Each message says what to use instead.
+    - Prove both: a scratch cream import and a cream hex in a game CSS module fail lint and the guard; revert. In the report.
+    - Run the guard against the ten open lane branches; list which would fail once merged.
+    - The design bible's "How it's built" lists the guard and the lint rule next to rule 2.
+
+13. **Ready for UI packs** (coordinator, 2026-11-13, ledger row 335; David: "in the future well design ui packs, which will the entire game ui that ppl can buy with gems"):
+    - A pack is one theme file in `web/styles/themes/` that swaps the whole UI under `[data-ui-theme="<name>"]`, shapes as well as colours. The flat shape values (radii, shadows, border widths, panel and card surfaces, font family and weights, textures such as grain) are `--ui-*` tokens the clean theme sets on `:root`; the kit's CSS reads them. Nothing hard-coded as the `.gui` default.
+    - `dark.css` stays as the dev sample and sets at least one shape token too. No shop item, no purchase flow.
+    - Cream still goes. Nothing defaults to any theme but clean; no component names a theme.
+    - Guard additions: files in `styles/themes/` may hold any values (cream hexes too); only `clean.css` may set `:root`/`body`, every other theme only its own `[data-ui-theme="<name>"]`; a theme name (any `UI_THEMES` entry) in component code fails, except `styles/themes/index.ts`, `DevUiTheme`, `/lab` and `/dev`. The cream-hex check covers everything outside the themes folder, the paper block and the recruitment paths.
+    - Paper stays outside the theme tokens: paper things stay paper in every pack.
+    - Evidence `fo-packs`: one in-game sheet and the HUD in clean and in the dark sample, colour and shape changing together.
+    - Docs: `specs/polish/ui-themes.md` gets a "UI packs (row 335)" section: the token list a pack sets, components read tokens only, `<body data-ui-theme>` wears it, buying one is later work.
+
 ## Evidence
 
 All shots are headless and muted; never open a window. Before shots come from this branch's base commit, after shots from your head. Before and after go side by side, desktop and phone, on the new world.
@@ -90,14 +111,32 @@ Ten lanes are open and unmerged: sfx-library, analytics, title-r2, club, daily-r
 
 ## Status
 
-- Not started.
+- **Done, waiting on review** (head: see `git log -1 game/flat-only`; build commit named in the report). Steps 1 to 13 built.
+- **Gates:** tsc clean; vitest one run, new world (`NEXT_PUBLIC_GAME_WORLD=new`, lane rules: once): 415 files, 3856 tests pass, 4 skipped; eslint on the 52 touched files: 0; the cream grep finds only the guard itself and one quoted design note (`flat/flat.module.css` 285, David 10-28 on the reward pop). Guard and lint proven to fail on a scratch cream import and a cream hex, then reverted (`specs/evidence/flat-only/guard-proof.txt`).
+- **0 px:** `/student/apply` (desktop, phone), `/student/apply/ui-preview`, the applicant portal on a phone, the applicant creator and collection (desktop, phone), the marketing home (desktop, phone). Inside the paper sheets (notice board with its club goal and HQ notice, mailbox, journal): 0 px. The member closet: 0 px; the member first creator differs only in its name field (the kit's own Field).
+- **What changed:**
+  - Tokens: clean on `:root` (`styles/themes/clean.css`) with the pack shape tokens (`--ui-font`, weights, `--ui-r-*`, `--ui-border`, `--ui-shadow-*`, `--ui-panel-texture`); `dark.css` sets them too (squarer, deeper). `cream.css` deleted, `UI_THEMES = ["clean", "dark"]`. `game-tokens.css`: the `--gui-*` aliases resolve on `:root, [data-ui-theme]`; the painted paper tokens, the recruit-kit hooks, the reveal hooks and `[data-gui-flat]` are gone. Paper: `styles/paper.css` (`[data-gui-paper]`, the one paper block), imported by the root layout.
+  - Kit: `Sheet` has no `variant` or `tone`; `IslandSheet`, `ProgressionPanel`, `ConfirmDialog` no `flat`/`variant`/`tone`; `variant.tsx` deleted. The kit's own `Button` (+ `buttonClass` for links), `Field`, `TextArea`, `Keycap`, `Dialogue` in `components/gui/index.tsx`; `Panel` dropped. Card: no `torn`, `tone` default plain ("paper" kept as its name, see questions); Banner, NameTag, Badge, sign-in pill flat. `components/gui/cream` became `components/gui/flat/folds.tsx`.
+  - Creator: no `flat`; the applicant island hands in its studio (`components/recruit/applicantStudio.ts`: `applicantCreator.module.css`, the frozen cream copy, and the recruit button) through `CharacterCreator`'s `applicant` prop; `creatorStudio.ts` carries it to the controls. The game's `CharacterCreator.module.css` is merged flat.
+  - Applicant island: `<main>` wears `components/recruit/applicantLook.module.css` (the old cream `--gui-*` values). `FishingOverlay` and `FishReveal` (applicant-only) moved to `components/recruit`; `celebrate` takes its colours from the caller.
+  - Cream hexes out of game code: HUD wheels, chat, touch buttons, companion, minimap dot, member badge, rune guide, trip veil, toasts; museum plaques now white with ink; photo prints use the paper material values.
+  - Deleted: `styles/themes/cream.css`, `components/gui/variant.tsx` (+ test), `components/gui/cream/`, `scripts/gui-paper.mjs`, `app/lab/gui/ref/` (the ACNH kit crops). `/lab/gui` shows flat only.
+  - Gates: `web/components/gui/flatOnly.test.ts`, ESLint `no-restricted-imports` in `web/eslint.config.mjs`. Docs: design bible UI (row 334/335 paragraphs, "How it's built" 2 and 2b), `specs/polish/flat-ui.md`, `specs/polish/ui-themes.md` (UI packs section), `specs/recruitment-ui-kit.md`, `CODEMAP.md`.
+- **Evidence** (`specs/evidence/flat-only/`): `fo-sheets.webp`, `fo-sheets-phone.webp`, `fo-pieces.webp`, `fo-paper.webp`, `fo-portal.webp`, `fo-unchanged.webp`, `fo-packs.webp`, `fo-creator.webp`, `guard-proof.txt`, `shoot.mjs`. No motion changed, so no mp4.
+- **Open lanes (scan of their added lines vs this branch):** analytics (`GameAnalytics.tsx`: `data-gui-flat`, and `data-ui-theme={dark ? "dark" : "clean"}` fails the guard; `app/lab/gui/page.tsx` `data-gui-flat`; edits `cream.css`); club (`ClubSheet.tsx`: `<ProgressionPanel flat>`, fails tsc); parties and tutorial-v2 (`MiniMap.tsx` friend dot `#FFFBE7`, fails the guard); rod-titanium (`flat/moments.tsx` `data-gui-flat`; edits `cream.css`). sfx-library, title-r2, daily-return, gem-shop, market: clean. Any lane adding a `--ui-*` token must add it to clean and dark only (and every pack).
+
+## Questions for David (fo-questions)
+
+1. The museum's wing signs and case plaques were the cream kit's bark plaques drawn into the 3D labels; they are now flat (white, ink). Keep, or should they be world art (wood signs) instead?
+2. The tool wheel, emote wheel, chat bar, touch buttons and talk box were cream HUD pieces; they now read the theme (white, ink). Fine as is?
+3. `Card tone="paper"` stays as the name of the plain card because portal page files (owned by the play.tethos.ca session: admin/quests, portfolio, quests) pass it. Rename it there later?
+4. Photo prints (the photo frame) use the paper material's values (`--ui-paper`, nearly the old cream). Paper or flat white?
+5. The top-level student pages (check-in, opening-soon, election, onboarding, marketplace) still name `--gui-confetti`; it now resolves to the pack texture (none in clean). Their owner may want to drop it.
 
 ## Next
 
-1. Read the files named above (line ranges via `CODEMAP.md` for big ones).
-2. Take the before shots first.
-3. Build steps 1 to 11, then the after shots.
-4. Run the gates, update this file, commit and report.
+1. Coordinator review of the evidence; David's answers to the questions above.
+2. Merge notes: club, analytics, parties, tutorial-v2 and rod-titanium need the fixes listed above when they merge after this.
 
 ## Tools and gotchas
 
@@ -105,3 +144,6 @@ Ten lanes are open and unmerged: sfx-library, analytics, title-r2, club, daily-r
 - Locks: `LANE=game/flat-only /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|devserver <cmd>` for vitest, builds and the dev server.
 - Never use ports 3000, 3300, 3301 or 3390.
 - Stale `.next/types` can break tsc: `rm -rf web/.next/types web/.next/dev/types`.
+- Shots: `specs/evidence/flat-only/shoot.mjs` (headless, muted, reduced motion; `PORT=3482 node ../specs/evidence/flat-only/shoot.mjs <out> [scene ...]` from web/). World sheets load fast at `/lab/island?sheet=<name>` (~12 s each); `sheet=path` opens nothing there. The real applicant island needs Supabase (blanked), so its creator and collection are shot on `/dev/flat-ui?surface=creator-applicant|collection-applicant`, which now renders them in the island's own frame. The marketing home animates: shoot it with `frozen` (seeded random, Playwright clock) to compare.
+- Before shots ran from an APFS clone of the base tree (`cp -Rc web <scratch>`), so building and shooting could overlap.
+- zsh doesn't word-split `$FILES`: feed eslint a file list through xargs.

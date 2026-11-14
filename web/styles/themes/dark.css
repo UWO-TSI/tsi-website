@@ -1,4 +1,5 @@
-/* The dark theme: a sample that proves the swap (specs/polish/ui-themes.md). Dev only: ?uitheme=dark. */
+/* The dark theme: a sample UI pack that proves the swap, colours and shapes from this one file (specs/polish/ui-themes.md,
+   row 335). Dev only: ?uitheme=dark. */
 [data-ui-theme="dark"] {
   --ui-bg: #161618;
   --ui-panel: #1c1c1f;
@@ -120,4 +121,21 @@
   --ui-paper-tray: #26221e;
   --ui-paper-plate: #f2efe8;
   --ui-paper-washi: url("/assets/ui/washi.png");
+  /* ── The shapes and the type (row 335): a UI pack swaps these with the colours. ── */
+  --ui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ui-weight: 600;
+  --ui-weight-strong: 800;
+  --ui-r-panel: 12px;    /* the dark sample's squarer cut proves a shape swap */
+  --ui-r-card: 8px;
+  --ui-r-blob: 8px;
+  --ui-r-tag: 4px;
+  --ui-r-button: 10px;
+  --ui-r-field: 6px;
+  --ui-border: 1px;      /* hairlines: a sheet's foot, a card's ring */
+  --ui-shadow-sm: none;
+  --ui-shadow-md: 0 8px 22px rgb(0 0 0 / 0.3);
+  --ui-shadow-lg: 0 24px 80px rgb(0 0 0 / 0.55);
+  --ui-shadow-press: none;
+  --ui-shadow-inset: none;
+  --ui-panel-texture: none;  /* a texture over sheets and panels (a pack's paper grain, say) */
 }

@@ -1,5 +1,5 @@
-/* The cream menus' layout pieces (components/gui/cream; specs/polish/flat-ui.md round 2, step 7): the old palette, more
-   air, no boxes in boxes. Rows are split by the paper's own rule; the open row is the one piece of paper. */
+/* The menus' layout pieces (components/gui/flat/folds.tsx; specs/polish/flat-ui.md round 2, step 7): more air, no boxes
+   in boxes. Rows are split by a hairline rule; the open row is the one raised card. */
 
 .section { display: grid; gap: 10px; min-width: 0; }
 .sectionHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; }

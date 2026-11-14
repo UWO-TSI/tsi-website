@@ -1,18 +1,17 @@
 "use client";
 
 /**
- * The cream menus' layout pieces (specs/polish/flat-ui.md round 2, step 7). David: "keep old color pallete but the ui and
- * design needs more work, more space and cleaner more intuitive design". The paper sheet and its palette stay; what's
- * inside loses its boxes:
+ * The menus' layout pieces (specs/polish/flat-ui.md round 2, step 7; in the flat kit since ledger row 334). David: "more
+ * space and cleaner more intuitive design". What's inside a sheet loses its boxes:
  * - `Folds` and `Fold`: a list whose rows open in place. The open row is the one piece of paper on the page, and it
  *   holds that row's one action.
  * - `Section`: a group under a quiet heading.
  * - `QuietButton`: a text-weight button for second actions (skip, abandon, report, back).
- * Colours: the --gui-* cream tokens (styles/game-tokens.css).
+ * Colours: the kit's --gui-* tokens (styles/game-tokens.css), the theme's.
  */
 import { useId, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { ChevronDown, ChevronLeft } from "lucide-react";
-import c from "./cream.module.css";
+import c from "./folds.module.css";
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
 

@@ -1,7 +1,7 @@
 /* The boat trip's veil (arrival-wharf.md §3): the sea haze the boat sails into while the next island loads, in the
    hour's own haze colour (--veil), with a paper card; its fades run on the trip's times (--veil-time). */
 .veil { position: absolute; inset: 0; z-index: 45; display: grid; place-items: center; pointer-events: none; opacity: 0;
-  background: radial-gradient(ellipse at 50% 44%, color-mix(in srgb, var(--veil) 45%, #fffbe7) 0%, var(--veil) 72%);
+  background: radial-gradient(ellipse at 50% 44%, color-mix(in srgb, var(--veil) 45%, var(--ui-card)) 0%, var(--veil) 72%);
   transition: opacity var(--veil-time, 0.7s) ease-in-out; }
 .veil[data-shown="true"] { opacity: 1; }
 .card { display: grid; justify-items: center; gap: 4px; padding: 16px 28px 14px; border-radius: var(--gui-r-card); background: var(--gui-paper);

@@ -62,10 +62,10 @@
 
 /* ── /student/companion shell chrome (the app tab bar, sub-tabs, embeds, the Me tab) ── */
 /* The tab bar: each section a rounded tile in its colour, like the kit's phone apps; the open one on a butter pill. */
-.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; gap: 6px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgb(255 251 231 / 0.97); box-shadow: 0 -2px 0 rgb(114 92 78 / 0.1), 0 -8px 24px rgb(79 63 49 / 0.08); }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; gap: 6px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgb(255 251 231 / 0.97); box-shadow: 0 -2px 0 rgb(var(--ui-shade) / 0.1), 0 -8px 24px rgb(79 63 49 / 0.08); }
 .tabbtn { flex: 1; min-height: 60px; border: 0; border-radius: 22px; background: transparent; color: var(--gui-ink-2); font-weight: 800; font-size: var(--gui-text-xs); display: grid; place-items: center; gap: 3px; }
 .tabbtn[aria-current="true"] { background: var(--gui-butter); color: var(--gui-ink-strong); }
-.appTile { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--tile, var(--gui-sage-soft)); color: #3a2e22; box-shadow: 0 2px 0 rgb(114 92 78 / 0.18); }
+.appTile { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; background: var(--tile, var(--gui-sage-soft)); color: var(--ui-ink); box-shadow: 0 2px 0 rgb(var(--ui-shade) / 0.18); }
 .sceneWrap { height: 46vh; min-height: 220px; max-height: 320px; overflow: hidden; border-radius: var(--gui-r-card); background: #cfd9c3; box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); }
 .sceneWrap canvas { display: block; }
 .subtabs { margin: 0 auto; }

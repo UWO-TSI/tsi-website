@@ -9,8 +9,7 @@ import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { useUser } from "@/components/portal/UserContext";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Empty, ErrorNote, Loading, Select, Toggle as KitToggle } from "@/components/gui";
-import kit from "@/components/recruit/ui/village-ui.module.css";
+import { Button, buttonClass, Empty, ErrorNote, Loading, Select, Toggle as KitToggle } from "@/components/gui";
 
 // The admin tools on the GUI sheet (components/gui): fields and buttons in the kit's paper, ink and sage. The class
 // strings are for native controls and older callers; real buttons use <Button>, links use `buttonLinkCls`.
@@ -21,8 +20,8 @@ const btnCls =
 export const primaryBtnCls = `${btnCls} bg-[var(--gui-sage)] text-[var(--gui-paper)] shadow-[0_3px_0_var(--gui-sage-deep)] hover:bg-[#4b7a68]`;
 export const publishBtnCls = primaryBtnCls;
 export const dangerBtnCls = `${btnCls} bg-[var(--gui-danger-soft)] text-[var(--gui-danger)] shadow-[0_3px_0_#e2b3a3] hover:bg-[#fbd3c5]`;
-/** A link that wears the kit's button (the recruit kit's own classes); add data-size="sm" and a data-variant. */
-export const buttonLinkCls = `${kit.theme} ${kit.button}`;
+/** A link that wears the kit's button; add data-size="sm" and a data-variant. */
+export const buttonLinkCls = buttonClass;
 /** "Back to …" above an editor's title. */
 export const backLinkCls = "inline-flex items-center gap-1.5 text-sm font-bold text-[var(--gui-ink-2)] hover:text-[var(--gui-ink-strong)]";
 export const thCls = "text-left px-4 py-3 text-[13px] font-extrabold text-[var(--gui-ink-2)] whitespace-nowrap";

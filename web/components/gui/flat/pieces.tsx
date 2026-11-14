@@ -18,7 +18,6 @@ import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import type { Season } from "@/lib/game/season";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import type { Place } from "@/lib/game/world/places";
-import { GuiVariantContext } from "../variant";
 import p from "./pieces.module.css";
 
 const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
@@ -305,11 +304,9 @@ export function FlatDialog({ open, onClose, title, keys, testId, children }: { o
   if (!state) return null;
   return <div className={p.dialogLayer} data-state={state}>
     <div className={p.dialogScrim} onClick={onClose} aria-hidden />
-    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay data-gui-flat="" className={p.dialog} data-testid={testId}>
-      <GuiVariantContext.Provider value="flat">
-        <header className={p.dialogTop}><h2>{title}</h2><button type="button" className={p.dialogClose} aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button></header>
-        {children}
-      </GuiVariantContext.Provider>
+    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={p.dialog} data-testid={testId}>
+      <header className={p.dialogTop}><h2>{title}</h2><button type="button" className={p.dialogClose} aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button></header>
+      {children}
     </section>
   </div>;
 }
