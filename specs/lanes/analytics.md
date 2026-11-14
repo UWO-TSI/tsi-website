@@ -68,6 +68,7 @@ Head: see `git log -1` on game/analytics. Not merged, migration not applied. ori
   - Scripts moved to `specs/evidence/analytics/r2/` (`sql-smoke.sh`, `backfill.sql`, `shoot.sh`, `shoot.mjs`).
 - **Round 1** (still true): event log (`steps.ts`, `track.ts`, `POST /api/analytics/events`), hooks in `DefaultIslandWorld`, `hq/store.ts`, `lookStore.saveMyLook`, `collections.ts`; page `/student/dashboard/admin/game`, read route `GET /api/admin/game-analytics?days=`; dev twin `/dev/analytics` (now 30 days by default); privacy in `specs/analytics.md`.
 
+- **Gates (r2):** tsc clean; vitest 3869 passed (4 skipped) both with and without `NEXT_PUBLIC_GAME_WORLD=new`; eslint clean on the changed files; the lane's SQL smoke fails before the migration and passes after, applies twice, security smoke passes, the snapshot takes 8 ms on the backfill; the canonical chain passes except `world_chat_smoke` "the rest" (pre-existing). No perf check: an admin page, nothing on the game's render path.
 - **Evidence** (`specs/evidence/analytics/r2/`, made-up data, dev `now` 2026-11-13):
   - `an2-summary.png`: the summary card.
   - `an2-tiles.png`: this period (with changes) and active and coming back.
