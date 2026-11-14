@@ -31,6 +31,7 @@ export { PODIUM, Podium, podiumFeet, type PodiumPlace } from "./Podium";
 export { ServeMeter } from "./ServeMeter";
 export { CallTag, type CallKind } from "./CallTag";
 export { ActionBar, ActionIcon, type ActionSlot } from "./ActionBar";
+export { BarRows, CHART, ChartCard, Columns, Delta, Heatmap, Legend, Segmented, StatTile, TimeChart, type BarRow, type Series } from "./charts";
 export { SpinPicker } from "./SpinPicker";
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
 export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;

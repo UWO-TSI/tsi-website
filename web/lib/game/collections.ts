@@ -12,6 +12,7 @@
  */
 
 import type { CatchReply } from "@/lib/collections/service";
+import { trackFeature } from "@/lib/analytics/track";
 
 const KEY = "tsi.collections.local.v1";
 
@@ -78,6 +79,7 @@ async function catchRequest(body: Record<string, unknown>): Promise<CatchAnswer 
     const res = await fetch("/api/collections", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (res.status === 401 || res.status === 503) return null;
     const json = await res.json().catch(() => null);
+    if (res.ok && json?.catch && body.action !== "cast") trackFeature(body.action === "harvest" ? "foraging" : "fishing");
     return res.ok && json?.catch ? { ok: true, catch: json.catch } : { ok: false, error: json?.error ?? "Something went wrong. Try again.", code: json?.code };
   } catch {
     return null;

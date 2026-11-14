@@ -150,7 +150,8 @@ import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
 import Arrival from "./arrival/Arrival";
 import GuideArrow from "./GuideArrow";
 import ArrivalWorld, { crateSpots, placeWorld, withCrates } from "./arrival/ArrivalWorld";
-import { arrivalEvent, bramNear, bramPrompt, clearDock, useArrivalChip, useArrivalPhase, useArrivalTools, useDockCleared, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
+import { arrivalEvent, arrivalRun, bramNear, bramPrompt, clearDock, subscribeArrival, useArrivalChip, useArrivalPhase, useArrivalTools, useDockCleared, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
+import { setScreen, startSession, trackStep } from "@/lib/analytics/track";
 import { NEW_ROUTE } from "@/lib/game/arrival/routes/new";
 import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
@@ -997,6 +998,18 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const arrivalPhase = useArrivalPhase();
   // Arriving (before the walk-along): the player holds still, so no prompt and no key hints; the HUD stands back.
   const welcoming = arrivalPhase !== null && arrivalPhase !== "tutorial";
+  // The event log (lib/analytics, specs/analytics.md): this visit, the opening's and the walk's beats as the arrival
+  // moves on (its store's change, never a frame), and the screen the player is on.
+  useEffect(() => {
+    const stop = startSession();
+    const off = subscribeArrival(() => {
+      const a = arrivalRun.current, t = arrivalRun.tutorial, id = t && arrivalRun.stops?.[t.stop]?.id;
+      if (a) trackStep(a.phase === "done" ? "arrived" : `arrival_${a.phase}`);
+      if (id) trackStep(`tut_${id.toLowerCase()}`);
+    });
+    return () => { off(); stop(); };
+  }, []);
+  useEffect(() => setScreen(welcoming ? "opening" : bagOpen ? "bag" : sheet ?? inside ?? site), [welcoming, bagOpen, sheet, inside, site]);
   // Golden hour for the crossing, whatever the real time (specs/v1-drop.md §1.4): the light, the sun and a clear sky.
   // From the boat's first beat: aboard and in the creator the island is paused under the reflection, so the golden
   // island mounts there unseen and is compiled before the crossing shows it (ArrivalWorld WarmCrossing).

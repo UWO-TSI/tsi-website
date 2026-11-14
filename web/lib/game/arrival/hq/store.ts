@@ -9,8 +9,9 @@
 import { useSyncExternalStore } from "react";
 import { newVisit, parseVisit, visitEvent, type HqState } from "./visit";
 import { parseQuests, type TaughtTool, type ToolQuests } from "./teachers";
-import type { HqEvent } from "./script";
 import { mergeProgress, type AccountProgress } from "./accountProgress";
+import { HQ_SCRIPT, type HqEvent } from "./script";
+import { trackStep } from "@/lib/analytics/track";
 
 /** v4: the v3 review's script (the menu, mail and minimap beats folded into the keys; older saves were beats of older ones). */
 const VISIT_KEY = "tsi.hq.v4";
@@ -74,14 +75,16 @@ export function useHq(): HqSnapshot { return useSyncExternalStore(subscribeHq, h
 export function setToolsTaught(taught: boolean) { if (current().taught !== taught) set({ taught }); }
 
 /** Bram's tour is over for a new arrival: the visit with Alice starts (its first step: report to her at HQ). */
-export function startVisit() { set({ visit: newVisit() }); }
+export function startVisit() { set({ visit: newVisit() }); trackStep("hq_report"); }
 
 /** Something the visit waits for happened (or her lines were said). Nothing changes unless the beat moves on. */
 export function hqEvent(e: HqEvent | "said") {
   const v = current().visit;
   if (!v) return;
   const next = visitEvent(v, e);
-  if (next !== v) set({ visit: next });
+  if (next === v) return;
+  set({ visit: next });
+  if (next.beat !== v.beat || next.done) trackStep(next.done || next.beat >= HQ_SCRIPT.length ? "hq_done" : `hq_${HQ_SCRIPT[next.beat].id}`);
 }
 
 /**
