@@ -4,6 +4,8 @@ Each of these stops the public opening by itself. Owner in brackets.
 
 ## 1. Publish Google sign-in [David, about 15 minutes, then Google's review]
 
+**Status (2026-11-14):** published. Project `claude-490322` (the client Supabase prod uses), app name Tethos Island, home, privacy and terms links on play.tethos.ca, authorized domains tethos.ca and the Supabase one, no extra scopes, status In production. `/terms` and `/privacy` are live. Still open (David): a sign-in test from a Google account that was never a test user; info@tethos.ca added as project Owner and set as the support email.
+
 Today the OAuth app is in Testing mode: only listed test users can sign in, and sessions expire after 7 days.
 
 1. Open console.cloud.google.com and pick the project that holds the Tethos sign-in client.
@@ -17,6 +19,8 @@ Today the OAuth app is in Testing mode: only listed test users can sign in, and 
 Note: the recruitment Sheets delivery uses the same Google project with Drive and Sheets scopes for David's own account. If publishing asks for verification of those scopes, move them to a separate internal OAuth client instead of verifying.
 
 ## 2. Verify tethos.ca in Resend [David for DNS, coordinator for the check]
+
+**Status (2026-11-14):** not started. DNS today: no DMARC record, and no SPF on the root domain for Google Workspace (worth adding: TXT `@` `v=spf1 include:_spf.google.com ~all`).
 
 Without this no launch email, no "email me the link" on phones.
 
@@ -55,5 +59,6 @@ A shard holds 30 players on one Fly machine. Nobody knows what happens at 300.
 ## 5. Also required
 
 - Analytics migration applied before the pre-registration page goes up.
-- `/terms` and `/privacy` live before step 1 and before the gem shop.
+- `/terms` and `/privacy` live before step 1 and before the gem shop. **Done 2026-11-14** (text in `web/content/legal/`).
+- **Analytics migration: applied in prod 2026-11-14** (`20261113120000_game_events.sql`).
 - Gem shop: spending limit, under-18 permission step, tackle shop gem roll changed to coins.
