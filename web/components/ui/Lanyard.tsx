@@ -3,22 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Environment, Lightformer, useGLTF } from "@react-three/drei";
-import {
-  BallCollider,
-  CuboidCollider,
-  Physics,
-  RigidBody,
-  useRopeJoint,
-  useSphericalJoint,
-} from "@react-three/rapier";
 import * as THREE from "three";
+import { DRAG_SPIN, dragSwing, newSwing, spinTwist, stepSwingFor, type Swing } from "@/lib/game/keychainSwing";
 
 import styles from "./Lanyard.module.css";
 import { PEOPLE } from "@/components/site/marks";
 
 // The club's own lanyard, the game's model (specs/merch/tsi-lanyard.md, art/merch/build_lanyard.py): one unit is 10 cm,
-// hung from a peg at its origin, its two strands down to the sewn tab, a D-ring and a snap hook. Here the strands follow
-// a physics rope (three links, the game's LANYARD_LINKS) and the hook holds the card, a 12 x 17 cm invite.
+// hung from a peg at its origin, its two strands down to the sewn tab, a D-ring and a snap hook. It swings as the game's
+// does (lib/game/keychainSwing.ts, a small verlet chain, no physics library): three links for the strands (the game's
+// LANYARD_LINKS), one for the hook, one from the card's slot to its middle. The hook holds the card, a 12 x 17 cm invite.
 const LANYARD_URL = "/assets/game/items/merch-tsi-lanyard.glb";
 const DROP = 4.356;
 const LINKS = [1.45, 1.45, DROP - 2.9];
@@ -202,7 +196,6 @@ function bend(rig: Rig, pts: THREE.Vector3[]) {
 
 type LanyardProps = {
   position?: [number, number, number];
-  gravity?: [number, number, number];
   fov?: number;
   /** false: the scene stops drawing (off screen). */
   active?: boolean;
@@ -210,16 +203,10 @@ type LanyardProps = {
   onOpen?: () => void;
 };
 
-export default function Lanyard({ position = [0, 0, 30], gravity = [0, -40, 0], fov = 20, active = true, onOpen }: LanyardProps) {
+export default function Lanyard({ position = [0, 0, 30], fov = 20, active = true, onOpen }: LanyardProps) {
   // Touch screens can't drag the card (it would fight the page scroll); a tap still opens it.
   const [touch] = useState(() => typeof window !== "undefined" && window.matchMedia("(hover: none), (pointer: coarse)").matches);
-  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const [isMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
 
   return (
     <div className={styles.lanyardWrapper}>
@@ -233,9 +220,7 @@ export default function Lanyard({ position = [0, 0, 30], gravity = [0, -40, 0], 
       >
         {/* Soft enough that the strap stays navy and the card stays ink, as printed. */}
         <ambientLight intensity={1.2} />
-        <Physics gravity={gravity} timeStep={isMobile ? 1 / 30 : 1 / 60}>
-          <Band touch={touch} onOpen={onOpen} />
-        </Physics>
+        <Band touch={touch} onOpen={onOpen} />
         <Environment blur={0.75} environmentIntensity={0.6}>
           <Lightformer intensity={2} color="white" position={[0, -1, 5]} rotation={[0, 0, Math.PI / 3]} scale={[100, 0.1, 1]} />
           <Lightformer intensity={3} color="white" position={[-1, -1, 1]} rotation={[0, 0, Math.PI / 3]} scale={[100, 0.1, 1]} />
@@ -247,15 +232,23 @@ export default function Lanyard({ position = [0, 0, 30], gravity = [0, -40, 0], 
   );
 }
 
-function Band({ maxSpeed = 50, minSpeed = 0, touch, onOpen }: { maxSpeed?: number; minSpeed?: number; touch: boolean; onOpen?: () => void }) {
-  /* eslint-disable @typescript-eslint/no-explicit-any -- rapier's rigid body refs */
-  const fixed = useRef<any>(null);
-  const j1 = useRef<any>(null);
-  const j2 = useRef<any>(null);
-  const j3 = useRef<any>(null);
-  const card = useRef<any>(null);
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+/** The swing runs this much faster than the game's, so the card drops in and settles briskly. */
+const PACE = 1.8;
+const LINKS_ALL = [...LINKS, HOOK, SLOT_Y];
+const PEG = new THREE.Vector3(0, PEG_Y, 0);
 
+/** The chain laid out to the right of the peg, level with it, so it drops in and swings down as it appears. */
+function droppingSwing(): Swing {
+  const s = newSwing(LINKS_ALL);
+  let x = 0;
+  s.p.forEach((pt, i) => { if (i) x += LINKS_ALL[i - 1] * 0.8; pt[0] = x; pt[1] = 0; pt[2] = 0; });
+  s.prev = s.p.map((pt) => [...pt] as [number, number, number]);
+  s.spin = 2.5;
+  return s;
+}
+
+function Band({ touch, onOpen }: { touch: boolean; onOpen?: () => void }) {
+  const card = useRef<THREE.Group>(null);
   const { scene } = useGLTF(LANYARD_URL);
   const rig = useMemo(() => buildRig(scene), [scene]);
   useEffect(() => () => rig.strap.forEach((b) => b.mesh.geometry.dispose()), [rig]);
@@ -268,97 +261,91 @@ function Band({ maxSpeed = 50, minSpeed = 0, touch, onOpen }: { maxSpeed?: numbe
     return { body, face: faceGeometry(shape) };
   }, []);
 
+  const [swing] = useState(droppingSwing);
   const [scratch] = useState(() => ({
-    vec: new THREE.Vector3(), dir: new THREE.Vector3(), rot: new THREE.Vector3(), ang: new THREE.Vector3(),
-    quat: new THREE.Quaternion(), pts: [0, 1, 2, 3, 4].map(() => new THREE.Vector3()),
+    pts: [0, 1, 2, 3, 4, 5].map(() => new THREE.Vector3()), up: new THREE.Vector3(), q: new THREE.Quaternion(), turn: new THREE.Quaternion(),
+    plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit: new THREE.Vector3(),
   }));
-  const [dragged, drag] = useState<false | THREE.Vector3>(false);
-  const [hovered, hover] = useState(false);
+  // While dragged: the pointer's id, the grab's offset from the card's middle, and the last x (a sideways sweep spins it).
+  const grab = useRef<{ id: number; dx: number; dy: number; x: number } | null>(null);
   const press = useRef<{ x: number; y: number } | null>(null);
-
-  const segmentProps = { type: "dynamic", canSleep: true, colliders: false, angularDamping: 4, linearDamping: 4 } as const;
-  useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], LINKS[0]]);
-  useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], LINKS[1]]);
-  useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], LINKS[2]]);
-  useSphericalJoint(j3, card, [[0, 0, 0], [0, SLOT_Y + HOOK, 0]]);
+  const [hovered, hover] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
-    if (!hovered) return;
-    document.body.style.cursor = dragged ? "grabbing" : "pointer";
+    if (!hovered && !dragging) return;
+    document.body.style.cursor = dragging ? "grabbing" : "pointer";
     return () => { document.body.style.cursor = "auto"; };
-  }, [hovered, dragged]);
+  }, [hovered, dragging]);
 
-  useFrame((state, delta) => {
-    const { vec, dir: d, rot, ang, quat, pts } = scratch;
-    if (dragged && card.current) {
-      vec.set(state.pointer.x, state.pointer.y, 0.5).unproject(state.camera);
-      d.copy(vec).sub(state.camera.position).normalize();
-      vec.add(d.multiplyScalar(state.camera.position.length()));
-      [card, j1, j2, j3, fixed].forEach((ref) => ref.current?.wakeUp());
-      card.current.setNextKinematicTranslation({ x: vec.x - dragged.x, y: vec.y - dragged.y, z: vec.z - dragged.z });
-    }
-    if (!fixed.current || !j1.current || !j2.current || !j3.current || !card.current) return;
-    // The two middle joints are eased toward the physics, so the strap bends without jitter.
-    [j1, j2].forEach((ref) => {
-      if (!ref.current.lerped) ref.current.lerped = new THREE.Vector3().copy(ref.current.translation());
-      const gap = Math.max(0.1, Math.min(1, ref.current.lerped.distanceTo(ref.current.translation())));
-      ref.current.lerped.lerp(ref.current.translation(), delta * (minSpeed + gap * (maxSpeed - minSpeed)));
-    });
-    pts[0].copy(fixed.current.translation());
-    pts[1].copy(j1.current.lerped);
-    pts[2].copy(j2.current.lerped);
-    pts[3].copy(j3.current.translation());
-    const r = card.current.rotation();
-    quat.set(r.x, r.y, r.z, r.w);
-    pts[4].set(0, SLOT_Y, 0).applyQuaternion(quat).add(card.current.translation());
+  useFrame((_, delta) => {
+    stepSwingFor(swing, delta * PACE);
+    const { pts, up, q, turn } = scratch;
+    swing.p.forEach((pt, i) => pts[i].set(pt[0], pt[1], pt[2]).add(PEG));
     bend(rig, pts);
-    // The card keeps turning back to face the room.
-    ang.copy(card.current.angvel());
-    rot.copy(card.current.rotation());
-    card.current.setAngvel({ x: ang.x, y: ang.y - rot.y * 0.25, z: ang.z });
+    // The card hangs from its slot: its middle at the chain's end, upright along the last link, turned by the twist.
+    const c = card.current;
+    if (!c) return;
+    c.position.copy(pts[5]);
+    up.subVectors(pts[4], pts[5]).normalize();
+    q.setFromUnitVectors(THREE.Object3D.DEFAULT_UP, up);
+    turn.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, swing.twist);
+    c.quaternion.copy(q).multiply(turn);
   });
 
+  /** Where the pointer's ray meets the card's plane, in the swing's own units (the peg at 0). */
+  const at = (e: ThreeEvent<PointerEvent>) => (e.ray.intersectPlane(scratch.plane, scratch.hit) ? scratch.hit.clone().sub(PEG) : null);
   const onDown = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
     press.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY };
     if (touch) return;
-    (e.target as unknown as HTMLElement).setPointerCapture(e.pointerId);
-    drag(new THREE.Vector3().copy(e.point).sub(scratch.vec.copy(card.current.translation())));
+    const p = at(e), mid = swing.p[5];
+    if (!p) return;
+    try { (e.target as unknown as Element).setPointerCapture?.(e.pointerId); } catch { /* not an active pointer */ }
+    grab.current = { id: e.pointerId, dx: p.x - mid[0], dy: p.y - mid[1], x: e.nativeEvent.clientX };
+    setDragging(true);
+  };
+  const onMove = (e: ThreeEvent<PointerEvent>) => {
+    const g = grab.current;
+    if (!g || g.id !== e.pointerId) return;
+    const p = at(e);
+    if (!p) return;
+    dragSwing(swing, [p.x - g.dx, p.y - g.dy, 0]);
+    spinTwist(swing, (e.nativeEvent.clientX - g.x) * DRAG_SPIN * 0.4);
+    g.x = e.nativeEvent.clientX;
   };
   const onUp = (e: ThreeEvent<PointerEvent>) => {
-    if (touch) return;
-    (e.target as unknown as HTMLElement).releasePointerCapture(e.pointerId);
-    drag(false);
+    const g = grab.current;
+    if (!g || g.id !== e.pointerId) return;
+    try { (e.target as unknown as Element).releasePointerCapture?.(e.pointerId); } catch { /* already released */ }
+    dragSwing(swing, null);
+    grab.current = null;
+    setDragging(false);
   };
+  // The card is several meshes, so one click arrives once for each under the pointer: only the first counts, and only
+  // if it pressed on the card and barely moved (more than that was a drag).
   const onClick = (e: ThreeEvent<MouseEvent>) => {
-    const at = press.current;
+    e.stopPropagation();
+    const p = press.current;
     press.current = null;
-    if (at && Math.hypot(e.nativeEvent.clientX - at.x, e.nativeEvent.clientY - at.y) > 6) return; // that was a drag
+    if (!p || Math.hypot(e.nativeEvent.clientX - p.x, e.nativeEvent.clientY - p.y) > 6) return;
     onOpen?.();
   };
 
-  const x0 = LINKS[0] * 0.7;
   return (
     <>
-      <group position={[0, PEG_Y, 0]}>
-        <RigidBody ref={fixed} {...segmentProps} type="fixed" />
-        <RigidBody position={[x0, 0, 0]} ref={j1} {...segmentProps}><BallCollider args={[0.1]} /></RigidBody>
-        <RigidBody position={[x0 * 2, 0, 0]} ref={j2} {...segmentProps}><BallCollider args={[0.1]} /></RigidBody>
-        <RigidBody position={[x0 * 3, 0, 0]} ref={j3} {...segmentProps}><BallCollider args={[0.1]} /></RigidBody>
-        <RigidBody position={[x0 * 3, -(SLOT_Y + HOOK), 0]} ref={card} {...segmentProps} type={dragged ? "kinematicPosition" : "dynamic"}>
-          <CuboidCollider args={[CARD_W / 2, CARD_H / 2, CARD_T / 2]} />
-          <group onPointerOver={() => hover(true)} onPointerOut={() => hover(false)} onPointerDown={onDown} onPointerUp={onUp} onClick={onClick}>
-            {/* A matte card with rounded corners and a slot: the edge, and the two printed faces. */}
-            <mesh geometry={geo.body}>
-              <meshStandardMaterial color="#1b1b1e" roughness={0.9} />
-            </mesh>
-            <mesh geometry={geo.face} position={[0, 0, CARD_T / 2 + 0.001]}>
-              <meshStandardMaterial map={front} roughness={0.85} />
-            </mesh>
-            <mesh geometry={geo.face} position={[0, 0, -CARD_T / 2 - 0.001]} rotation={[0, Math.PI, 0]}>
-              <meshStandardMaterial map={back} roughness={0.85} />
-            </mesh>
-          </group>
-        </RigidBody>
+      <group ref={card} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}
+        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onClick={onClick}>
+        {/* A matte card with rounded corners and a slot: the edge, and the two printed faces. */}
+        <mesh geometry={geo.body}>
+          <meshStandardMaterial color="#1b1b1e" roughness={0.9} />
+        </mesh>
+        <mesh geometry={geo.face} position={[0, 0, CARD_T / 2 + 0.001]}>
+          <meshStandardMaterial map={front} roughness={0.85} />
+        </mesh>
+        <mesh geometry={geo.face} position={[0, 0, -CARD_T / 2 - 0.001]} rotation={[0, Math.PI, 0]}>
+          <meshStandardMaterial map={back} roughness={0.85} />
+        </mesh>
       </group>
       <primitive object={rig.root} />
     </>

@@ -32,7 +32,10 @@ export default function IslandScrub() {
 
   useEffect(() => {
     const el = block.current!, v = video.current!;
-    const pinned = window.matchMedia("(min-width: 821px)").matches && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wide = window.matchMedia("(min-width: 821px)").matches;
+    const pinned = wide && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Phones get the clip at 960 px (2.3 MB instead of 6.4): it plays in a small window, and nothing scrubs it.
+    v.src = wide ? "/videos/island-clip.mp4" : "/videos/island-clip-sm.mp4";
     // Fetch the whole clip a screen or two before it's needed, so scrubbing never waits on the network.
     const near = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
@@ -79,7 +82,7 @@ export default function IslandScrub() {
         <div className="tm-window is__window" data-pop={pop || undefined}>
           <div className="tm-window__bar"><span className="tm-window__dots"><i /><i /><i /></span>play.tethos.ca</div>
           <div className="tm-window__screen">
-            <video ref={video} src="/videos/island-clip.mp4" poster="/videos/island-clip.webp" muted playsInline loop preload="none"
+            <video ref={video} poster="/videos/island-clip.webp" muted playsInline loop preload="none"
               aria-label="Playing Tethos Island: a member walks down the wharf, fishes from the beach and talks to a resident" />
             <div className="is__talk" aria-live="polite">
               {c.href

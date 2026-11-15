@@ -106,9 +106,10 @@ export default function LoadingScreen() {
       later(() => setPhase("gone"), CLICK_MS + LIFT_MS);
     };
 
-    // Everything the page will show is fetched and decoded behind the screen (lazy images too), and the heavy pieces
-    // (the globe) draw their first frame, so nothing loads or compiles once you start scrolling.
-    const warm = warmImages();
+    // Everything the page will show starts loading behind the screen (lazy images too); the screen waits for the images
+    // in the first two screens and for the heavy pieces (the globe) to draw their first frame. Images further down keep
+    // loading after it lifts, well before you scroll to them.
+    const warm = warmImages(window.innerHeight * 2);
     let timedOut = false;
     // How far the page has loaded, 0 to 1; it reaches 1 only when all of that is done (or at the time limit).
     const progress = () => {

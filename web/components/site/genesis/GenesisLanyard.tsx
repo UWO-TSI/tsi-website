@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
-// The physics engine is WebAssembly: loaded only in the browser, and only once the section is near.
+// The 3D (three.js and the lanyard model) loads only in the browser, and only once the section is near.
 const Lanyard = dynamic(() => import("@/components/ui/Lanyard"), { ssr: false });
 
 /** Scroll to the sponsor form, the page's one ask. */
@@ -33,7 +33,7 @@ export default function GenesisLanyard() {
   const [z] = useState(() => (typeof window !== "undefined" && window.innerWidth < 768 ? 9.5 : 8.5));
   return (
     <>
-      <div ref={box} className="gx-lanyard__stage" aria-hidden="true">{near && <Lanyard position={[0, 0, z]} fov={25} gravity={[0, -40, 0]} active={onScreen} onOpen={toSponsor} />}</div>
+      <div ref={box} className="gx-lanyard__stage" aria-hidden="true">{near && <Lanyard position={[0, 0, z]} fov={25} active={onScreen} onOpen={toSponsor} />}</div>
       <a href="#sponsor" className="ts-visually-hidden">You&apos;re invited to GENESIS 2027, our project showcase in March. Sponsor GENESIS 2027.</a>
     </>
   );
