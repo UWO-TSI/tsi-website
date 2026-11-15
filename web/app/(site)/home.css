@@ -278,7 +278,8 @@
    player's speech bubbles over it. */
 .is { position: relative; height: 300svh; margin-top: clamp(64px, 10vh, 120px); }
 .is__stage { position: sticky; top: 0; height: 100svh; display: grid; place-items: center; }
-.is__window { width: min(100%, calc((100svh - 150px) * 16 / 9));
+/* Above the page grain (z-index 55), like the other stages: the game is shown clean. */
+.is__window { position: relative; z-index: 56; width: min(100%, calc((100svh - 150px) * 16 / 9));
   transform: translateY(90px) scale(0.6); opacity: 0.001; transition: transform 0.85s cubic-bezier(0.34, 1.45, 0.64, 1), opacity 0.35s var(--ease-out); }
 .is__window[data-pop] { transform: none; opacity: 1; }
 .is__talk { position: absolute; inset: 0; pointer-events: none; }
