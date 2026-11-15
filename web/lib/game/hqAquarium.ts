@@ -72,3 +72,23 @@ export function fishAt(f: Fish, t: number): { x: number; y: number; z: number; y
   const dx = f.aa * f.w * Math.cos(a), dz = f.da * 1.3 * f.w * Math.cos(b);
   return { x: f.ac + f.aa * Math.sin(a), y: f.y0 + f.ya * Math.sin(2 * f.w * t + 1.7 * f.ph), z: f.d0 + f.da * Math.sin(b), yaw: Math.atan2(dx, dz) };
 }
+
+/**
+ * The club's gifts from the tasting book (lib/wallet/service.ts tastingView: the species members gave the tank, the
+ * newest first): `n` paths, each its own stretch of the tank's length, low in the first storey and near the glass where
+ * the lounge and the walk in see them, a slower, longer run than the orange fish.
+ */
+export function giftPaths(n: number, o: HqOption = HQ, seed = 11): Fish[] {
+  const r = seededRandom(seed), box = swimBox(o), span = (box.x1 - box.x0) / Math.max(1, n);
+  return Array.from({ length: n }, (_, i) => {
+    const aa = Math.min(span * 0.5 + 0.8, 2.6), ya = 0.12, da = 0.15;
+    return {
+      ac: THREE.MathUtils.clamp(box.x0 + span * (i + 0.5), box.x0 + aa, box.x1 - aa), aa, w: 0.1 + 0.06 * r(), ph: r() * Math.PI * 2,
+      y0: THREE.MathUtils.clamp(box.y0 + 0.7 + (i % 3) * 0.75 + 0.3 * r(), box.y0 + ya, box.y1 - ya), ya,
+      d0: THREE.MathUtils.clamp(box.z0 + 0.35 + 0.3 * r(), box.z0 + da, box.z1 - da), da,
+      size: 1, beat: r() * 6.28, color: "",
+    };
+  });
+}
+/** A gift's length in the big tank from its real size (cm): big enough to read from the hall, the giants capped. */
+export const giftLength = (sizeCm: readonly [number, number]) => Math.min(1.4, Math.max(0.6, 0.6 + 0.2 * Math.log2(Math.max(1, (sizeCm[0] + sizeCm[1]) / 2) / 10)));

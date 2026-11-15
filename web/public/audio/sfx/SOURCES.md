@@ -43,6 +43,12 @@ To rebuild: `python3 art/audio/synth_volleyball.py <wav dir> [<preview dir>]`, t
 |---|---|---|---|---|
 | `coin.ogg` | a coin landing in the wallet: a bright two-partial clink, a metal tick, a glint (played once per coin of a sale, rising) | self-made, `art/audio/synth_coin.py` (2026-11-02), synthesised from sines and noise, nothing fetched | game/fishing-depth (Tethos) | CC0 1.0 |
 
+## The tasting book's stamp
+
+| File | What it is | Source | Author | Licence |
+|---|---|---|---|---|
+| `stamp-heavy.ogg` | the collection's stamp landing hard: a heavy wooden thump, the block's knock, the paper's slap, the counter ringing under it | self-made, `art/audio/synth_stamp.py` (2026-11-06), synthesised from sines and noise, nothing fetched | game/tasting-book (Tethos) | CC0 1.0 |
+
 ## Ambient beds (`../ambient/bed-*.ogg`)
 
 Self-made: synthesised from noise and sines by `art/audio/synth_ambience.py` (2026-11-05, game/sky-ambient round 3), with

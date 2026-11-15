@@ -1,0 +1,38 @@
+.page {
+  min-height: 100vh;
+  background: var(--ui-bg);
+  color: var(--ui-ink-body);
+  font-family: var(--gui-font);
+  padding: 24px 16px 64px;
+}
+.nav {
+  max-width: 720px;
+  margin: 0 auto 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-weight: 700;
+}
+.nav a { color: var(--ui-ink); text-decoration: none; }
+.nav a:hover { text-decoration: underline; }
+.doc {
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--ui-card);
+  border-radius: 22px;
+  padding: clamp(22px, 5vw, 48px);
+  line-height: 1.65;
+  font-size: 16px;
+}
+.doc h1 { color: var(--ui-ink); font-size: clamp(28px, 6vw, 36px); line-height: 1.15; margin: 0 0 6px; }
+.doc h1 + p { color: var(--ui-muted); margin-top: 0; }
+.doc h2 { color: var(--ui-ink); font-size: 20px; margin: 36px 0 10px; }
+.doc h3 { color: var(--ui-ink); font-size: 17px; margin: 24px 0 8px; }
+.doc p, .doc ul { margin: 0 0 14px; }
+.doc ul { padding-left: 22px; list-style: disc; }
+.doc li { margin-bottom: 6px; }
+.doc a { color: var(--ui-ink); text-decoration: underline; text-underline-offset: 2px; }
+.doc code { font-family: inherit; font-weight: 700; }
+.doc table { width: 100%; border-collapse: collapse; margin: 6px 0 18px; font-size: 15px; }
+.doc th, .doc td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--ui-line); }
+.doc th { color: var(--ui-ink); }

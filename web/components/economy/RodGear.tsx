@@ -11,7 +11,8 @@ import { Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { CircleDot, Clover, Link, Magnet, MoveHorizontal, RefreshCw, Timer, Worm } from "lucide-react";
+import { CircleDot, Worm } from "lucide-react";
+import { STAT_ICON } from "./statIcons";
 import { GearSlot, HexRadar } from "@/components/gui/flat";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { worldModel } from "@/lib/game/world/active";
@@ -32,9 +33,6 @@ export const gainsText = (t: Tackle) => STAT_KEYS.flatMap(k => (t.gains[k] ? [`+
 /** "Rare rod · hooks up to epic". */
 export const rodLine = (r: RodTier) => `${RARITY_LABEL[r.rarity]} rod · hooks up to ${RARITY_LABEL[hookCap(r.rarity)].toLowerCase()}`;
 
-const STAT_ICON: Record<RodStat, ReactNode> = {
-  luck: <Clover />, bite: <Timer />, strength: <Link />, reel: <RefreshCw />, lure: <Magnet />, control: <MoveHorizontal />,
-};
 const axis = (k: RodStat, value: number, base?: number) => ({ label: STAT_INFO[k].label, hint: STAT_INFO[k].does, icon: STAT_ICON[k], value, base });
 
 /** A rod's radar: the rod alone, or (`tackle`) the build with its add-ons over the rod alone. */

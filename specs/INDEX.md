@@ -139,6 +139,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 
 ## Ops, launch, QA, security
 `admin-pass.md` | Admin tooling content control | reference
+`analytics.md` | Player analytics: the event log, the admin Players page, what is collected | live
 `api.md` | API contracts | reference
 `cleanup-and-game-security.md` | Game-side security cleanup | reference
 `hardening-questions.md` | Hardening open points | reference

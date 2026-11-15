@@ -15,14 +15,21 @@
  * - the fish: one instanced mesh, every fish swimming its path in the vertex shader (lib/game/hqAquarium.ts has the
  *   same sums), so the tank is one draw and a uniform a frame.
  * Every shader goes through three's shared project_vertex, so the curved world bends the tank with the room.
+ * The club's drops (tasting-book round 6, David: "if you wanna drop but it doesnt do anything"): every species members
+ * dropped in, the newest AQUARIUM_MAX, swim among the schools as their own models, lit by the tank like the reef
+ * (`Gifts`). The tank is the club's, as HQ is: everyone sees everyone's.
  */
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { HQ } from "@/lib/game/hqLayout";
-import { tankFish } from "@/lib/game/hqAquarium";
+import { fishAt, giftLength, giftPaths, tankFish, type Fish as Path } from "@/lib/game/hqAquarium";
+import { levelFish, tankFishDef } from "@/components/game/peaceful/TankFish";
+import { worldTime } from "@/lib/game/worldClock";
+import { httpEconomyTransport } from "@/lib/wallet/transport";
+import type { FishDef } from "@/lib/game/fishing";
 
 const TANK_URL = "/assets/game/interiors/hq/tank.glb";
 export const preloadAquarium = () => useGLTF.preload(TANK_URL);
@@ -185,6 +192,47 @@ function Fish() {
   return <primitive object={mesh} />;
 }
 
+/** Module scope (the react compiler forbids writing through hook values): a gift at its place on its path. */
+function swim(group: THREE.Group | null, path: Path) {
+  if (!group) return;
+  const p = fishAt(path, worldTime() % 3600);
+  group.position.set(p.x, p.y, p.z);
+  group.rotation.y = p.yaw;
+}
+
+/** One gift: its species' model laid level, lit by the tank's light like the reef, on its path. */
+function GiftFish({ def, path }: { def: FishDef; path: Path }) {
+  const { scene } = useGLTF(def.model);
+  const body = useMemo(() => {
+    const fish = levelFish(scene, def, giftLength(def.sizeCm));
+    fish.traverse(o => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && (mesh.material as THREE.MeshStandardMaterial).isMeshStandardMaterial) mesh.material = tankLit((mesh.material as THREE.MeshStandardMaterial).clone(), false);
+    });
+    return fish;
+  }, [scene, def]);
+  useEffect(() => () => body.traverse(o => { const mesh = o as THREE.Mesh; if (mesh.isMesh) (mesh.material as THREE.Material).dispose(); }), [body]);
+  const group = useRef<THREE.Group>(null);
+  useFrame(() => swim(group.current, path));
+  return <group ref={group}><primitive object={body} /></group>;
+}
+
+/** The club's drops in the tank (GET /api/economy/tasting `aquarium`); nothing when signed out or none yet. */
+function Gifts() {
+  const [keys, setKeys] = useState<string[]>([]);
+  useEffect(() => {
+    // Again after a drop at the tank (TankSheet's tsi:tank), so yours swims in at once.
+    let live = true;
+    const load = () => httpEconomyTransport.tasting().then(v => { if (live) setKeys(v.aquarium); }, () => {});
+    void load();
+    window.addEventListener("tsi:tank", load);
+    return () => { live = false; window.removeEventListener("tsi:tank", load); };
+  }, []);
+  const defs = useMemo(() => keys.map(tankFishDef).filter((d): d is FishDef => !!d), [keys]);
+  const paths = useMemo(() => giftPaths(defs.length), [defs.length]);
+  return <>{defs.map((d, i) => <Suspense key={d.key} fallback={null}><GiftFish def={d} path={paths[i]} /></Suspense>)}</>;
+}
+
 export default function Aquarium() {
   const { scene } = useGLTF(TANK_URL);
   const model = useMemo(() => {
@@ -212,5 +260,6 @@ export default function Aquarium() {
   return <group>
     <primitive object={model.root} />
     <Fish />
+    <Gifts />
   </group>;
 }

@@ -15,7 +15,7 @@ import { useEffect, useRef } from "react";
 import { useThree, type RootState } from "@react-three/fiber";
 import { bindGameKeys } from "@/lib/game/keyboardInput";
 import { pauseGame } from "@/lib/game/escMenu";
-import { AIM_Y, RESUME_MS, capture, cursorHolds, loadOrbit, lockEndPauses, lookOrbit, nextCapture, orbit, pen, pickName, resume, saveOrbit, setAimTarget, setCaptureState, snapBack, subscribeOrbitPrefs, zoomOrbit, type CaptureEvent } from "@/lib/game/orbitCamera";
+import { AIM_Y, RESUME_MS, capture, cursorHolds, loadOrbit, lockEndPauses, lookOrbit, nextCapture, orbit, pen, pickName, resume, saveOrbit, seated, setAimTarget, setCaptureState, snapBack, subscribeOrbitPrefs, zoomOrbit, type CaptureEvent } from "@/lib/game/orbitCamera";
 
 /** The camera keys held now (the arrows), read by the rig each frame. */
 export const orbitKeys: Record<string, boolean> = {};
@@ -102,8 +102,9 @@ export function useOrbitInput(pick = true) {
       if (!locked && lockEndPauses(prev, mine)) pauseGame();
     };
     const lockError = () => send("failed");
+    // Seated (a bar stool's view: tasting-book round 4, David: "remove clock to look around") the mouse looks round with no click.
     const look = (e: MouseEvent) => {
-      if (doc.pointerLockElement !== el || capture.state !== "captured") return;
+      if (!(doc.pointerLockElement === el && capture.state === "captured") && !(seated.on && capture.state === "free")) return;
       const dx = e.movementX, dy = e.movementY;
       if (Math.abs(dx) > MAX_STEP || Math.abs(dy) > MAX_STEP) return;
       if (pen.move) { pen.move(dx, dy); return; } // tracing a shape: the mouse is the pen
@@ -145,24 +146,35 @@ export function useOrbitInput(pick = true) {
 
     // Two fingers on a touch screen: drag to turn, two quick two-finger taps to snap back. One finger stays tap-to-walk.
     const touches = new Map<number, { x: number; y: number }>();
-    let pair: { x: number; y: number; moved: number; at: number } | null = null, lastPairTap = -Infinity, swallowUntil = -Infinity;
+    let pair: { x: number; y: number; moved: number; at: number } | null = null, lastPairTap = -Infinity, swallowUntil = -Infinity, dragged = 0;
     const middle = () => { let x = 0, y = 0; for (const p of touches.values()) { x += p.x; y += p.y; } return { x: x / touches.size, y: y / touches.size }; };
     const touchDown = (e: PointerEvent) => {
       if (e.pointerType !== "touch") return;
       touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      dragged = 0;
       if (touches.size === 2) pair = { ...middle(), moved: 0, at: performance.now() };
     };
     const touchMove = (e: PointerEvent) => {
       if (e.pointerType !== "touch" || !touches.has(e.pointerId)) return;
+      const was = touches.get(e.pointerId)!;
       touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // Seated, one finger drags the view (a drag is never a tap-to-walk; the stick or a tap gets you up).
+      if (seated.on && touches.size === 1) {
+        const dx = e.clientX - was.x, dy = e.clientY - was.y;
+        lookOrbit(dx * 1.6, dy * 1.6);
+        dragged += Math.hypot(dx, dy);
+        return;
+      }
       if (!pair || touches.size !== 2) return;
       const m = middle(), dx = m.x - pair.x, dy = m.y - pair.y;
       lookOrbit(dx * 1.6, dy * 1.6);
       pair.moved += Math.hypot(dx, dy); pair.x = m.x; pair.y = m.y;
     };
     const touchUp = (e: PointerEvent) => {
-      if (e.pointerType !== "touch" || !touches.delete(e.pointerId) || !pair) return;
+      if (e.pointerType !== "touch" || !touches.delete(e.pointerId)) return;
       const now = performance.now();
+      if (dragged > 8) swallowUntil = now + 400;
+      if (!pair) return;
       swallowUntil = now + 400;
       if (pair.moved < 12 && now - pair.at < 300) {
         if (now - lastPairTap < 450) { snapBack(); lastPairTap = -Infinity; } else lastPairTap = now;

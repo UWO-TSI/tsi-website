@@ -1,0 +1,27 @@
+an1: the event log adds no work per frame (game/analytics r1).
+
+Per-frame APIs in the tracking code (lib/analytics, and the lines it adds to game code):
+  none
+
+Where the game calls it (each runs on a change, never in a frame loop):
+  import { arrivalEvent, arrivalRun, bramNear, bramPrompt, clearDock, subscribeArrival, useArrivalChip, useArrivalPhase, useArrivalTools, useDockCleared, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
+  import { setScreen, startSession, trackStep } from "@/lib/analytics/track";
+  const stop = startSession();
+  const off = subscribeArrival(() => {
+  if (a) trackStep(a.phase === "done" ? "arrived" : `arrival_${a.phase}`);
+  if (id) trackStep(`tut_${id.toLowerCase()}`);
+  useEffect(() => setScreen(welcoming ? "opening" : bagOpen ? "bag" : sheet ?? inside ?? site), [welcoming, bagOpen, sheet, inside, site]);
+  import { trackStep } from "@/lib/analytics/track";
+  export function startVisit() { set({ visit: newVisit() }); trackStep("hq_report"); }
+  if (next.beat !== v.beat || next.done) trackStep(next.done || next.beat >= HQ_SCRIPT.length ? "hq_done" : `hq_${HQ_SCRIPT[next.beat].id}`);
+  import { trackStep } from "@/lib/analytics/track";
+  trackStep("creator");
+  import { trackFeature } from "@/lib/analytics/track";
+  if (res.ok && json?.catch && body.action !== "cast") trackFeature(body.action === "harvest" ? "foraging" : "fishing");
+
+- subscribeArrival: the arrival store's change notice, already deferred out of the frame loop by setTimeout (lib/game/arrival/arrivalStore.ts arrivalChanged); fires on a phase or stop change only.
+- setScreen: a React effect on sheet/room/island changes; it sets one variable.
+- trackStep/trackFeature: a Set lookup and an array push; the network is one POST per 15 s at most, or a beacon on pagehide.
+- heartbeat: one setInterval every 3 minutes, skipped while the tab is hidden.
+
+Tests: web/lib/analytics/track.test.ts (batching: three steps, one request after 15 s; nothing sent before a session; heartbeat stops when hidden; stops for good after 401).

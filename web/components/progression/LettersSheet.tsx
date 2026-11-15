@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { listLetters, markRead, reportLetter, sendLetter } from "@/lib/progression/client";
 import { ApiError } from "@/lib/apiClient";
+import { friendsList } from "@/lib/world/api";
 import { NOTE_MAX_LEN, SUBJECT_MAX_LEN } from "@/lib/progression/letters";
 import { refreshProgression } from "@/lib/progression/useProgression";
 import type { LetterView } from "@/lib/progression/types";
@@ -30,11 +31,15 @@ export const lettersTransport: LettersTransport = {
   send: sendLetter,
   markRead,
   report: reportLetter,
+  // World names only, from your friends (real names never show in game; the directory search showed profile names).
   async searchMembers(query) {
-    const res = await fetch(`/api/directory?search=${encodeURIComponent(query)}`);
-    if (!res.ok) return [];
-    const body = (await res.json().catch(() => null)) as { members?: MemberOption[] } | null;
-    return (body?.members ?? []).slice(0, 8).map((m) => ({ id: m.id, display_name: m.display_name }));
+    const r = await friendsList();
+    if (!r.ok) return [];
+    const q = query.trim().toLowerCase();
+    return r.friends.friends
+      .filter((f) => (f.world_name ?? "").toLowerCase().includes(q))
+      .slice(0, 8)
+      .map((f) => ({ id: f.member_id, display_name: f.world_name ?? "A friend" }));
   },
 };
 
@@ -209,7 +214,7 @@ function LetterComposer({ transport, to: initialTo, onDone }: { transport: Lette
           </div>
         ) : (
           <>
-            <input id="letter-to" className={m.input} placeholder="Search members by name" value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" />
+            <input id="letter-to" className={m.input} placeholder="Search your friends" value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" />
             {matches.length > 0 ? (
               <div className={m.matches}>
                 {matches.map((x) => <button key={x.id} type="button" className={m.match} onClick={() => setTo(x)}>{x.display_name}</button>)}
