@@ -10,7 +10,7 @@ This file is that frame. Every asset of a kind gets the same shots, the same fra
 
 | Rule | Value |
 |---|---|
-| Image model | GPT-Image-2.6 Sunburst (`gpt-image-2.6-sunburst`) or GPT-Image-2.5 Sunburst (`gpt-image-2.5-sunburst`), David's two (2026-11-18). One model for every shot of an asset, recorded in the manifest; never mix the two inside one sheet. Default 2.6 Sunburst, the newer. The same two draw the VFX sprite sheets (§3). |
+| Image model | GPT-Image-2.5 Sunburst (`gpt-image-2.5-sunburst`) or GPT-Image-2.6 Sunburst (`gpt-image-2.6-sunburst`), David's two (2026-11-18). One model for every shot of an asset, recorded in the manifest; never mix the two inside one sheet. Default 2.5 Sunburst: it is the one the public API runs with the key (§5). 2.6 is only reachable through the signed-in ElevenLabs MCP. The same model draws the VFX sprite sheets (§3). Quality `high`, resolution `2K`. |
 | Reference images | The family's collage (§1.6) for the hero. Every later shot also gets the approved hero and, once it exists, the approved front (or profile). |
 | Background | Flat pure white `#FFFFFF`. No floor, no ground shadow, no gradient, no text, no labels, no frame lines, no other objects, no hands. |
 | Light | Soft and even from the upper front-left, the same in every shot. A glowing part glows on the object only. |
@@ -149,11 +149,11 @@ The family collage and style sheet come from the existing models:
   - ElevenLabs sound effects;
   - 4 takes per sound;
   - prompt = style sheet + the sound's line from the sound list + its length.
-- **Lengths:**
+- **Lengths** (the API makes 0.5 to 30 s, so shorter sounds are generated at 0.5 s and trimmed):
   - UI 0.1 to 0.6 s;
   - actions 0.3 to 2 s;
   - stingers up to 4 s;
-  - ambient beds are 30 s seamless loops.
+  - ambient beds are 30 s seamless loops (`loop: true`).
 - **Processing (the worker):**
   1. trim the silence;
   2. 10 ms fades;
@@ -183,3 +183,15 @@ The family collage and style sheet come from the existing models:
   - two takes of the same motion, one from the front and one from the side;
   - for a cutscene, one reference per shot of the storyboard, with the shot's camera named in the prompt.
 - **Use:** David remakes the motion in Roblox Studio. The `.rbxmx` export goes in `art/characters/r15/studio/`, and `roblox-anim.mjs` converts it.
+
+## 5. Calling ElevenLabs
+
+The key is in the keychain as `elevenlabs-api-key` (David, 2026-11-18). Read it into a variable, pass it as the `xi-api-key` header, and never print it. The public API needs no MCP sign-in:
+- **Images:** `POST /v1/flows/image` with:
+  - `model_id`, `prompt`, `aspect_ratio` (`1:1` or `16:9`), `resolution` (`2K`) and `quality` (`high`);
+  - `images`: up to 10 references (`inline_base64`, or a `generation` reference to an earlier result).
+  Poll `GET /v1/flows/image/{generation_id}` for the result.
+- **Video references:** `POST /v1/flows/video`, polled the same way.
+- **Sound effects:** `POST /v1/sound-generation` with `text`, `duration_seconds` (0.5 to 30), `loop` and `prompt_influence` (default 0.3), on `eleven_text_to_sound_v2`.
+
+The hosted MCP (`/v1/mcp`) takes only the OAuth sign-in, not the key. `/v1/user/subscription` hangs with this key, so the credit balance is read in the ElevenLabs dashboard.
