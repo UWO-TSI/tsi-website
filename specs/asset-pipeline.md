@@ -36,17 +36,17 @@ The axes are the game's: front faces the camera at the start, right is the objec
 | 7 | `bottom` | Orthographic, straight up. The front faces the top edge. Skipped for buildings and anything that sits flat on the ground. |
 | 8-10 | `detail-1` to `detail-3` | Close-ups of the three details named in the brief, each straight on, filling 80%. |
 
-**B. Long items: rods, tools, weapons, fish** (canvas 3:1, the long axis horizontal)
+**B. Long items: rods, tools, weapons, fish** (canvas 16:9 for the long views, the long axis horizontal)
 
-In every view the grip (a fish's head) is on the left and the tip (the tail) is on the right.
+In every view the grip (a fish's head) is on the left and the tip (the tail) is on the right. The long views were 3:1 until David's mark on Asset Frames 1 ("why is the frames so horizontally long"). At 80% fill the item's length sets its size, so a 16:9 frame draws it just as big.
 
 | # | File | View |
 |---|---|---|
 | 1 | `hero` | Canvas 1:1. Three-quarter: the item lies on a diagonal from lower left to upper right at 30 degrees, the camera 25 degrees above. Gentle perspective. |
-| 2 | `profile` | Orthographic side view of the side with the most detail (a rod's reel side, a fish's left side). |
-| 3 | `profile-other` | Orthographic, the opposite side. Only when it differs. |
-| 4 | `top` | Orthographic, straight down. |
-| 5 | `bottom` | Orthographic, straight up. |
+| 2 | `profile` | Canvas 16:9. Orthographic side view of the side with the most detail (a rod's reel side, a fish's left side). |
+| 3 | `profile-other` | Canvas 16:9. Orthographic, the opposite side. Only when it differs. |
+| 4 | `top` | Canvas 16:9. Orthographic, straight down. |
+| 5 | `bottom` | Canvas 16:9. Orthographic, straight up. |
 | 6 | `end-grip` | Canvas 1:1. Orthographic, looking along the long axis at the grip (head) end. |
 | 7 | `end-tip` | Canvas 1:1. Orthographic, looking at the tip (tail) end. |
 | 8-10 | `detail-1` to `detail-3` | Canvas 1:1 close-ups of the three named details (for a rod, say the reel, the grip and the tip ornament). |
@@ -64,6 +64,21 @@ In every view the grip (a fish's head) is on the left and the tip (the tail) is 
 | 7 | `face-right` | Close-up of the head and shoulders from the right. |
 | 8 | `hands` | Both hands at rest, palm and back, side by side. |
 | 9 | `feet` | Both feet (or shoes), front and side, side by side. |
+
+Humanoid mobs (anything that stands on two legs with arms) use this list.
+
+**D. Creatures and mobs that aren't humanoid: animals, slimes, flyers** (canvas 1:1; David on Asset Frames 1: "add a character sheet for mobs")
+
+| # | File | View |
+|---|---|---|
+| 1 | `hero` | Three-quarter front-right, 25 degrees up, in its natural idle: standing on all fours, sitting, or hovering with wings spread. Gentle perspective. |
+| 2 | `front` | Orthographic, from the front, in the same idle pose (wings spread, tail out). |
+| 3 | `right` | Orthographic, from its right. |
+| 4 | `back` | Orthographic, from behind. |
+| 5 | `top` | Orthographic, straight down, head toward the bottom edge. A low or flying creature reads from above in play. |
+| 6 | `face-front` | Close-up of the face, straight on. |
+| 7 | `face-right` | Close-up of the face from the right. |
+| 8, 9 | `detail-1`, `detail-2` | The two parts named in the brief (a tail, wings, a shell, a weapon). |
 
 ### 1.3 The prompt skeleton
 
@@ -93,8 +108,9 @@ A script (`art/pipeline/sheet.py`, written on the first run) puts the approved s
 - **Consistency check:** a shared side that differs by more than 5% between two views is drawn in red with its percentage. That view is regenerated before modelling.
 - **Layouts:**
   - Family A: front, right, back and left on row 1; top, bottom and the hero on row 2; the three details on row 3.
-  - Family B: the hero and both end views on row 1; then profile, profile-other, top and bottom, each a full-width row; the details on the last row.
+  - Family B: row 1 is profile, profile-other and top (16:9); row 2 is bottom (16:9), the hero and both end views (1:1); row 3 is the three details.
   - Family C: front, right, back and left on row 1, with a head-height ruler (how many heads tall) and lines at the chin, shoulders, waist, hips and knees; the hero, both face close-ups, the hands and the feet on row 2.
+  - Family D: front, right, back and top on row 1, with the 2 m player's silhouette beside the front view for scale; the hero, both face close-ups and the two details on row 2.
 - **Files:**
   - the shots: `art/pipeline/concepts/<family>/<asset>/<view>.png`;
   - the sheet: `<asset>-sheet.png`;
@@ -118,7 +134,7 @@ A shot that fails gets another take (up to 3, §1.1).
    - front (or profile) on the XZ plane;
    - right on YZ;
    - top on XY.
-3. The worker renders the model from exactly the sheet's angles, at the same 1:1 or 3:1 framing.
+3. The worker renders the model from exactly the sheet's angles, at the same 1:1 or 16:9 framing.
 4. Opus sets each render beside its shot and lists the differences as numbered fixes. The loop repeats until Opus is satisfied, at most 100 rounds.
 5. Then the GLB is packed (`pack-glbs.mjs`), and the final renders beside the sheet go to David as a review page.
 
