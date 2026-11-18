@@ -1,8 +1,8 @@
 # The asset pipeline: the fixed frames
 
-Ledger row 339 (David, 2026-11-18): every asset that needs iteration runs through `/delegate`, with Opus as director and QA. The loop runs until Opus is satisfied, capped at 100 rounds. Then, on how: "be more specific on what you will do, like which specific angle shots will you produce for the sheet so that its consistent, like have a frame for it so we gen consistent result".
+Ledger row 339 (David, 2026-11-18): every asset that needs iteration runs through `/delegate`, with Opus as director and QA. The loop runs until Opus is satisfied, capped at 100 rounds. Then, on how: "be more specific on what you will do, like which specific angle shots will you produce for the sheet so that its consistent, like have a frame for it so we gen consistent result". Row 340, the same day: "each model and object need a blue print, not only the hero shot but also exploaded view, and docuemtn the dimentions the colors the moving parts the materials the texture the animation and effects" (§1.5).
 
-This file is that frame. Every asset of a kind gets the same shots, the same framing, the same prompt skeleton and the same sheet layout. The only thing that changes between two rods is the description. Layout pictures: `specs/asset-pipeline/frame-*.webp`.
+This file is that frame. Every asset of a kind gets the same shots, the same framing, the same prompt skeleton, the same sheet layout and the same blueprint. The only thing that changes between two rods is the description. Layout pictures: `specs/asset-pipeline/frame-*.webp`.
 
 ## 1. Models
 
@@ -11,13 +11,13 @@ This file is that frame. Every asset of a kind gets the same shots, the same fra
 | Rule | Value |
 |---|---|
 | Image model | GPT-Image-2.5 Sunburst (`gpt-image-2.5-sunburst`) or GPT-Image-2.6 Sunburst (`gpt-image-2.6-sunburst`), David's two (2026-11-18). One model for every shot of an asset, recorded in the manifest; never mix the two inside one sheet. Default 2.5 Sunburst: it is the one the public API runs with the key (§5). 2.6 is only reachable through the signed-in ElevenLabs MCP. The same model draws the VFX sprite sheets (§3). Quality `high`, resolution `2K`. |
-| Reference images | The family's collage (§1.6) for the hero. Every later shot also gets the approved hero and, once it exists, the approved front (or profile). |
+| Reference images | The family's collage (§1.7) for the hero. Every later shot also gets the approved hero and, once it exists, the approved front (or profile). |
 | Background | Flat pure white `#FFFFFF`. No floor, no ground shadow, no gradient, no text, no labels, no frame lines, no other objects, no hands. |
 | Light | Soft and even from the upper front-left, the same in every shot. A glowing part glows on the object only. |
 | Projection | Orthographic (no perspective) for every view except the hero and the close-ups. The camera is level and exactly on the view's axis. |
 | Fill | The object is centred and spans 80% of the canvas along its longest on-screen side, leaving a 10% margin. Nothing is cropped. |
 | State | Rest state. A rod is unextended with its line wound, and a door is closed. A character stands in an A-pose: arms 30 degrees out, palms in, feet under the hips, face neutral, looking ahead. |
-| Takes | 1 per shot. If Opus rejects it (§1.5), one more take, up to 3. After 3 failed takes, stop that shot and show David. Every take spends credits; a take is never re-called to retry a failure. |
+| Takes | 1 per shot. If Opus rejects it (§1.6), one more take, up to 3. After 3 failed takes, stop that shot and show David. Every take spends credits; a take is never re-called to retry a failure. |
 
 ### 1.2 The shots, by family
 
@@ -35,6 +35,7 @@ The axes are the game's: front faces the camera at the start, right is the objec
 | 6 | `top` | Orthographic, straight down. The object's front faces the bottom edge of the canvas. |
 | 7 | `bottom` | Orthographic, straight up. The front faces the top edge. Skipped for buildings and anything that sits flat on the ground. |
 | 8-10 | `detail-1` to `detail-3` | Close-ups of the three details named in the brief, each straight on, filling 80%. |
+| 11 | `exploded` | The hero's camera. The object taken apart: every separate part pulled straight out along the direction it fits on, with even gaps, each part still facing the way it does when assembled, nothing overlapping. A building comes apart in storeys and roof, with its door and windows pulled out in front. |
 
 **B. Long items: rods, tools, weapons, fish** (canvas 16:9 for the long views, the long axis horizontal)
 
@@ -50,6 +51,7 @@ In every view the grip (a fish's head) is on the left and the tip (the tail) is 
 | 6 | `end-grip` | Canvas 1:1. Orthographic, looking along the long axis at the grip (head) end. |
 | 7 | `end-tip` | Canvas 1:1. Orthographic, looking at the tip (tail) end. |
 | 8-10 | `detail-1` to `detail-3` | Canvas 1:1 close-ups of the three named details (for a rod, say the reel, the grip and the tip ornament). |
+| 11 | `exploded` | Canvas 16:9. The profile view, orthographic. The parts slid apart along the long axis with even gaps; parts that sit on the side (a reel, fins) pulled straight out above or below their seat. |
 
 **C. Characters** (canvas 1:1)
 
@@ -64,6 +66,7 @@ In every view the grip (a fish's head) is on the left and the tip (the tail) is 
 | 7 | `face-right` | Close-up of the head and shoulders from the right. |
 | 8 | `hands` | Both hands at rest, palm and back, side by side. |
 | 9 | `feet` | Both feet (or shoes), front and side, side by side. |
+| 10 | `exploded` | Canvas 16:9. Orthographic, from the front, in the A-pose. The body in the centre, split at the R15 joints with even gaps: head, upper and lower torso, upper and lower arms, hands, upper and lower legs, feet. Hair, headwear, each piece of clothing and each accessory lifted off and set beside the body at the height where it is worn. |
 
 Humanoid mobs (anything that stands on two legs with arms) use this list.
 
@@ -79,6 +82,7 @@ Humanoid mobs (anything that stands on two legs with arms) use this list.
 | 6 | `face-front` | Close-up of the face, straight on. |
 | 7 | `face-right` | Close-up of the face from the right. |
 | 8, 9 | `detail-1`, `detail-2` | The two parts named in the brief (a tail, wings, a shell, a weapon). |
+| 10 | `exploded` | The hero's camera. The parts pulled away from the body with even gaps (head, legs, tail, wings, shell, horns), each still facing the way it does when attached. |
 
 ### 1.3 The prompt skeleton
 
@@ -95,6 +99,8 @@ Every shot's prompt is these five blocks in this order. Only `[ASSET]` and `[VIE
 [MATCH]  (every shot after the hero) Exactly the same object as the reference image: the same parts, colours,
          materials, proportions and number of pieces. Change only the camera angle.
 ```
+
+For `exploded`, `[MATCH]` reads instead: "Exactly the same object as the reference image, taken apart: the same parts, colours, materials and proportions, every part shown once. Change only the spacing between the parts. No lines, arrows, numbers or labels." The numbers are added by script on the blueprint (§1.5).
 
 ### 1.4 The model sheet (composed by script, not generated)
 
@@ -113,30 +119,83 @@ A script (`art/pipeline/sheet.py`, written on the first run) puts the approved s
   - Family D: front, right, back and top on row 1, with the 2 m player's silhouette beside the front view for scale; the hero, both face close-ups and the two details on row 2.
 - **Files:**
   - the shots: `art/pipeline/concepts/<family>/<asset>/<view>.png`;
-  - the sheet: `<asset>-sheet.png`;
-  - `<asset>.json`: each shot's prompt, model, take number, credits and flow id.
-  - Full-size PNGs stay out of git. Only the sheet, as webp, is committed.
+  - the sheet: `<asset>-sheet.png`, and its second page, the blueprint: `<asset>-blueprint.png` (§1.5);
+  - `<asset>.json`: each shot's prompt, model, take number, credits and flow id;
+  - `<asset>.blueprint.json`: the blueprint's record (§1.5).
+  - Full-size PNGs stay out of git. The sheet and the blueprint are committed as webp, with the blueprint's JSON.
 
-### 1.5 What Opus checks on each shot, before the sheet
+### 1.5 The blueprint
+
+Row 340 (David, 2026-11-18): "each model and object need a blue print, not only the hero shot but also exploaded view, and docuemtn the dimentions the colors the moving parts the materials the texture the animation and effects". Every model gets a blueprint as its sheet's second page: the exploded view with every part numbered, and a record of the seven things David named. The worker builds from the blueprint, and Opus checks the model against it number by number. Layout: `frame-blueprint.webp`.
+
+**The record:** `<asset>.blueprint.json`, written by Opus once the shots pass §1.6. One entry per part, numbered in the order the exploded view reads (left to right, top to bottom).
+
+| What | Recorded | Where it comes from |
+|---|---|---|
+| Dimensions | The whole asset's length, width and height in metres at game scale (the player is 2 m). Each part's size. The pivot: where it meets the ground or the hand. The front direction. | The family style sheet's size range for the rarity, then measured off the orthographic shots at the sheet's one scale (§1.4). |
+| Colours | One hex per part, and the palette: every colour once, with the parts that use it. | Sampled from the front (or profile) shot at each part, then snapped to the family style sheet's palette, within its colour count. |
+| Materials | One per part, from the game's presets: wood, stone, metal, paint, glass, cloth, leather or velvet (`P_Wood` and so on, `web/lib/game/modelMaterials.ts`). Characters use their `Character*` materials. A glowing part also records its emissive colour and strength. | Opus, from the description and the shots. |
+| Textures | `none` (flat colour with the shared top-light gradient) unless a texture shows in play. When one does: what it paints (grain, weave, a face, a label), its size in pixels within the family budget, and its file. | Opus. The default is none: textures only where they show (lane rules). |
+| Moving parts | For each part that moves: the pivot point in metres, the axis, the range (degrees or metres), the rest position, and what drives it: an animation clip, the rig or game code (a fishing line). In the GLB a moving part is its own node with its origin on the pivot, or a bone. | Opus, from the description. |
+| Animation | Each clip the asset needs: name, length in seconds, loop or once, which parts move and how far, and its reference (an ElevenLabs video or David's Studio clip, §4). A prop that never moves says `none`. | Opus. References per §4. |
+| Effects | Each effect: name; socket, an empty named `FX_<Name>` in the GLB at the point the effect attaches; trigger (always, while held, on use, on a catch, at night); colours; loop or once, and its length; its VFX sheet (§3). | Opus, from the rarity and the description. Effects are never drawn in the shots or built into the mesh: the model carries only the sockets and a glowing part's emissive colour (auras are rarity effects, rod style sheet). |
+
+Each part also records `explode`, the direction and distance it moved in the exploded shot, so the worker's exploded render can match it; and `callout`, where its number points on the exploded shot (x and y as fractions of the image), placed by Opus.
+
+**The page:** `art/pipeline/sheet.py` draws it at 4096 x 2304, laid out as in `frame-blueprint.webp`:
+- **Header:** the model sheet's header, then the palette strip: every swatch with its hex and its part numbers.
+- **Left:** the exploded shot, with a numbered circle and a leader line on every part.
+- **Top right:** the parts table: number, part, size, colour swatch and hex, material, texture, and whether it moves.
+- **Middle right:** the dimensions, drawn on the front (or profile) silhouette: overall length, width and height, the pivot marked, and the 2 m player beside it at the same scale.
+- **Bottom:** three panels:
+  - moving parts: pivot, axis, range, driven by;
+  - animation: clip, length, loop or once, what moves;
+  - effects: socket, trigger, colours, length, sheet.
+
+**By family:**
+- **A:** the usual moving parts are hinges, lids, drawers and wheels. A building lists its doors, the windows that light at night (emissive), and sockets for smoke or lamps.
+- **B:** a rod's moving parts are the reel handle and the tip; the line and bobber are game code, recorded as such. A fish lists its tail, fins and jaw, and the body bend it swims with.
+- **C:** the parts are the R15 body parts plus hair, clothing and accessories. The moving parts are the rig (the 23-bone advanced R15, `TREE` in `art/characters/r15/build_body.py`), the face (blink, mouth) and any extra bones for hair or cloth (`Hair_*`, `Cloth_*`). Clips: Idle, Walk, Run and the character's own.
+- **D:** the parts are the creature's body pieces. The moving parts are its bones, part by part. Clips: its idle, its movement and the actions in its mob spec.
+
+**Approval:** the sheet and the blueprint go to David on one review page before the worker starts. His marks change the blueprint; shots are only regenerated when he says so.
+
+### 1.6 What Opus checks on each shot, before the sheet
 
 1. The background is white, and there is no text, floor or shadow.
 2. Orthographic views are orthographic: parallel edges stay parallel and nothing shrinks with distance.
 3. The view is the one asked for, on axis and level.
 4. The object is centred, not cropped, and close to 80% fill.
 5. It is the same object as the hero: the same parts, colours and proportions, and the same number of pieces.
+6. The exploded shot shows every part from the other shots exactly once, apart and not overlapping, with no lines, arrows or numbers.
 
 A shot that fails gets another take (up to 3, §1.1).
 
-### 1.6 From the sheet to the model
+### 1.7 From the sheet and the blueprint to the model
 
-1. The brief to the `/delegate` worker names the sheet, the target size and the triangle budget.
-2. The worker models in headless Blender, with the orthographic views set up as blueprint planes at the target size:
+1. The brief to the `/delegate` worker names the sheet, the blueprint and its JSON, and the triangle budget.
+2. The worker models in headless Blender, with the orthographic views set up as blueprint planes at the blueprint's size:
    - front (or profile) on the XZ plane;
    - right on YZ;
    - top on XY.
-3. The worker renders the model from exactly the sheet's angles, at the same 1:1 or 16:9 framing.
-4. Opus sets each render beside its shot and lists the differences as numbered fixes. The loop repeats until Opus is satisfied, at most 100 rounds.
-5. Then the GLB is packed (`pack-glbs.mjs`), and the final renders beside the sheet go to David as a review page.
+   `art/pipeline/blueprint.py` on `game/tool-pipeline` already crops the views, sets the scale and measures the silhouettes; reuse it.
+3. The model follows the blueprint exactly:
+   - one node per part, named as in the blueprint;
+   - materials named by preset (`P_Wood`), with each part's hex as its colour;
+   - each moving part its own node with its origin on the pivot, or a bone;
+   - an `FX_<Name>` empty at every effect socket;
+   - the clips named and timed as in the blueprint.
+4. The worker renders the model from exactly the sheet's angles, at the same 1:1 or 16:9 framing, and once more exploded: each part moved by its `explode`, from the exploded shot's camera.
+5. `art/pipeline/check_blueprint.py` (headless Blender, written on the first run) checks the GLB against the blueprint and prints a pass or a fail per line:
+   - the overall size within 3% on each axis, each part within 5%;
+   - the same parts, by name and count;
+   - each part's colour hex exact, its preset, and no texture beyond the ones recorded;
+   - each moving part's origin within 1 cm of its pivot, turning on the recorded axis;
+   - every `FX_` socket present, within 1 cm of its point;
+   - every clip present, its length within 0.05 s, looping as recorded;
+   - the triangle, material and texture budget.
+6. Opus sets each render beside its shot, reads the check, and lists the differences as numbered fixes. The loop repeats until every check passes and Opus is satisfied, at most 100 rounds.
+7. Then the GLB is packed (`pack-glbs.mjs`), and the final renders beside the sheet and the blueprint go to David as a review page.
 
 The family collage and style sheet come from the existing models:
 - `art/pipeline/{rod,fish,gear}-style.md`, `collage.py` and `profile.py` are on `game/tool-pipeline`;
