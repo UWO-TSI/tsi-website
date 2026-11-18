@@ -22,8 +22,6 @@ export default function SiteFooter({ site }: { site: SiteConfig }) {
           <span>Start a branch at your school: <a href={`mailto:${site.contact}?subject=Starting%20a%20Tethos%20branch`}>{site.contact}</a></span>
           <span>
             <a href={site.instagram} target="_blank" rel="noopener noreferrer">Instagram</a>
-            {" · "}
-            <a href={site.github} target="_blank" rel="noopener noreferrer">GitHub</a>
             {" · "}<span style={{ whiteSpace: "nowrap" }}>© {new Date().getFullYear()} Tethos Association</span>
           </span>
         </div>

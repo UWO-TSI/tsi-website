@@ -1,5 +1,5 @@
-import Link from "next/link";
 import Reveal from "@/components/site/Reveal";
+import IslandScrub from "@/components/site/home/IslandScrub";
 
 /** Hovering a photo shows what it is. */
 const PHOTOS = [
@@ -29,22 +29,7 @@ export default function Team() {
           ))}
         </div>
 
-        <div className="tm-window-row">
-          <div style={{ display: "grid", gap: 18 }}>
-            <Reveal delay={0.06}><h3 className="ts-h2" style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)" }}>Members get an island.</h3></Reveal>
-            <Reveal delay={0.12}><p className="ts-body">Tethos Island is our member world: projects, events and the club in one place you walk around in. Join a team to get in.</p></Reveal>
-            <Reveal delay={0.16} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/students" className="ts-btn ts-btn--primary">Find your role <span className="ts-btn__arrow">→</span></Link>
-            </Reveal>
-          </div>
-          <Reveal className="tm-window">
-            <div className="tm-window__bar"><span className="tm-window__dots"><i /><i /><i /></span>play.tethos.ca</div>
-            <div className="tm-window__screen">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/site/tethos-island.webp" alt="Tethos Island, the member world: a small island with the club's buildings" loading="lazy" />
-            </div>
-          </Reveal>
-        </div>
+        <IslandScrub />
       </div>
     </section>
   );

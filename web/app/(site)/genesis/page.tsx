@@ -2,6 +2,7 @@ import "../pages.css";
 import type { Metadata } from "next";
 import GlyphField from "@/components/site/GlyphField";
 import Reveal from "@/components/site/Reveal";
+import GenesisLanyard from "@/components/site/genesis/GenesisLanyard";
 import DotNav from "@/components/site/DotNav";
 import GlyphSeam from "@/components/site/GlyphSeam";
 import SponsorForm from "@/components/site/genesis/SponsorForm";
@@ -55,6 +56,7 @@ const SECTIONS = [
   { id: "projects", label: "Projects" },
   { id: "where", label: "Where it goes" },
   { id: "glance", label: "2026" },
+  { id: "invite", label: "Invite" },
   { id: "thanks", label: "Thank you" },
   { id: "sponsor", label: "Sponsor us" },
 ];
@@ -140,6 +142,12 @@ export default function GenesisPage() {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="ts-section gx-lanyard" data-tone="deep" id="invite" aria-label="You're invited to GENESIS 2027">
+        <div className="ts-wrap">
+          <GenesisLanyard />
         </div>
       </section>
 
