@@ -42,7 +42,7 @@ These rules are hard. The coordinator merges and pushes; lanes never push.
   - frame-by-frame sprite sheets for VFX;
   - a still or video for animation;
   - the generated sound itself for SFX.
-  The coordinator then runs `/delegate`: a worker builds the piece (Blender headless for models) and Opus reviews it against the sheet until satisfied, at most 8 rounds. VFX, animation and cutscenes are remade in Roblox Studio by David and exported here (`web/scripts/roblox-anim.mjs`). No other asset libraries or generators. Meshy is paused. Every edit to a model is done in Blender.
+  The coordinator then runs `/delegate`: a worker builds the piece (Blender headless for models) and Opus reviews it against the sheet until satisfied, at most 100 rounds (David: "loop cap put it as 100"). VFX, animation and cutscenes are remade in Roblox Studio by David and exported here (`web/scripts/roblox-anim.mjs`). No other asset libraries or generators. Meshy is paused. Every edit to a model is done in Blender.
 - **Sound effects** (David, 2026-11-18, row 339, replacing the 2026-10-30 synthesised-or-CC0 rule): generated with ElevenLabs against one written SFX style sheet, through the asset pipeline above. Sounds already in the game stay. Log every file's source (ElevenLabs, or the old CC0 URL, author and licence) in web/public/audio/sfx/SOURCES.md. Music and voice still need David.
   - The exception is official technical templates David has OK'd, such as Roblox's creator reference avatar and head for fitting.
 - Real names never show in game (world names only). Never reveal the TC to CAD rate.
