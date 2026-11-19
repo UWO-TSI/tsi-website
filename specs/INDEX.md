@@ -156,6 +156,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 
 ## Recruitment portal and site
 `site/revamp.md` | tethos.ca redesign: structure, look, frame, home, /npo, /genesis (2026-11-11) | live
+`genesis-pass.md` | genesis.tethos.ca: GENESIS 2027 pass (NFC booth stickers, photobooth photos, vote, schedule, accounts) (2026-11-18) | plan
 `applicant-lighting-2026-09-16.md` | Applicant island lighting research | reference
 `recruitment-ui-kit.md` | Recruitment village UI kit | reference
 `tokens.md` | Design tokens for game and portal | reference
