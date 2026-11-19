@@ -66,6 +66,12 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
    - The fiery dark takes (`north-star/hero-5.png`, `hero-6.png`): "this looks like the fallen star rod". They become the **Fallen Star rod's** concept.
    - **North Star:** "need to make this more christmas looking and look like the north star, also the effects should be modeled layered on after the base model". David's reference: `References/Rod references/north-star-bethlehem-ref.png` (the Star of Bethlehem: a white eight-point star over a deep blue sky). Generate the base model alone first, then add the effects as layers.
 
+8. **North Star effects reference** (David, 2026-11-19, Pinterest pin 620089442493947762): a shooting-star effect breakdown.
+   - A bright white four-point star glint.
+   - A violet, blue and gold iridescent comet trail built from noise and optical flares.
+   - Radial speed streaks.
+   - Saved in the vault at `References/Rod references/north-star-vfx-ref.jpg`; third-party, so kept out of git.
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
