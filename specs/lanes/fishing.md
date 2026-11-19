@@ -32,6 +32,11 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
 1. All 11 rods on December 20, with Riptide and Tempest modelled through the asset pipeline?
 2. How many legendary fish? Proposal: one per open water (river, sea, cliff pool) plus the divine fight. The pond's legendary comes with the mountain.
 
+## David's answers (2026-11-19)
+
+1. Rods: "yes once its complete". All 11 ship on December 20, but each only once it is finished.
+2. Legendaries: "3 is good, no divine yet". One legendary each for the river, the sea and the cliff pool. The divine fight stays off.
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
