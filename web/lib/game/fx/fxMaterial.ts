@@ -17,11 +17,11 @@ export const FIRE_PACK_URL = "/assets/fx/fire-pack.webp";
 export const FIRE_PACK = { flame: { row: 0 }, mote: { row: 1 } } as const;
 export const FIRE_PACK_ROWS = Object.keys(FIRE_PACK).length;
 /**
- * The effects library's cut (art/fx/build_pack.py build_fxlib; specs/fx-library.md): the combat rows its code-drawn
+ * The effects library's cut (art/fx/build_pack.py build_fxlib; specs/vfx-library.md): the combat rows its code-drawn
  * types throw (components/game/fx/HolderFx.tsx, the awakening's strikes) and a sakura petal tumbling, painted as heat.
  */
 export const FXLIB_PACK_URL = "/assets/fx/fxlib-pack.webp";
-export const FXLIB_PACK = { mote: { row: 0 }, sparkBurst: { row: 1 }, flare: { row: 2 }, bolt: { row: 3 }, flame: { row: 4 }, wave: { row: 5 }, droplet: { row: 6 }, sakura: { row: 7 } } as const;
+export const FXLIB_PACK = { mote: { row: 0 }, sparkBurst: { row: 1 }, flare: { row: 2 }, bolt: { row: 3 }, flame: { row: 4 }, droplet: { row: 5 }, sakura: { row: 6 } } as const;
 export type FxlibSprite = keyof typeof FXLIB_PACK;
 export const FXLIB_PACK_ROWS = Object.keys(FXLIB_PACK).length;
 

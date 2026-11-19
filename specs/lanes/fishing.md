@@ -1,0 +1,50 @@
+# Section: fishing (complete for December 20)
+
+Worktree `.claude/worktrees/fishing`, branch `game/fishing`, cut from main 5ae7c2665 on 2026-11-19. Run by the coordinator as one section with David (memory `feedback-uwotsi-one-section`): one section at a time, its influence on the rest of the game checked inside it, merged only on his approval. Building runs through `/delegate` (lane rules).
+
+The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, then mountains, then combat, then the personal island, then a freeze from December 15.
+
+## Scope
+
+1. **Rods onto main.** Merge `game/rod-titanium`, which carries rod-gear rounds 1 to 11 and tool-pipeline's models, and `game/vfx-library`. Roster (`lib/game/rods.ts`): Flimsy, Precision, Training, Cedar, Carrot, Glass, Lighthouse, Tidewarden, Riptide, Titanium, Tempest. Also the awakenings, the per-rod catch counter, the Training rod found at 50 fish, and the rod seller. Finish the Titanium redo from Rods Titanium 3 (awakening, idle, workbench; `specs/lanes/rod-titanium.md` round 4).
+2. **The tackle shop**, from Markets 1:
+   - Rods, Bait and Bobbers in one shop with a toggle rail.
+   - The general shop no longer sells rods, bait or bobbers. It keeps cosmetics and UI packs.
+   - The tackle counter's gem roll becomes coins only (launch blocker, row 326).
+3. **Big fish:** turn on legendary fish (the boss reel) and the divine fight (`NEXT_PUBLIC_FISH_BOSSES`, `realtime/src/rooms/raid.ts`). The roster is a question for David (below).
+4. **Bait and bobbers:** real models through the asset pipeline (`specs/asset-pipeline.md`), and their effects.
+5. **The awakening cutscene** in play, not only in the lab.
+
+## Influence (check each, fix or flag, before the page)
+
+- **Tutorial:** Bram's rod challenge (m4) and the walk past the rod and tackle shop.
+- **Gem shop:** the newcomer pack's gear, the Glass rod (`game/gem-shop`).
+- **Pre-registration:** the reward copy ("a limited edition rod").
+- **Daily tasks:** "catch a river fish" (`game/daily-return`).
+- **Every place that lists fish:** sushi, the tasting book, museum donations, the collection's counts, the catch board and chef orders, the HQ tank. New legendaries and divines need a decision in each: in, out, or special.
+- **Sell prices:** new fish, and the economy around them.
+- **The mountain section:** the pond's 10 fish and its legendary open there, not here.
+- **Analytics:** the new `rodseller` screen.
+- **UI packs:** new rod screens must use pack tokens (the guard test enforces it).
+
+## Questions for David (asked 2026-11-19)
+
+1. All 11 rods on December 20, with Riptide and Tempest modelled through the asset pipeline?
+2. How many legendary fish? Proposal: one per open water (river, sea, cliff pool) plus the divine fight. The pond's legendary comes with the mountain.
+
+## Status
+
+- 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
+  - cream.css stays deleted, and its two new tokens went to vintage.css;
+  - rolls use main's season with the rod passive;
+  - the sushi meal still applies to the held rod;
+  - the trophy and showcase sheets stay removed, and the rod seller sheet joins.
+  - `rod_catches` was re-dated `20261119120000`, and the catalogue seed regenerated from the merged code as `20261119120001`, both in the SQL smoke chain.
+- tsc clean. Full vitest and the SQL chain are running.
+
+## Next
+
+1. Merge `game/vfx-library`.
+2. The SQL smoke chain.
+3. Shots of the merged rods in the new world, against what David approved on the rods pages.
+4. Then scope items 1 to 5, each through `/delegate`.
