@@ -122,6 +122,7 @@ export const HQ_LINES = {
   coffee: "Fresh coffee at the marble bar. The cups are already warm.",
   aquarium: "Silver fish turn together in the blue. A small orange one goes its own way.",
   admin: "Admins only. It's locked.",
+  desk: "Alice waves from behind the desk. Nothing to sign today.",
 } as const;
 /** The trophy case, the clock, the workbench and the Founder's desk (their components read these). */
 export const HQ_TROPHY = { x: 11.45, z: 4.6, yaw: Math.PI / 2 } as const;
@@ -324,7 +325,6 @@ export const HQ: HqOption = {
     st("coffee", "Coffee bar", [CX, CZ - 1.7], "coffee", 1.5),
     st("board", "Notice board", [-10.6, -1.6], "board", 2.0),
     st("shelf", "Library", [10.7, -3.0], "shelf", 1.8),
-    st("display", "Trophy display", [10.4, HQ_TROPHY.z], "display", 1.4),
     st("founder", "The Founder's desk", [HQ_FOUNDER.x - 0.2, 6.5], "founder", 1.2),
     st("clock", "Clock", [HQ_CLOCK_AT.x, 7.6], "clock", 1.3),
     st("aquarium", "Aquarium", [0, 6.95], "aquarium", 1.6),

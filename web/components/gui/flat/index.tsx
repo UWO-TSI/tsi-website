@@ -14,7 +14,6 @@ import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from 
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
-import { GuiVariantContext } from "../variant";
 import { bothRefs, useMarker, useNudge } from "../motion";
 import f from "./flat.module.css";
 
@@ -25,6 +24,7 @@ export { CountUp, WalletSlot } from "./wallet";
 export { Phone, type PhoneApp, type PhoneView } from "./phone";
 export { box, frame, sprite, text, textWidth, type Ink } from "./phoneScreen";
 export { inCorner } from "./phoneMotion";
+export { BackLink, Fold, Folds, QuietButton, Section, type FoldState } from "./folds";
 export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordIcon, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
 export { PODIUM, Podium, podiumFeet, type PodiumPlace } from "./Podium";
@@ -81,19 +81,16 @@ export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, emb
     <h2 className={f.heading}>{title}</h2>
     {onClose ? <button type="button" className={f.close} aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button> : <span />}
   </header>;
-  // The GUI pieces inside wear the flat look too (components/gui/variant).
-  if (embedded) return <GuiVariantContext.Provider value="flat"><section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="" data-gui-flat="">
+  if (embedded) return <section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="">
     {top}{rail}<div className={f.main}>{content}</div>
-  </section></GuiVariantContext.Provider>;
+  </section>;
   if (!state) return null;
   return <div className={f.layer} data-state={state}>
     <div className={f.scrim} onClick={onClose} aria-hidden="true" />
-    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-gui-flat="">
-      <GuiVariantContext.Provider value="flat">
-        {top}
-        {rail}
-        <main className={f.main}>{content}</main>
-      </GuiVariantContext.Provider>
+    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined}>
+      {top}
+      {rail}
+      <main className={f.main}>{content}</main>
     </section>
   </div>;
 }

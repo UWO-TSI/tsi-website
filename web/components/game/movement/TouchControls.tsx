@@ -26,7 +26,7 @@ export default function TouchControls({ left = 24, bottom = 28, walkOnly = false
   // Jump and slide are also held (a held jump goes higher, a held slide keeps sliding); a dash is a press.
   const up = () => { stick.jump = false; stick.crouch = false; };
   const button = (kind: "jump" | "dash" | "slide", text: string, size: number) => (
-    <button aria-label={text} style={{ width: `calc(${size}px * var(--touch-scale, 1))`, height: `calc(${size}px * var(--touch-scale, 1))`, padding: 0, borderRadius: "50%", border: 0, background: "rgb(255 250 230 / 0.92)", color: "var(--gui-ink-strong, #3a2e22)", boxShadow: "0 3px 0 rgb(114 92 78 / 0.25), 0 6px 16px rgb(41 70 65 / 0.18)", font: "800 14px var(--gui-font, system-ui)", touchAction: "none" }}
+    <button aria-label={text} style={{ width: `calc(${size}px * var(--touch-scale, 1))`, height: `calc(${size}px * var(--touch-scale, 1))`, padding: 0, borderRadius: "50%", border: 0, background: "color-mix(in srgb, var(--ui-card) 92%, transparent)", color: "var(--ui-ink)", boxShadow: "0 6px 16px rgb(var(--ui-shade) / 0.18)", font: "700 14px var(--gui-font)", touchAction: "none" }}
       onPointerDown={e => { e.preventDefault(); if (kind === "jump") stick.jump = stick.jumpPressed = true; else if (kind === "slide") stick.crouch = true; else stick.dashPressed = true; }}
       onPointerUp={up} onPointerCancel={up} onPointerLeave={up}>{text}</button>
   );

@@ -1,26 +1,22 @@
 "use client";
 
 /**
- * The GUI sheet's components (specs/polish/gui-sheet.md): one library for the member game, the portal and the phone
- * companion, drawn from David's Animal Crossing UI kit. It extends the recruit kit (components/recruit/ui), whose
- * keycaps, buttons, dialogue box, fields and panel it re-exports; inside a `.gui` scope those wear this sheet's tokens
- * (styles/game-tokens.css), while recruitment keeps its own look. /lab/gui shows every piece in every state.
+ * The GUI kit: the flat kit, one look for the member game, the portal and the phone companion (specs/design-bible.md, UI
+ * chapter; ledger rows 320, 334 and 335). These are its shared pieces (sheets, buttons, fields, keycaps, the dialogue box,
+ * tabs, lists, tiles, badges, progress); components/gui/flat holds the rest. They read the theme's tokens
+ * (styles/themes, through styles/game-tokens.css), so a UI pack restyles them whole. There is no other look: recruitment
+ * and the applicant island keep theirs in their own code (components/recruit). /lab/gui shows every piece.
  */
 import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes,
-  type InputHTMLAttributes, type KeyboardEvent, type ReactElement, type ReactNode, type SelectHTMLAttributes } from "react";
+  type InputHTMLAttributes, type KeyboardEvent, type ReactElement, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { Pointer, X } from "lucide-react";
 import { inTopDialog, usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
-import { Keycap, NPCDialogue, VillageButton, VillageField, VillagePanel, VillageTextArea } from "@/components/recruit/ui";
-import { GuiVariantContext, useGuiVariant, type GuiVariant } from "./variant";
 import { useMarker } from "./motion";
 import styles from "./gui.module.css";
 import type { Rarity } from "@/lib/rarity";
 
-export { Keycap, NPCDialogue as Dialogue, VillageButton as Button, VillageField as Field, VillageTextArea as TextArea, VillagePanel as Panel };
-/** Toasts: the island's one lane (components/game/ToastHub), paper slips inside a .gui scope. `toast(text, icon?)` from anywhere. */
+/** Toasts: the island's one lane (components/game/ToastHub). `toast(text, icon?)` from anywhere. */
 export { default as ToastHub, toast } from "@/components/game/ToastHub";
-/** The flat UI's look for the game's menus (specs/polish/flat-ui.md): which one the pieces wear. */
-export { GuiVariantContext, useGuiVariant, type GuiVariant } from "./variant";
 /** "Sign in" links back to where you are (reachability §3). */
 export { SignInLink, SignInText, useSignInHref } from "./SignIn";
 
@@ -30,15 +26,12 @@ const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boo
 
 export type SheetSize = "sm" | "md" | "lg" | "xl";
 /**
- * A paper sheet: the one dialog frame for every menu. Focus, Escape, its opening key (`keys`), the world's hotkeys
- * held and the paper sound come from the dialog system (lib/game/useWorldDialog); it scales and fades in and out.
- * `modal` false: no scrim, the world stays bright behind it (the decorate panel). On a phone it is a bottom sheet.
- * `variant` "flat" (the game's menus, specs/polish/flat-ui.md step 7): the shop overlay's flat grey look, and the
- * pieces inside follow it (text tabs as flat words, the buttons as pills); the default stays cream, as the portal and
- * recruitment pages have it.
+ * A sheet: the one dialog frame for every menu, one flat light panel. Focus, Escape, its opening key (`keys`), the
+ * world's hotkeys held and the paper sound come from the dialog system (lib/game/useWorldDialog); it scales and fades in
+ * and out. `modal` false: no scrim, the world stays bright behind it (the decorate panel). On a phone it is a bottom sheet.
  */
-export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "md", tone, keys, modal = true, footer, headerExtra, testId, className, bodyClassName, variant = "cream", children }: {
-  open: boolean; onClose: () => void; title: ReactNode; eyebrow?: ReactNode; icon?: ReactNode; size?: SheetSize; tone?: "butter" | "sage" | "oracle"; variant?: GuiVariant;
+export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "md", keys, modal = true, footer, headerExtra, testId, className, bodyClassName, children }: {
+  open: boolean; onClose: () => void; title: ReactNode; eyebrow?: ReactNode; icon?: ReactNode; size?: SheetSize;
   keys?: string | readonly string[]; modal?: boolean; footer?: ReactNode; headerExtra?: ReactNode; testId?: string; className?: string; bodyClassName?: string; children: ReactNode;
   /** What Escape (and `keys`) do, when it isn't closing: the game's Esc Menu steps on to Settings. The ✕ and the scrim still close. */
   onEscape?: () => void;
@@ -52,12 +45,10 @@ export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "m
     || kept.footer !== footer || kept.children !== children)) setKept({ title, eyebrow, icon, headerExtra, footer, children });
   const shown = open ? { title, eyebrow, icon, headerExtra, footer, children } : kept;
   if (!state) return null;
-  const flat = variant === "flat";
-  return <div className={styles.layer} data-state={state} data-modal={modal || undefined} data-variant={flat ? "flat" : undefined}>
+  return <div className={styles.layer} data-state={state} data-modal={modal || undefined}>
     {modal && <div className={styles.scrim} onClick={onClose} aria-hidden="true" />}
     <section ref={ref} role="dialog" aria-modal={modal} aria-labelledby={titleId} tabIndex={-1} data-gui-dialog data-gui-overlay data-testid={testId}
-      className={cx(styles.sheet, className)} data-size={size} data-tone={tone} data-variant={flat ? "flat" : undefined} data-gui-flat={flat ? "" : undefined}>
-      <GuiVariantContext.Provider value={variant}>
+      className={cx(styles.sheet, className)} data-size={size}>
       <header className={styles.head}>
         {shown.icon && <span className={styles.headIcon} aria-hidden="true">{shown.icon}</span>}
         <div className={styles.headText}>
@@ -69,7 +60,6 @@ export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "m
       </header>
       <div className={cx(styles.body, bodyClassName)}>{shown.children}</div>
       {shown.footer && <footer className={styles.foot}>{shown.footer}</footer>}
-      </GuiVariantContext.Provider>
     </section>
   </div>;
 }
@@ -78,23 +68,76 @@ export function Sheet({ open, onClose, onEscape, title, eyebrow, icon, size = "m
 export function ConfirmDialog({ open, title, children, confirmLabel = "Yes", cancelLabel = "Not now", danger, busy, onConfirm, onCancel }: {
   open: boolean; title: ReactNode; children?: ReactNode; confirmLabel?: string; cancelLabel?: string; danger?: boolean; busy?: boolean; onConfirm: () => void; onCancel: () => void;
 }) {
-  // Asked from a flat menu (the bag's Drop), it is flat too.
-  const variant = useGuiVariant();
-  return <Sheet open={open} onClose={onCancel} title={title} size="sm" variant={variant} footer={<>
-    <VillageButton variant="quiet" size="sm" onClick={onCancel}>{cancelLabel}</VillageButton>
-    <VillageButton variant={danger ? "danger" : "primary"} size="sm" onClick={onConfirm} disabled={busy}>{busy ? "One moment…" : confirmLabel}</VillageButton>
+  return <Sheet open={open} onClose={onCancel} title={title} size="sm" footer={<>
+    <Button variant="quiet" size="sm" onClick={onCancel}>{cancelLabel}</Button>
+    <Button variant={danger ? "danger" : "primary"} size="sm" onClick={onConfirm} disabled={busy}>{busy ? "One moment…" : confirmLabel}</Button>
   </>}>{children && <div className={styles.confirmText}>{children}</div>}</Sheet>;
 }
 
 // ── Buttons ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** A round cream button with an icon: its `label` is its name (and its tooltip); `badge` a count on its shoulder. */
+/** A round button with an icon: its `label` is its name (and its tooltip); `badge` a count on its shoulder. */
 export function IconButton({ label, size = "md", badge, tone, className, children, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string; size?: "sm" | "md" | "lg"; badge?: number; tone?: "paper" | "sage" | "butter";
 }) {
   return <button type="button" aria-label={badge ? `${label}, ${badge}` : label} title={label} {...props} className={cx(styles.iconButton, className)} data-size={size} data-tone={tone}>
     {children}{badge ? <Counter n={badge} className={styles.iconBadge} /> : null}
   </button>;
+}
+
+// ── The kit's own button, fields, keycap and dialogue (row 334; design bible UI, "How it's built" 2) ───────────────────
+
+export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
+/** The kit's button class, for a link that wears it (add `data-variant` and `data-size="sm"` as on a Button). */
+export const buttonClass = styles.button;
+/** A flat pill: `primary` (the default) on the accent, `secondary` and `quiet` white, `danger` white with the error ink. `leadingKey` shows its key. */
+export function Button({ variant = "primary", size, leadingKey, className, children, type = "button", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant; size?: "sm"; leadingKey?: string;
+}) {
+  return <button {...props} type={type} className={cx(styles.button, className)} data-variant={variant} data-size={size}>
+    {leadingKey && <Keycap aria-hidden="true">{leadingKey}</Keycap>}{children}
+  </button>;
+}
+
+/** A key's name on a small ink cap (E, Esc, Shift). */
+export function Keycap({ children, className, ...props }: HTMLAttributes<HTMLElement>) {
+  return <kbd {...props} className={cx(styles.keycap, className)}>{children}</kbd>;
+}
+
+type FieldCopy = { label: ReactNode; hint?: ReactNode; error?: ReactNode };
+/** The label, a hint under it, the box on a grey well and what's wrong under that, all tied to the box for screen readers. */
+function FieldFrame({ id, label, hint, error, required, className, children }: FieldCopy & { id: string; required?: boolean; className?: string; children: ReactNode }) {
+  return <div className={cx(styles.field, className)}>
+    <label htmlFor={id}>{label}{required && <span className={styles.required}>Required</span>}</label>
+    {hint && <p className={styles.hint} id={`${id}-hint`}>{hint}</p>}
+    {children}
+    {error && <p className={styles.fieldError} id={`${id}-error`}>{error}</p>}
+  </div>;
+}
+const described = (id: string, own: string | undefined, hint: unknown, error: unknown) => cx(own, !!hint && `${id}-hint`, !!error && `${id}-error`) || undefined;
+/** A text field with its label. */
+export function Field({ label, hint, error, id, className, "aria-describedby": own, ...props }: InputHTMLAttributes<HTMLInputElement> & FieldCopy) {
+  const made = useId(), fieldId = id ?? made;
+  return <FieldFrame id={fieldId} label={label} hint={hint} error={error} required={props.required} className={className}>
+    <input {...props} id={fieldId} aria-invalid={error ? true : props["aria-invalid"]} aria-describedby={described(fieldId, own, hint, error)} />
+  </FieldFrame>;
+}
+/** A longer text with its label. */
+export function TextArea({ label, hint, error, id, className, rows = 5, "aria-describedby": own, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & FieldCopy) {
+  const made = useId(), fieldId = id ?? made;
+  return <FieldFrame id={fieldId} label={label} hint={hint} error={error} required={props.required} className={className}>
+    <textarea {...props} rows={rows} id={fieldId} aria-invalid={error ? true : props["aria-invalid"]} aria-describedby={described(fieldId, own, hint, error)} />
+  </FieldFrame>;
+}
+
+/** Someone talking: their name on a tag at the top, the words, and the way on (`onContinue`) with its chevron. */
+export function Dialogue({ speaker, children, onContinue, continueLabel = "Got it", className }: { speaker: string; children: ReactNode; onContinue?: () => void; continueLabel?: string; className?: string }) {
+  const nameId = useId();
+  return <section className={cx(styles.dialogue, className)} aria-labelledby={nameId}>
+    <h2 id={nameId} className={styles.speaker}>{speaker}</h2>
+    <div className={styles.dialogueText}>{children}</div>
+    {onContinue && <button type="button" className={styles.continue} onClick={onContinue}>{continueLabel}<span aria-hidden="true">▾</span></button>}
+  </section>;
 }
 
 // ── Tabs ────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -109,7 +152,7 @@ function stepTab(list: HTMLElement | null, { tabs, value, onChange }: TabState, 
   list?.querySelector<HTMLElement>(`[data-tab="${next.id}"]`)?.focus({ preventScroll: true });
 }
 /**
- * Pill tabs, the chosen one butter with a highlighter swipe. Arrow keys move between them; inside the top dialog the
+ * Text tabs, the chosen one on the accent pill that slides to the next. Arrow keys move between them; inside the top dialog the
  * menu's tab keys ([ and ], remappable) arrive as `tsi:menu-tab`, and `keyHints` shows them at the ends like the
  * kit's L and R.
  */
@@ -144,10 +187,9 @@ export function Tabs<T extends string>({ tabs, value, onChange, label, keyHints,
     return () => window.removeEventListener("tsi:menu-tab", on);
   }, []);
   const onKey = (e: KeyboardEvent) => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); stepTab(ref.current, live.current, e.key === "ArrowRight" ? 1 : -1); } };
-  const flat = useGuiVariant() === "flat";
   // The chosen tab's pill slides to the next one (round 2's micro animations; its own background until measured).
   const pill = useMarker(ref, '[aria-selected="true"]', value);
-  return <div className={cx(styles.tabsWrap, className)} data-flat={flat ? "" : undefined}>
+  return <div className={cx(styles.tabsWrap, className)}>
     {keyHints && <Keycap aria-hidden="true" className={styles.tabKey} data-shape="square">{keyHints[0]}</Keycap>}
     <div ref={ref} role="tablist" aria-label={label} className={styles.tabs} data-edges={edges ?? undefined} data-pill={pill ? "" : undefined} onKeyDown={onKey}>
       {pill ? <span className={styles.tabPill} aria-hidden="true" style={{ width: pill.w, height: pill.h, transform: `translate(${pill.x}px, ${pill.y}px)` }} /> : null}
@@ -210,7 +252,7 @@ export function List({ label, children, className }: { label?: string; children:
 
 export type { Rarity };
 /**
- * An item tile: the real icon on cream, its stack count, its rarity edge, a dot while it's new. `empty` is a free slot
+ * An item tile: the real icon on a white card, its stack count, its rarity edge, a dot while it's new. `empty` is a free slot
  * (the kit's little dot, still choosable with `onClick`); `unknown` shows the icon as a silhouette (not found yet).
  * `caption` prints the name below. Without `onClick` it is a picture, not a button.
  */
@@ -257,7 +299,7 @@ export function Slider({ label, value, min = 0, max = 100, step = 1, onChange, f
   </div>;
 }
 
-/** A native select in paper. */
+/** A native select. */
 export function Select({ label, className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label?: ReactNode; children: ReactNode }) {
   const id = useId();
   const select = <select id={id} {...props} className={cx(styles.select, !label && className)}>{children}</select>;
@@ -309,7 +351,7 @@ export function Tooltip({ label, place = "top", children }: { label: ReactNode; 
   return <span className={styles.tipWrap} data-place={place}>{child}<span role="tooltip" id={id} className={styles.tip}>{label}</span></span>;
 }
 
-/** The shop's yellow band: a title on butter paper with tumbling confetti and a wavy lower edge; `ribbon` a notched tag. */
+/** A band over a screen: an icon, a title and a line, on a flat tint (`tone`); `ribbon` a tag at its end (a deadline). */
 export function Banner({ title, children, ribbon, icon, tone = "butter", className }: { title: ReactNode; children?: ReactNode; ribbon?: ReactNode; icon?: ReactNode; tone?: "butter" | "sage" | "coral"; className?: string }) {
   return <div className={cx(styles.banner, className)} data-tone={tone}>
     {icon && <span className={styles.bannerIcon} aria-hidden="true">{icon}</span>}
@@ -318,15 +360,19 @@ export function Banner({ title, children, ribbon, icon, tone = "butter", classNa
   </div>;
 }
 
-/** A paper card; `pinned` puts it on the board with a pin and a little tilt, `torn` gives it a deckled foot. */
-export function Card({ tone = "paper", pinned, torn, tilt, as: Tag = "div", className, children, style, ...rest }: HTMLAttributes<HTMLElement> & {
-  tone?: "paper" | "butter" | "sage" | "warm"; pinned?: boolean; torn?: boolean; tilt?: number; as?: "div" | "section" | "article" | "li";
+/**
+ * A white card; `tone` tints it ("paper" is the plain card, the default, kept for the portal pages that name it).
+ * `pinned` (with `tilt`) is for paper in the world only (a notice on the board, the club goal): set `data-gui-paper`
+ * with it, so it wears paper (styles/paper.css), its pin and its little turn.
+ */
+export function Card({ tone, pinned, tilt, as: Tag = "div", className, children, style, ...rest }: HTMLAttributes<HTMLElement> & {
+  tone?: "paper" | "butter" | "sage" | "warm"; pinned?: boolean; tilt?: number; as?: "div" | "section" | "article" | "li";
 }) {
-  return <Tag {...rest} className={cx(styles.card, className)} data-tone={tone} data-pinned={pinned || undefined} data-torn={torn || undefined}
+  return <Tag {...rest} className={cx(styles.card, className)} data-tone={tone} data-pinned={pinned || undefined}
     style={tilt ? { ...style, "--tilt": `${tilt}deg` } as CSSProperties : style}>{children}</Tag>;
 }
 
-/** The speaker's tilted name tag (the kit's coral tag). */
+/** A name on a small tag (a speaker, a resident). */
 export function NameTag({ children, tone = "coral", className }: { children: ReactNode; tone?: "coral" | "sage" | "paper"; className?: string }) {
   return <span className={cx(styles.nameTag, className)} data-tone={tone}>{children}</span>;
 }
@@ -351,6 +397,6 @@ export function Empty({ icon, title, children, action, className }: { icon?: Rea
 /** Something went wrong, said plainly, with a way to try again. */
 export function ErrorNote({ children, onRetry, className }: { children: ReactNode; onRetry?: () => void; className?: string }) {
   return <div className={cx(styles.errorNote, className)} role="alert">
-    <span>{children}</span>{onRetry && <VillageButton variant="quiet" size="sm" onClick={onRetry}>Try again</VillageButton>}
+    <span>{children}</span>{onRetry && <Button variant="quiet" size="sm" onClick={onRetry}>Try again</Button>}
   </div>;
 }

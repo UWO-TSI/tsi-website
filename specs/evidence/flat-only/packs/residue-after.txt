@@ -1,0 +1,163 @@
+components/game/GameSceneBoundary.module.css:2:.recovery { display: grid; place-items: center; min-height: 480px; height: 100%; padding: 24px; background: #b7dce0; color: var(--gui-ink); font-family: var(--gui-font); } /* world */
+components/game/MiniMap.module.css:2:.corner { position: relative; width: var(--minimap-size, 156px); aspect-ratio: 1; border-radius: var(--gui-r-card); overflow: hidden; background: #76b4c6; /* world */
+components/game/MiniMap.module.css:14:.bigPlot { display: block; width: min(100%, 62dvh); margin: 0 auto; aspect-ratio: 1; border-radius: var(--gui-r-card); background: #76b4c6; } /* world */
+components/game/RewardCard.module.css:16:.roller { position: relative; z-index: 1; width: calc(100% + 18px); height: 16px; border-radius: 8px; background: linear-gradient(180deg, #d9a86a 0%, #a8733f 55%, #7f5530 100%); /* world */
+components/game/RewardCard.module.css:18:.roller::before, .roller::after { content: ""; position: absolute; top: 1px; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #f1c98a, #8f6235 75%); } /* world */
+components/game/RewardCard.module.css:21:  background: repeating-linear-gradient(180deg, transparent 0 7px, rgb(165 134 92 / 0.06) 7px 8px), linear-gradient(90deg, #efe2c2, #fbf3dc 18%, #fbf3dc 82%, #ecdcb8); /* world */
+components/game/RewardCard.module.css:23:.scrollArt { display: grid; place-items: center; width: 84px; height: 84px; margin: 4px 0 2px; border-radius: 50%; background: radial-gradient(circle, rgb(255 255 255 / 0.65), transparent 70%); } /* world */
+components/game/ToolWheel.module.css:6:.wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a14 0, #1c2a2a38 75%); opacity: 0; transition: opacity 0.16s ease; } /* world */
+components/game/DefaultIslandWorld.module.css:23:.world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: var(--gui-ink); } /* world */
+components/game/DefaultIslandWorld.module.css:68:.fade { position: absolute; inset: 0; z-index: 40; background: #14100c; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; } /* world */
+components/game/DefaultIslandWorld.module.css:102:@keyframes objectiveGlow { 0%, 100% { box-shadow: var(--gui-shadow-sm); } 30% { box-shadow: 0 0 0 4px #e2826a66, var(--gui-shadow-sm); } } /* world */
+components/game/DefaultIslandWorld.module.css:128:.keeperLine { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--gui-r-card); background: #ebe2f5; } /* world */
+components/game/DefaultIslandWorld.module.css:129:.keeperLine p { margin: 0; font-style: italic; color: #3d3250; } /* world */
+components/game/DefaultIslandWorld.module.css:130:.keeperFace { flex: none; width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 50% 62%, #f1c8a2 0 36%, transparent 37%), #5a4a7e; box-shadow: inset 0 -6px 0 #43365f; } /* world */
+components/game/DefaultIslandWorld.module.css:131:.oracleProgress { height: 8px; border-radius: 99px; background: #e2d8ee; overflow: hidden; } /* world */
+components/game/DefaultIslandWorld.module.css:132:.oracleProgress span { display: block; height: 100%; border-radius: inherit; background: #7b5ea7; transition: width 0.2s ease; } /* world */
+components/game/DefaultIslandWorld.module.css:133:.oracleCount { margin: 6px 0 0; font-size: var(--gui-text-xs); font-weight: 800; color: #5f4f78; text-align: right; font-variant-numeric: tabular-nums; } /* world */
+components/game/DefaultIslandWorld.module.css:136:.oracleScale button { min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 4px; border: 0; border-radius: 16px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #d8cce6; font: inherit; font-size: var(--gui-text-xs); font-weight: 800; color: #3d3250; cursor: pointer; } /* world */
+components/game/DefaultIslandWorld.module.css:137:.oracleScale button:hover { background: #efe7f8; } /* world */
+components/game/DefaultIslandWorld.module.css:138:.oracleScale kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 99px; background: #5a4a7e; color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); } /* world */
+components/game/DefaultIslandWorld.module.css:140:.oracleBegin { border: 0; background: #5a4a7e; color: #fbf7ff; box-shadow: 0 3px 0 #43365f; } /* world */
+components/game/DefaultIslandWorld.module.css:141:.oracleBack { border: 0; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px #c9b8dd; color: #4a3d6a; } /* world */
+components/game/DefaultIslandWorld.module.css:147:.tieBreaker button { min-height: 52px; padding: 10px 16px; border: 0; border-radius: 18px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #c9b8dd; color: #3d3250; font: inherit; font-weight: 800; text-align: left; cursor: pointer; } /* world */
+components/game/DefaultIslandWorld.module.css:148:.tieBreaker button:hover { background: #efe7f8; } /* world */
+components/game/DefaultIslandWorld.module.css:153:.pathCards article { display: grid; align-content: start; gap: 6px; padding: 10px; border-radius: 12px; background: #fff; border-top: 4px solid var(--family); font-size: 12px; } /* world */
+components/game/DefaultIslandWorld.module.css:157:.pathCards header small, .pathNote { color: #6f5f86; font-size: 11px; } /* world */
+components/game/DefaultIslandWorld.module.css:161:.pathAbility small { color: #5b5068; line-height: 1.35; } /* world */
+components/game/DefaultIslandWorld.module.css:162:.runeTag { justify-self: start; margin: 1px 0; padding: 0 6px; border-radius: 6px; background: #ece4f7; color: #5b4a86; font-style: normal; font-size: 10px; font-weight: 600; } /* world */
+components/game/DefaultIslandWorld.module.css:163:.pathBadge { justify-self: start; padding: 4px 10px; border-radius: 999px; background: var(--family); color: #fff; font-weight: 700; } /* world */
+components/game/DefaultIslandWorld.module.css:164:.pathConfirm { grid-column: 1 / -1; padding: 12px; border-radius: 12px; background: #fff6e6; border: 1px solid #e0b660; } /* world */
+components/game/DefaultIslandWorld.module.css:167:.pathCards article[data-suggested] { box-shadow: 0 0 0 2px #e0b660; } /* world */
+components/game/DefaultIslandWorld.module.css:171:  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--class) 45%, #fff) 0, #fff 70%); border: 2px solid var(--family); animation: bannerIn 0.4s ease-out; } /* world */
+components/game/DefaultIslandWorld.module.css:174:.ceremony small { color: #5b5068; } /* world */
+components/game/DefaultIslandWorld.module.css:178:.pathLoadout button { width: 100%; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #d8cce6; border-radius: 10px; background: #fffdfb; font: inherit; font-size: 12px; text-align: left; color: #2e2640; cursor: pointer; } /* world */
+components/game/DefaultIslandWorld.module.css:179:.pathLoadout button[aria-pressed="true"] { border-color: #5a4a7e; background: #efe7f8; } /* world */
+components/game/DefaultIslandWorld.module.css:180:.pathLoadout kbd { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: #e9e0f3; font: 700 12px "IBM Plex Mono", monospace; } /* world */
+components/game/DefaultIslandWorld.module.css:181:.pathLoadout button[aria-pressed="true"] kbd { background: #5a4a7e; color: #fff; } /* world */
+components/game/DefaultIslandWorld.module.css:182:.pathLoadout em { font-style: normal; font-size: 10px; color: #6f5f86; text-transform: capitalize; } /* world */
+components/game/DefaultIslandWorld.module.css:186:.pathStats button { min-height: 36px; border: 1px solid #c9b8dd; border-radius: 8px; background: #fffdfb; font: 700 16px inherit; color: #5a4a7e; cursor: pointer; } /* world */
+components/game/DefaultIslandWorld.module.css:188:.pathStats small { color: #8a7d99; font-size: 11px; } /* world */
+components/game/DefaultIslandWorld.module.css:189:.pathStatus { margin: 10px 0 0; font-weight: 600; color: #3d3250; } /* world */
+components/game/DefaultIslandWorld.module.css:237:.combatHud { position: absolute; left: 50%; bottom: var(--hud-lane-bottom); transform: translateX(-50%); display: grid; gap: 7px; width: min(660px, calc(100% - 32px)); box-sizing: border-box; padding: 11px 14px 12px; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; background: #f8f7e9f2; color: #293e3b; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; z-index: 12; } /* world */
+components/game/DefaultIslandWorld.module.css:238:.hpBar { position: relative; height: 18px; border-radius: 9px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; } /* world */
+components/game/DefaultIslandWorld.module.css:239:.hpBar span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #ee8d6e, #f4b27e); transition: width 0.15s; } /* world */
+components/game/DefaultIslandWorld.module.css:240:.hpBar b { position: relative; display: block; text-align: center; font: 700 11px/18px "IBM Plex Mono", monospace; color: #293e3b; } /* world */
+components/game/DefaultIslandWorld.module.css:243:.weaponLine small { color: #4f625b; } /* world */
+components/game/DefaultIslandWorld.module.css:246:.dodgePip kbd { font: 600 10px "IBM Plex Mono", monospace; background: #e0e6d8; color: #293e3b; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; } /* world */
+components/game/DefaultIslandWorld.module.css:248:.abilityBar li { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 7px; align-items: center; min-height: 44px; padding: 5px 8px 5px 6px; border: 1px solid #d8cbaa; border-radius: 9px; background: #fffdf3; } /* world */
+components/game/DefaultIslandWorld.module.css:249:.abilityBar li[data-cooling] .slotName { color: #6c7a73; } /* world */
+components/game/DefaultIslandWorld.module.css:250:.abilityBar li[data-rune] { border-color: #b39ce6; box-shadow: inset 0 0 0 1px #b39ce6; } /* world */
+components/game/DefaultIslandWorld.module.css:253:.sweep { grid-row: span 2; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: conic-gradient(#426b5b calc(360deg - var(--sweep)), #293e3bb8 0); transition: --sweep 0.1s linear; } /* world */
+components/game/DefaultIslandWorld.module.css:254:.sweep kbd { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fffdf3; color: #293e3b; font: 700 11px "IBM Plex Mono", monospace; } /* world */
+components/game/DefaultIslandWorld.module.css:256:.abilityBar li small { font: 600 10px "IBM Plex Mono", monospace; color: #607069; } /* world */
+components/game/DefaultIslandWorld.module.css:259:@keyframes slotDenied { 0% { transform: translateX(0); } 25% { transform: translateX(-3px); box-shadow: inset 0 0 0 2px #e8704a; } 50% { transform: translateX(3px); } 75% { transform: translateX(-1px); } 100% { transform: translateX(0); } } /* world */
+components/game/DefaultIslandWorld.module.css:260:@keyframes slotDeniedStill { 0%, 60% { box-shadow: inset 0 0 0 2px #e8704a; } 100% { box-shadow: none; } } /* world */
+components/game/DefaultIslandWorld.module.css:262:.hpBar i { position: absolute; inset: 0 auto 0 0; background: #8fc3e8a0; } /* world */
+components/game/DefaultIslandWorld.module.css:263:.kitLine { color: #4f625b; } /* world */
+components/game/DefaultIslandWorld.module.css:272:.classBar .abilityBar li[data-form] { box-shadow: inset 0 -3px 0 var(--class, #b39ce6); } /* world */
+components/game/DefaultIslandWorld.module.css:275:  background: #fffdf3f0; border: 2px solid #293e3b; box-shadow: 0 4px 0 #293e3b33; color: #293e3b; pointer-events: none; z-index: 30; } /* world */
+components/game/DefaultIslandWorld.module.css:280:.mash kbd { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #fffdf3; border: 2px solid var(--note); border-bottom-width: 4px; font: 700 15px "IBM Plex Mono", monospace; color: #293e3b; } /* world */
+components/game/DefaultIslandWorld.module.css:283:.mash > span { width: 180px; height: 6px; border-radius: 3px; background: #d8cbaa; overflow: hidden; } /* world */
+components/game/DefaultIslandWorld.module.css:284:.mash > span i { display: block; height: 100%; background: #293e3b; } /* world */
+components/game/DefaultIslandWorld.module.css:288:.abilityBar li[data-held] { border-color: var(--class, #b39ce6); box-shadow: inset 0 0 0 2px var(--class, #b39ce6); } /* world */
+components/game/DefaultIslandWorld.module.css:289:.abilityBar li[data-on] { background: color-mix(in srgb, var(--class, #b39ce6) 18%, #fffdf3); } /* world */
+components/game/DefaultIslandWorld.module.css:291:  background: conic-gradient(var(--class, #b39ce6) var(--meter), #e0e6d8 0); box-shadow: 0 2px 0 #47625218; } /* world */
+components/game/DefaultIslandWorld.module.css:292:.ultSlot::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fffdf3; border: 1px solid #d8cbaa; } /* world */
+components/game/DefaultIslandWorld.module.css:295:.ultSlot[data-ready] { box-shadow: 0 0 0 2px var(--class, #b39ce6), 0 0 14px var(--class, #b39ce6); animation: ultPulse 2s ease-in-out infinite; } /* world */
+components/game/DefaultIslandWorld.module.css:296:.ultSlot kbd { position: absolute; right: -4px; bottom: -4px; font: 700 10px "IBM Plex Mono", monospace; background: #fffdf3; color: #293e3b; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; } /* world */
+components/game/DefaultIslandWorld.module.css:298:@keyframes ultPulse { 0%, 100% { box-shadow: 0 0 0 2px var(--class, #b39ce6), 0 0 8px var(--class, #b39ce6); } 50% { box-shadow: 0 0 0 3px var(--class, #b39ce6), 0 0 22px var(--class, #b39ce6); } } /* world */
+components/game/DefaultIslandWorld.module.css:300:.masteryBar { height: 4px; border-radius: 2px; background: #e0e6d8; overflow: hidden; } /* world */
+components/game/DefaultIslandWorld.module.css:301:.masteryBar span { display: block; height: 100%; background: linear-gradient(90deg, #c9a24a, #e6c66e); transition: width 0.3s; } /* world */
+components/game/DefaultIslandWorld.module.css:302:.banner[data-kind="mastery"] { border: 2px solid #c9a24a; animation: bannerIn 0.35s ease-out; } /* world */
+components/game/DefaultIslandWorld.module.css:303:.banner[data-kind="mastery"] b { color: #7a5a14; } /* world */
+components/game/DefaultIslandWorld.module.css:305:.safeBadge { position: absolute; top: 150px; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 12px; border-radius: 999px; background: #e7f5ea; color: #245c36; font-size: 12px; font-weight: 600; z-index: 12; } /* world */
+components/game/DefaultIslandWorld.module.css:306:.missionTracker { position: absolute; left: 16px; top: 196px; display: grid; gap: 2px; max-width: 260px; padding: 10px 12px; border-radius: 10px; background: #f8f7e9f0; color: #293e3b; font-size: 12px; z-index: 12; } /* world */
+components/game/DefaultIslandWorld.module.css:307:.missionTracker[data-status="complete"] { border-left: 4px solid #3d8f52; } /* world */
+components/game/DefaultIslandWorld.module.css:308:.missionTracker[data-status="failed"] { border-left: 4px solid #c0463c; } /* world */
+components/game/DefaultIslandWorld.module.css:309:.bossBar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); box-sizing: border-box; display: grid; gap: 5px; padding: 8px 14px 9px; border: 1px solid #5c746c40; border-radius: 12px; background: #f8f7e9f2; color: #293e3b; text-align: center; box-shadow: 0 4px 0 #47625218; z-index: 12; } /* world */
+components/game/DefaultIslandWorld.module.css:311:.bossBar small { font-size: 11px; color: #4f625b; } /* world */
+components/game/DefaultIslandWorld.module.css:312:.bossBar span { height: 10px; border-radius: 5px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; } /* world */
+components/game/DefaultIslandWorld.module.css:313:.bossBar i { display: block; height: 100%; background: linear-gradient(90deg, #8a6cff, #b9a3f2); transition: width 0.15s; } /* world */
+components/game/DefaultIslandWorld.module.css:315:.bossBar[data-mini] { border-color: #c98f2a66; animation: bannerIn 0.3s ease-out; } /* world */
+components/game/DefaultIslandWorld.module.css:316:.bossBar[data-mini] em { font-style: normal; font-weight: 500; color: #8a5a12; } /* world */
+components/game/DefaultIslandWorld.module.css:318:.bossBar[data-mini] i { background: linear-gradient(90deg, #d9862f, #e8bd5c); } /* world */
+components/game/DefaultIslandWorld.module.css:319:.bossBar u { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #29464166; z-index: 1; } /* world */
+components/game/DefaultIslandWorld.module.css:320:.defeat, .banner { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); display: grid; gap: 4px; margin: 0; padding: 14px 22px; border: 1px solid #5c746c40; border-radius: 14px; background: #f8f7e9f5; color: #293e3b; text-align: center; box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; font-size: 15px; z-index: 30; } /* world */
+components/game/DefaultIslandWorld.module.css:321:.defeat { border-left: 5px solid #c0463c; } /* world */
+components/game/DefaultIslandWorld.module.css:323:.banner span { font-size: 12px; color: #4f625b; } /* world */
+components/game/DefaultIslandWorld.module.css:324:.banner[data-kind="victory"] { border: 2px solid #d9a13a; box-shadow: 0 6px 0 #a87a2a40, 0 16px 40px #29464130; animation: bannerIn 0.35s ease-out; } /* world */
+components/game/DefaultIslandWorld.module.css:325:.banner[data-kind="victory"] b { color: #8a5a12; } /* world */
+components/game/DefaultIslandWorld.module.css:326:.banner[data-kind="trait"] { border: 2px solid #9f86e0; animation: bannerIn 0.35s ease-out; } /* world */
+components/game/DefaultIslandWorld.module.css:327:.banner[data-kind="trait"] b { color: #5b3fa8; } /* world */
+components/game/DefaultIslandWorld.module.css:329:.banner[data-kind="foe"] { top: 24%; padding: 10px 26px; border: 2px solid #d9a13a; animation: bannerIn 0.35s ease-out; } /* world */
+components/game/DefaultIslandWorld.module.css:330:.banner[data-kind="foe"] b { font-size: 20px; color: #8a5a12; letter-spacing: 0.02em; } /* world */
+components/game/DefaultIslandWorld.module.css:333:.hurt { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 #e8505b00; transition: box-shadow 0.25s; z-index: 11; } /* world */
+components/game/DefaultIslandWorld.module.css:334:.hurt[data-on] { box-shadow: inset 0 0 120px 20px #e8505b88; transition: none; } /* world */
+components/game/DefaultIslandWorld.module.css:336:.floater { position: absolute; left: 0; top: 0; opacity: 0; font: 800 20px "IBM Plex Mono", monospace; color: #fff6d8; text-shadow: 0 2px 0 #3a2400, 0 0 6px #000a; white-space: nowrap; will-change: transform; } /* world */
+components/game/DefaultIslandWorld.module.css:337:.floater[data-kind="crit"] { color: #ffd34d; font-size: 26px; } /* world */
+components/game/DefaultIslandWorld.module.css:338:.floater[data-kind="hurt"] { color: #ff6a6a; } /* world */
+components/game/DefaultIslandWorld.module.css:339:.floater[data-kind="ult"] { color: #fff; font-size: 30px; -webkit-text-stroke: 1.5px #1d1a24; text-shadow: 0 3px 0 #1d1a24, 0 0 12px #fff8; } /* world */
+components/game/DefaultIslandWorld.module.css:340:.floater[data-kind="info"] { padding: 2px 9px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; font-size: 12px; font-weight: 700; text-shadow: none; box-shadow: 0 2px 6px #29464130; } /* world */
+components/game/DefaultIslandWorld.module.css:342:.incantation { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: grid; gap: 8px; justify-items: center; padding: 14px 16px; border-radius: 18px; background: #1b1626e0; color: #f4eefc; z-index: 25; } /* world */
+components/game/DefaultIslandWorld.module.css:345:.incantation svg { border-radius: 12px; background: radial-gradient(circle, #3b2a5a 0%, #1f1830 70%); cursor: crosshair; } /* world */
+components/game/DefaultIslandWorld.module.css:346:.runeGuide { fill: none; stroke: #d9c8ff55; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; } /* world */
+components/game/DefaultIslandWorld.module.css:347:.runeGuide[data-next] { stroke: #d9c8ff88; } /* world */
+components/game/DefaultIslandWorld.module.css:348:.runeGuide[data-done] { stroke: #8fe3a055; } /* world */
+components/game/DefaultIslandWorld.module.css:349:.runeTrace { fill: none; stroke: #fff4c8; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px #ffd34d); } /* world */
+components/game/DefaultIslandWorld.module.css:351:.incantation[data-outcome="fail"] .runeReadout { color: #ff8a8a; } /* world */
+components/game/DefaultIslandWorld.module.css:352:.incantation[data-outcome="enhanced"] .runeReadout { color: #ffd34d; } /* world */
+components/game/DefaultIslandWorld.module.css:364:.energyBar span { background: linear-gradient(90deg, #9cc3f2, #bfaaf2); } /* world */
+components/game/DefaultIslandWorld.module.css:367:.weaponLine small[data-broken] { color: #b23a2e; font-weight: 600; } /* world */
+components/game/DefaultIslandWorld.module.css:368:.runeTimer { width: 320px; height: 5px; border-radius: 3px; background: #3b2f45; overflow: hidden; } /* world */
+components/game/DefaultIslandWorld.module.css:369:.runeTimer span { display: block; height: 100%; background: #ffe08a; transition: width 0.1s linear; } /* world */
+components/game/DefaultIslandWorld.module.css:372:.lookHint { position: absolute; top: max(24px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); } /* world */
+components/game/DefaultIslandWorld.module.css:373:.crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; } /* world */
+components/game/DefaultIslandWorld.module.css:374:.crosshair circle + circle { fill: #f8f3df; stroke: none; } /* world */
+components/game/DefaultIslandWorld.module.css:377:.aimDot i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #f8f3df; box-shadow: 0 0 0 1px #1b2a2a73, 0 0 3px #1b2a2a66; opacity: 0.8; transition: all 0.12s ease-out; } /* world */
+components/game/DefaultIslandWorld.module.css:378:.aimDot[data-on] i { left: -9px; top: -9px; width: 18px; height: 18px; background: transparent; box-shadow: inset 0 0 0 2px #f8f3df, 0 0 0 1px #1b2a2a59, inset 0 0 0 3px #1b2a2a40; opacity: 1; } /* world */
+components/game/DefaultIslandWorld.module.css:379:.aimDot span { position: absolute; left: 16px; top: -12px; padding: 3px 10px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font: 800 var(--gui-text-xs)/1.4 var(--gui-font); white-space: nowrap; box-shadow: var(--gui-shadow-sm); zoom: var(--tsi-text-scale, 1); } /* world */
+components/game/DefaultIslandWorld.module.css:396:.combatHud, .bossBar, .defeat, .banner, .missionTracker { background: rgb(255 251 231 / 0.96); color: var(--gui-ink); border-color: transparent; box-shadow: var(--gui-shadow-md); } /* world */
+components/game/DefaultIslandWorld.module.css:417:.incantation svg { background: radial-gradient(circle, var(--gui-paper-hi) 0%, #f3ead2 78%); box-shadow: inset 0 0 0 2px var(--gui-paper-edge); } /* world */
+components/game/DefaultIslandWorld.module.css:418:.runeGuide { stroke: rgb(114 92 78 / 0.2); } /* world */
+components/game/DefaultIslandWorld.module.css:419:.runeGuide[data-next] { stroke: rgb(114 92 78 / 0.42); } /* world */
+components/game/DefaultIslandWorld.module.css:420:.runeGuide[data-done] { stroke: rgb(138 198 138 / 0.55); } /* world */
+components/game/DefaultIslandWorld.module.css:421:.runeTrace { stroke: #5b3fa8; filter: drop-shadow(0 0 3px #b77dee99); } /* world */
+components/game/DefaultIslandWorld.module.css:428:.pathCards header small, .pathNote { font-size: var(--gui-text-xs); color: #5f4f78; } /* world */
+components/game/DefaultIslandWorld.module.css:431:.pathLoadout em { font-size: var(--gui-text-xs); color: #5f4f78; } /* world */
+components/game/DefaultIslandWorld.module.css:432:.pathStats small { font-size: var(--gui-text-xs); color: #6b5f7a; } /* world */
+components/game/DefaultIslandWorld.module.css:434:.mash { border: 0; border-radius: var(--gui-r-card); background: rgb(255 251 231 / 0.96); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); } /* world */
+components/game/InteriorBackdrop.module.css:10:    radial-gradient(ellipse 120% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.5) 100%), /* world */
+components/game/InteriorBackdrop.module.css:11:    radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--tint) 52%, #17181b) 0%, color-mix(in srgb, var(--tint) 14%, #121315) 72%); /* world */
+components/game/InteriorBackdrop.module.css:12:  background-color: #121315; /* world */
+components/game/combat/ClassGauges.module.css:2:.gauges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font: 800 var(--gui-text-xs) var(--gui-font); font-variant-numeric: tabular-nums; color: #4f625b; } /* world */
+components/game/combat/ClassGauges.module.css:3:.gauges b { font-weight: 900; color: #293e3b; } /* world */
+components/game/combat/ClassGauges.module.css:5:.gauges kbd { font: 800 var(--gui-text-xs) var(--gui-font); background: #fffdf3; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 3px; color: #293e3b; } /* world */
+components/game/combat/ClassGauges.module.css:7:.focus span { position: relative; height: 7px; border-radius: 4px; background: #e0e6d8; overflow: hidden; box-shadow: inset 0 0 0 1px #d8cbaa; } /* world */
+components/game/combat/ClassGauges.module.css:11:.cylinder li { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #293e3b; background: #e0e6d8; } /* world */
+components/game/combat/ClassGauges.module.css:12:.cylinder li[data-loaded] { background: #c9a24a; } /* world */
+components/game/combat/ClassGauges.module.css:13:.cylinder li[data-last] { box-shadow: 0 0 0 1.5px #e6c66e; } /* world */
+components/game/combat/ClassGauges.module.css:15:.cylinder[data-spun] li[data-loaded] { background: #ffd27a; box-shadow: 0 0 5px #ffd27a; } /* world */
+components/game/combat/ClassGauges.module.css:16:.reload { position: relative; width: 120px; height: 9px; border-radius: 5px; background: #e0e6d8; box-shadow: inset 0 0 0 1px #d8cbaa; } /* world */
+components/game/combat/ClassGauges.module.css:17:.reload span { position: absolute; top: 0; bottom: 0; background: #e6c66e; border-radius: 3px; } /* world */
+components/game/combat/ClassGauges.module.css:19:.reload i { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: #293e3b; } /* world */
+components/game/combat/ClassGauges.module.css:21:.hammer[data-ready] { color: #7a5a14; } /* world */
+components/game/combat/ClassGauges.module.css:24:.streak i { width: 8px; height: 12px; border-radius: 2px; background: #e0e6d8; border: 1px solid #c4ccbf; } /* world */
+components/game/combat/ClassGauges.module.css:25:.streak i[data-on] { background: var(--class); border-color: #293e3b; } /* world */
+components/game/combat/ClassGauges.module.css:26:.hint { color: #607069; } /* world */
+components/game/character/CharacterCreator.module.css:95:  background: radial-gradient(circle at 42% 36%, color-mix(in srgb, var(--skin) 80%, #fff), var(--skin) 75%); box-shadow: inset 0 -3px 0 rgb(120 80 50 / 0.12); } /* world */
+components/game/character/CharacterCreator.module.css:114:  background: radial-gradient(circle closest-side, #fff, rgb(255 255 255 / 0)), conic-gradient(from 90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); /* world */
+components/game/character/CharacterCreator.module.css:116:.wheelDisc::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #000; opacity: var(--dim, 0); pointer-events: none; } /* world */
+components/game/arrival/ReflectionCreator.module.css:7:  color: var(--gui-ink); font-family: var(--gui-font); font-weight: var(--gui-weight); line-height: var(--gui-leading); background: #cfdad3; color-scheme: light; } /* world */
+components/game/arrival/Arrival.module.css:10:  background: radial-gradient(ellipse 85% 70% at 50% 46%, #fff8e6 0%, #f8e7c4 40%, #e8d7b9 70%, #cfd6cc 100%); } /* world */
+components/game/arrival/Arrival.module.css:14:.fadeIn { position: absolute; inset: 0; z-index: 85; background: #0d0b09; pointer-events: none !important; animation: fadeIn var(--fade-ms, 1600ms) linear both; } /* world */
+components/game/arrival/Arrival.module.css:19:.letterbox i { position: absolute; left: 0; right: 0; height: clamp(28px, 7vh, 64px); background: #1b1611; animation: bar 0.9s var(--gui-ease) both; } /* world */
+components/game/emotes/EmoteWheel.module.css:7:.wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a10 0, #1c2a2a30 75%); opacity: 0; transition: opacity 0.16s ease; } /* world */
+components/game/photo/photo.module.css:13:.frame { position: absolute; inset: 0; border-style: solid; border-color: #fffdf6; box-sizing: border-box; transition: border-width 0.25s ease, border-color 0.25s ease; } /* world */
+components/game/photo/photo.module.css:14:.frame[data-frame="polaroid"] { border-color: #fbf8f1; } /* world */
+components/game/photo/photo.module.css:15:.frame[data-frame="postcard"] { border-color: #f6eedb; } /* world */
+components/game/photo/photo.module.css:16:.frame[data-frame="tsi"] { border-color: #2f4f46; } /* world */
+components/game/photo/photo.module.css:17:.flash { position: absolute; inset: 0; background: #fffdf6; pointer-events: none !important; animation: flash 0.45s ease-out forwards; } /* world */
+components/study/companion.module.css:69:.sceneWrap { height: 46vh; min-height: 220px; max-height: 320px; overflow: hidden; border-radius: var(--gui-r-card); background: #cfd9c3; box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); } /* world */
+app/lab/gui/showroom.module.css:33:.toastStage { position: relative; height: 150px; border-radius: 18px; background: linear-gradient(180deg, #9fd3e6, #cfe8d8); overflow: hidden; --game-toast-bottom: 16px; } /* world */
+app/lab/gui/showroom.module.css:36:.stage { position: relative; height: 520px; overflow: hidden; transform: translateZ(0); border-radius: 18px; background: linear-gradient(180deg, #9fd3e6 0%, #cfe8d8 55%, #9cc58a 56%, #86b878 100%); } /* world */

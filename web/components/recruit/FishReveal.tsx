@@ -18,7 +18,8 @@ import { useCatchCard } from "@/lib/game/useCatchCard";
 import { useRef } from "react";
 import { celebrate, fishOdds, iconFor, RARITY_META, type FishDef } from "@/lib/game/fishing";
 import { oneLinerFor } from "@/lib/game/peaceful";
-import { Badge, Button, RarityBadge } from "@/components/gui";
+import { Badge, RarityBadge } from "@/components/gui";
+import { VillageButton as Button } from "./ui";
 
 export default function FishReveal({ fish, sizeCm, recipe, together, isNew = true, newRecord = false, delay = 0, onDone }: {
   fish: FishDef;
@@ -43,7 +44,7 @@ export default function FishReveal({ fish, sizeCm, recipe, together, isNew = tru
   const { developed, next } = useCatchCard({ fish, isNew, delay, onDone, onDevelop: () => {
     const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const top = cardRef.current?.getBoundingClientRect().top ?? window.innerHeight * 0.75;
-    if (!calm) celebrate(fish.rarity, meta.color, { x: 0.5, y: Math.min(0.95, top / window.innerHeight) });
+    if (!calm) celebrate(fish.rarity, [meta.color, "#fffbe7", "#ffeea0"], { x: 0.5, y: Math.min(0.95, top / window.innerHeight) });
   } });
 
   const line = oneLinerFor(fish.key);

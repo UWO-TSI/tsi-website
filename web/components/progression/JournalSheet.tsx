@@ -13,7 +13,7 @@ import ContributeSheet from "./ContributeSheet";
 import { LettersBody } from "./LettersSheet";
 import ProgressionPanel, { type ProgressionSheetProps } from "./ProgressionPanel";
 import { Button, Empty, Progress, SignInText, TabPanel, Tabs, Toggle } from "@/components/gui";
-import { Fold, Folds, QuietButton, Section } from "@/components/gui/cream";
+import { Fold, Folds, QuietButton, Section } from "@/components/gui/flat";
 import { BookOpen, Check, Flag, Lock } from "lucide-react";
 import m from "./menus.module.css";
 
@@ -157,7 +157,7 @@ function ChapterPage({ c, museum, goal, now, busy, preview, onAct, onContribute 
 /** `keys`: J (fixed), which closes the journal too. */
 export default function JournalSheet({ open, onClose, initialTab, keys }: ProgressionSheetProps & { initialTab?: Tab; keys?: string }) {
   return (
-    <ProgressionPanel flat open={open} onClose={onClose} title="Journal" wide keys={keys} icon={<BookOpen size={20} />}>
+    <ProgressionPanel open={open} onClose={onClose} title="Journal" wide keys={keys} icon={<BookOpen size={20} />}>
       <JournalBody initialTab={initialTab} />
     </ProgressionPanel>
   );

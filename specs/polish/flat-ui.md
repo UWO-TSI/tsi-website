@@ -2,6 +2,8 @@
 
 David, 2026-10-18. Ledger row 315.
 
+> **2026-11-13 (ledger row 334):** flat is now the only look. The cream base, the cream theme, `Sheet`'s `variant`, the `flat` props (`IslandSheet`, `ProgressionPanel`, `CharacterCreator`) and `components/gui/cream` are gone; the kit's own `Button`, `Field`, `TextArea`, `Keycap` and `Dialogue` live in `components/gui`, and the cream layout pieces are the flat kit's `Folds` (`components/gui/flat/folds.tsx`). Where this file speaks of a cream default or a flat variant, it is history. Gates: `web/components/gui/flatOnly.test.ts` and the ESLint rule in `web/eslint.config.mjs` (design bible UI, "How it's built" 2b).
+
 ## The decision
 
 The shop overlay (round 4, approved 2026-10-18; `specs/interiors/shop.md`) becomes the style for the game's menus. David on its review:

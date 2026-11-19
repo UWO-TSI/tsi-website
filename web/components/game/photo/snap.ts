@@ -49,7 +49,8 @@ function develop(shot: HTMLCanvasElement, f: PhotoFilter) {
 }
 
 const FONT = '"Tethos Nunito", "Nunito", ui-rounded, system-ui, sans-serif';
-const INK = "#3a2e22", SAGE = "#426b5b", CREAM = "#fffbe7";
+/** Paper, the material (a print): --ui-paper, --ui-paper-ink and the sage seal, as values (a canvas can't read the theme). */
+const INK = "#3a3025", SAGE = "#426b5b", CREAM = "#fffaf0";
 const dateLine = (d: Date) => d.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" });
 
 /** The frame's paper and marks round the photo (its own drawing per frame). */

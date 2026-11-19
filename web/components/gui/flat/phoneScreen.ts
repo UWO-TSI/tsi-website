@@ -3,8 +3,8 @@
  * David: "no i like the old ui i lied, keep it old but lewss blurry"): a slim status line, white cards two across (the
  * app's icon from the icon library over its name in the kit's font), green highlights, and the home bar. Drawn smooth
  * at TEX texture pixels a screen pixel; its one light pixel finish is phone.tsx's sharp pass (a CSS pixel a pixel).
- * The pixel helpers (round 13's font, sprites and stepped frames) draw the moments on the glass, like setting it up
- * (components/game/hq/PhoneSignup.tsx). Colours: the theme's --ui-* tokens.
+ * The pixel helpers (round 13's font, sprites and stepped frames) draw the moments on the glass, like setting it up.
+ * Colours: the theme's --ui-* tokens.
  */
 import { SCREEN, TEX, screenLayout } from "./phoneMotion";
 

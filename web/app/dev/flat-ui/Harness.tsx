@@ -29,6 +29,9 @@ import { setMission } from "@/lib/game/combat/runtime";
 import WardrobeSheet from "@/components/game/peaceful/WardrobeSheet";
 import CharacterCreator from "@/components/game/character/CharacterCreator";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
+import appearance from "@/components/recruit/appearance.module.css";
+import applicantLook from "@/components/recruit/applicantLook.module.css";
+import { APPLICANT_STUDIO } from "@/components/recruit/applicantStudio";
 
 const ME = "00000000-0000-4000-8000-000000000001";
 let routed = false;
@@ -73,20 +76,21 @@ export default function Harness() {
   const surface = q.get("surface") ?? "bag";
   const close = () => undefined;
   const layout = defaultLayout();
+  // The applicant island's pieces, in the island's own frame (its <main>: the appearance theme and its own look, no .gui), as ApplicantIsland mounts them.
+  if (surface === "creator-applicant" || surface === "collection-applicant") return <main className={`${appearance.theme} ${applicantLook.look}`} data-time="day">
+    {surface === "creator-applicant" && <CharacterCreator applicant={APPLICANT_STUDIO} initial={DEFAULT_LOOK} title="Make yourself at home" onDone={close} />}
+    {surface === "collection-applicant" && <CollectionBook open onClose={close} collectionScope="applicant" />}
+  </main>;
   return <main className="gui" style={{ minHeight: "100dvh", background: "linear-gradient(180deg,#a9d8e6,#cfe7cf 55%,#9cc58f)" }}>
     {surface === "bag" && <BagSheet open onClose={close} keys="i" />}
     {surface === "chest" && <ChestSheet open onClose={close} />}
     {surface === "collection" && <CollectionBook open onClose={close} />}
-    {/* The applicant island's card (recruitment keeps its look): shot to show it unchanged. */}
-    {surface === "collection-applicant" && <CollectionBook open onClose={close} collectionScope="applicant" />}
     {surface === "crafting" && <CraftingSheet />}
     {surface === "wallet" && <WalletSheet open onClose={close} />}
     {surface === "missions" && <MissionBoardSheet open onClose={close} gateNote={null} />}
     {/* The closet (the fitting room with place=fitting), and the member's first creator as a signed-in member sees it. */}
     {surface === "wardrobe" && <WardrobeSheet open place={q.get("place") === "fitting" ? "fitting" : "closet"} onClose={close} onShop={close} />}
-    {surface === "creator" && <CharacterCreator flat initial={DEFAULT_LOOK} askName={{ current: "You" }} onDone={close} />}
-    {/* The applicant island's creator, as ApplicantIsland mounts it: shot to show it unchanged. */}
-    {surface === "creator-applicant" && <CharacterCreator initial={DEFAULT_LOOK} title="Make yourself at home" onDone={close} />}
+    {surface === "creator" && <CharacterCreator initial={DEFAULT_LOOK} askName={{ current: "You" }} onDone={close} />}
     {/* Docked at the side as the world docks it (its --hud-* edges). */}
     {surface === "decorate" && <div style={{ position: "fixed", inset: 0, ["--hud-edge" as string]: "16px", ["--hud-side-bottom" as string]: "96px" }}>
       <DecorateSheet indoor selected={q.get("pick") ? { piece: q.get("pick")!, rot: 0 } : null} layout={layout} room={layout.rooms[0]}

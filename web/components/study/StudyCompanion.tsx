@@ -144,7 +144,7 @@ function Timer({ study }: { study: StudyHook }) {
   const frac = study.remaining === null ? 0 : study.remaining / total;
   const R = 90;
   const C = 2 * Math.PI * R;
-  const color = x.phase === "focus" ? "var(--gui-wood-light, #bb813f)" : "var(--gui-success, #6c9a6f)";
+  const color = x.phase === "focus" ? "var(--gui-wood-light)" : "var(--gui-success, #6c9a6f)";
   const isHost = study.mates.some((m) => m.me && m.is_host);
   return (
     <section className={s.card}>

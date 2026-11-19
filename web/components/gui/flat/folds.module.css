@@ -1,5 +1,5 @@
-/* The cream menus' layout pieces (components/gui/cream; specs/polish/flat-ui.md round 2, step 7): the old palette, more
-   air, no boxes in boxes. Rows are split by the paper's own rule; the open row is the one piece of paper. */
+/* The menus' layout pieces (components/gui/flat/folds.tsx; specs/polish/flat-ui.md round 2, step 7): more air, no boxes
+   in boxes. Rows are split by a hairline rule; the open row is the one raised card. */
 
 .section { display: grid; gap: 10px; min-width: 0; }
 .sectionHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; }
@@ -49,5 +49,5 @@ button.foldHead:focus-visible { outline: 3px solid var(--gui-focus); outline-off
   .foldBody { padding: 0 14px 18px 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .foldBody { animation: none; } .chev, .quiet, button.foldHead { transition: none; } }
-:global(html[data-contrast="high"]) .fold[data-open] { background: #ffffff; box-shadow: inset 0 0 0 2px #000000; }
-:global(html[data-contrast="high"]) .foldLine, :global(html[data-contrast="high"]) .sectionTitle, :global(html[data-contrast="high"]) .meta { color: #000000; }
+:global(html[data-contrast="high"]) .fold[data-open] { background: var(--ui-on-scrim); box-shadow: inset 0 0 0 2px var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .foldLine, :global(html[data-contrast="high"]) .sectionTitle, :global(html[data-contrast="high"]) .meta { color: var(--ui-contrast-ink); }

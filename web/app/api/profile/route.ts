@@ -40,7 +40,7 @@ const ProfileUpdateSchema = z.object({
   year: z.string().max(20).nullable().optional(),
   program: z.string().max(100).nullable().optional(),
   hometown: z.string().max(100).nullable().optional(),
-  // The island ID (HQ, IdCard.tsx; migration 20261101230000).
+  // Pronouns (migration 20261101230000).
   pronouns: z.string().trim().max(24).nullable().optional(),
   phone: z.string().max(20).nullable().optional(),
   preferred_email: z.string().email().nullable().optional(),
@@ -51,7 +51,7 @@ const ProfileUpdateSchema = z.object({
   favourite_music: z.string().max(200).nullable().optional(),
   dream_retirement: z.string().max(200).nullable().optional(),
   spirit_animal: z.string().max(100).nullable().optional(),
-  // Private (migration 20260926120000: read back only server side). The island ID asks for it (HQ, IdCard.tsx).
+  // Private (migration 20260926120000: read back only server side).
   birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((d) => { const t = Date.parse(`${d}T00:00:00Z`); return Number.isFinite(t) && t >= Date.parse("1900-01-01") && t <= Date.now(); }, "Not a birthday")
     .nullable().optional(),
   fun_fact: z.string().max(200).nullable().optional(),
