@@ -11,6 +11,7 @@ For the next coordinator session. Start fresh from this file, `STATE.md` and the
   - merges approved work into `feat/game-default-island` and pushes it to main;
   - applies prod migrations.
 - **Lanes:** never push and never talk to David.
+- **One UI (David, 2026-11-13, rows 334 and 335):** every UI lane brief names the flat kit; a review page never carries a cream or Animal Crossing paper screen (send it back to the lane instead); at every merge the guard test `web/components/gui/flatOnly.test.ts` and the lint rule must pass, and a branch that fails them is fixed onto the flat kit before it merges. Future looks are UI packs (theme files bought with gems), never per-screen styling.
 - **Restarting lanes:** done automatically, fresh from their file in `specs/lanes/`, when a lane has run for hours, its context is huge, or it's idle after a review (David, 2026-10-18).
 
 ## Helpers

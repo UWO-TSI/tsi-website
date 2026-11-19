@@ -6,10 +6,21 @@
 import "./clean.css";
 import "./dark.css";
 
+import { useSyncExternalStore } from "react";
+
 export const UI_THEMES = ["clean", "dark"] as const;
 export type UiTheme = (typeof UI_THEMES)[number];
 
 /** Wears a pack from now on (later the shop's purchase; today the dev switch). */
 export function setUiTheme(theme: UiTheme) {
   document.body.dataset.uiTheme = theme;
+}
+
+/** The viewer's system light or dark as a pack, for an admin page that follows the OS (the game analytics page). */
+export function useSchemeTheme(): UiTheme {
+  return useSyncExternalStore((on) => {
+    const m = window.matchMedia("(prefers-color-scheme: dark)");
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, () => window.matchMedia("(prefers-color-scheme: dark)").matches, () => false) ? "dark" : "clean";
 }

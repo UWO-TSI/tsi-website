@@ -2,7 +2,7 @@
 
 The one canon for how the game looks: UI, art and models. On these topics it wins over every other spec. A spec, lane file or asset that disagrees with it gets fixed or archived; it isn't followed. Changes to the bible are recorded as rows in the decision ledger (`specs/game-world-development-plan.md`).
 
-Chapters: **UI** and **Models** are set (2026-10-28, ledger rows 320 and 319); **Sky** holds David's sky calls (2026-11-06, sky-ambient round 4). **Art** is being written from the 2026-10-28 codebase review; until it lands, `specs/art-direction-oct17.md` is the art reference. Older UI docs (`specs/polish/gui-sheet.md`, `specs/polish/ui-themes.md`, `specs/cozy-lighting-and-adaptive-ui-2026-09-17.md`, `specs/game-ui-questions.md`, `web/DESIGN_SYSTEM.md`, `web/STYLE.md`) are history wherever they disagree with this file.
+Chapters: **UI** and **Models** are set (2026-10-28, ledger rows 320 and 319); **Sky** holds David's sky calls (2026-11-06, sky-ambient round 4). **Art** is being written from the 2026-10-28 codebase review; until it lands, `specs/art-direction-oct17.md` is the art reference. Older UI docs (`specs/polish/gui-sheet.md`, `specs/polish/ui-themes.md`, `specs/cozy-lighting-and-adaptive-ui-2026-09-17.md`, `specs/game-ui-questions.md`; the old site's `web/DESIGN_SYSTEM.md` and `web/STYLE.md` were deleted 2026-11-14, see git history) are history wherever they disagree with this file.
 
 ## UI
 

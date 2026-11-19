@@ -25,7 +25,7 @@ import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { ChevronLeft, CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyHome, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, BarRows, CHART, ChartCard, Columns, Delta, Heatmap, Segmented, StatTile, TimeChart, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyHome, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import PhoneSignup from "@/components/game/hq/PhoneSignup";
@@ -442,6 +442,35 @@ export default function GuiShowroom() {
         <Card><Empty icon={<PackageOpen size={34} />} title="Nothing in your bag yet" action={<Button size="sm" variant="quiet">Go fishing</Button>}>Catches, fruit and finds land here.</Empty></Card>
         <Card><Empty icon={<img src={iconUrl("yellow-message-mat")} alt="" />} title="No letters">When someone writes, it arrives here.</Empty></Card>
         <Card><ErrorNote onRetry={() => {}}>Your mail didn’t load. The connection dropped.</ErrorNote></Card>
+      </div>
+    </Section>
+
+    <Section id="charts" title="Charts (flat kit)" note="components/gui/flat/charts.tsx, for the admin analytics page: a headline tile with its change, days over time (bars and lines, hover for the read-out), bars along rows with a drop line, a distribution, a heatmap. One hue per job from the theme, values in ink.">
+      <div style={{ display: "grid", gap: 12, padding: 16, borderRadius: 22, background: "var(--ui-panel)" }}>
+        <Segmented label="Range" value={30} onChange={() => {}} options={[{ id: 7, label: "7 days" }, { id: 30, label: "30 days" }, { id: 90, label: "90 days" }]} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8, padding: 16, borderRadius: 16, background: "var(--ui-card)" }}>
+          <StatTile label="Players a day" value="14.2" sub={<Delta now={14.2} before={11} />} />
+          <StatTile label="Next-day return" value="38%" sub={<Delta now={38} before={44} unit="pct" />} />
+          <StatTile label="Stickiness" value="21%" sub="a day over the month" />
+        </div>
+        <ChartCard title="Players over time" note="Hover a day.">
+          <TimeChart label="Players a day" labels={["Nov 1", "Nov 2", "Nov 3", "Nov 4", "Nov 5", "Nov 6", "Nov 7"]} series={[
+            { label: "Played that day", kind: "bar", color: CHART.soft, values: [8, 11, 9, 14, 12, 16, 13] },
+            { label: "Played that week", kind: "line", color: CHART.a, values: [20, 22, 23, 25, 26, 28, 29] },
+            { label: "New", kind: "line", color: CHART.b, values: [3, 4, 2, 6, 3, 5, 4] },
+          ]} />
+        </ChartCard>
+        <ChartCard title="Bars along rows">
+          <BarRows rows={[
+            { key: "a", label: "Signed in", value: 100, text: "40" },
+            { key: "b", label: "Character made", value: 80, text: "32", drop: { text: "8 stopped here (20%)", big: true } },
+            { key: "c", label: "Fishing", value: 60, inner: 35, text: "24" },
+          ]} max={100} />
+        </ChartCard>
+        <ChartCard title="A distribution"><Columns label="Session length" bins={[{ label: "Under 1", n: 3 }, { label: "1 to 5", n: 12 }, { label: "5 to 15", n: 20 }, { label: "15 to 30", n: 9 }, { label: "30+", n: 4 }]} /></ChartCard>
+        <ChartCard title="A heatmap"><Heatmap lead={["Week of", "Joined"]} cols={["Day 1", "Day 7", "Day 30"]} rows={[
+          { label: "Oct 26", side: 12, cells: [58, 25, null] }, { label: "Oct 19", side: 9, cells: [44, 22, 11] },
+        ]} /></ChartCard>
       </div>
     </Section>
 

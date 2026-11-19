@@ -44,7 +44,7 @@ The applicant island (`/student/apply/portal`) and the member island share one i
 
 ## Gotchas
 
-- `cd web && npm install` needs `--legacy-peer-deps`.
+- `cd web && npm install` works as is (the packages that needed `--legacy-peer-deps` were removed 2026-11-14).
 - `.gitignore` ignores `*.json` with explicit exceptions: a new JSON file that must ship needs its own `!` line.
 - The game loads with `next/dynamic` and `ssr: false`, so `BAILOUT_TO_CLIENT_SIDE_RENDERING` in SSR output is expected.
 - Dev works without `web/.env.local`: middleware handles missing Supabase env vars.

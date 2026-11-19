@@ -7,7 +7,6 @@ const LINKS: [string, string][] = [
   ["/student/dashboard/oracle?oracle=demo&family=INTJ&name=Maya", "Oracle reading, finished as INTJ"],
   ["/dev/progression?demo=1&sheet=contribute", "Progression sheets: journal, goals, letters, contribute, notice"],
   ["/dev/economy?view=shop&tab=specials", "Economy sheets: shop, sell, inventory, wallet, merch admin"],
-  ["/dev/playground", "UI component playground"],
   ["/student/apply/portal?preview=1", "Applicant island"],
 ];
 

@@ -12,6 +12,7 @@ import {
   BarChart3,
   Vote,
   MessageSquareWarning,
+  Activity,
 } from "lucide-react";
 import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 import GameContentIndex from "@/components/portal/GameContentIndex";
@@ -79,6 +80,13 @@ const adminSections = [
     icon: <BarChart3 size={22} aria-hidden />,
     href: "/student/dashboard/admin/analytics",
     tone: "success",
+  },
+  {
+    title: "Players",
+    description: "The game's funnel, sessions, and where players stop",
+    icon: <Activity size={22} aria-hidden />,
+    href: "/student/dashboard/admin/game",
+    tone: "sage",
   },
   {
     title: "Election",

@@ -12,7 +12,6 @@ export type SiteConfig = {
   accentOnLight: string;
   contact: string;
   instagram: string;
-  github: string;
 };
 
 export const TETHOS: SiteConfig = {
@@ -22,7 +21,6 @@ export const TETHOS: SiteConfig = {
   accentOnLight: "#1d9bf0",
   contact: "info@tethos.ca",
   instagram: "https://www.instagram.com/westerntsi/",
-  github: "https://github.com/UWO-TSI",
 };
 
 const SITES: Record<string, SiteConfig> = { tethos: TETHOS };

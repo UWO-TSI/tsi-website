@@ -36,6 +36,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 
 ## Look and rendering
 `acnh-system-reference.md` | ACNH rules behind the target look | reference
+`asset-pipeline.md` | Row 339's fixed frames: the shots per family, framing, prompt skeleton, model sheet, the blueprint (exploded view, dimensions, colours, moving parts, materials, textures, animation, effects; row 340), SFX, VFX, animation | live
 `look-development.md` | Sunny-not-flat look spec, sections 5 to 9 | live
 `look/applied.md` | Open-air sun applied, row 236 | reference
 `look/baseline.md` | Look baseline and flatness diagnosis | reference
@@ -139,6 +140,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 
 ## Ops, launch, QA, security
 `admin-pass.md` | Admin tooling content control | reference
+`analytics.md` | Player analytics: the event log, the admin Players page, what is collected | live
 `api.md` | API contracts | reference
 `cleanup-and-game-security.md` | Game-side security cleanup | reference
 `hardening-questions.md` | Hardening open points | reference

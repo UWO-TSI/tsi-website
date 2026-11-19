@@ -10,6 +10,7 @@
 import { useSyncExternalStore } from "react";
 import { DEFAULT_LOOK, forMember, parseLook, type CharacterLook } from "./look";
 import { refreshCard } from "@/lib/net/netStore";
+import { trackStep } from "@/lib/analytics/track";
 
 const KEY = "tsi.look.v1";
 export interface MyLook { look: CharacterLook; saved: boolean; loaded: boolean; signedIn: boolean; member: boolean }
@@ -58,5 +59,6 @@ export function useMyLook(): MyLook {
 export async function saveMyLook(look: CharacterLook): Promise<string | null> {
   writeLocal(look);
   publish({ look, saved: true });
+  trackStep("creator");
   return state.signedIn ? pushRemote(look) : null;
 }
