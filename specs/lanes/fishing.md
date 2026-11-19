@@ -43,6 +43,13 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
    - **Raiju**, cliff pools, summer, in rain.
    Every season has at least one, and two bite at the December 20 launch. Descriptions come from `specs/fish-list.md` section 4 on `game/fish-list`.
 
+4. **Gear roles** (David, 2026-11-19: "rod has base stats, bobber has any small bonus, bait is either another booster or to catch more specific fish, or specific situation"):
+   - **Rod:** the base stats.
+   - **Bobber:** a small permanent bonus.
+   - **Bait:** the only consumable. Coins only, used up per catch, never sold for gems or given by the gacha. Each bait is either a booster or a targeter (specific fish or a specific situation).
+   - **Launch set** (proposed): Worms (faster bites), Sweet bait (rarer fish), Glow bait (night and bad weather), and the Legend lure (that water's legendary, craft-only).
+   - Bait sells at the tackle shop's Bait tab. Farming bait comes with the personal island, after launch.
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
