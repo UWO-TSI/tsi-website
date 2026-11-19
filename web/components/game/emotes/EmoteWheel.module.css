@@ -4,7 +4,7 @@
    centre one after another; flipping to the dances swings the new ring in with a little turn; the chosen petal bobs. */
 .wheel, .flower { --cream: var(--ui-card); --butter: var(--gui-butter); --teal: var(--gui-teal); --pill: var(--gui-teal-pill); --ink: var(--gui-bark); }
 .wheel { position: absolute; inset: 0; z-index: 35; display: grid; place-items: center; pointer-events: none; font-family: var(--gui-font); }
-.wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a10 0, #1c2a2a30 75%); opacity: 0; transition: opacity 0.16s ease; }
+.wheel::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #1c2a2a10 0, #1c2a2a30 75%); opacity: 0; transition: opacity 0.16s ease; } /* world */
 .wheel[data-shown]::before { opacity: 1; }
 .flower { position: relative; width: 0; height: 0; opacity: 0; transform: scale(0.72) rotate(-8deg); transition: opacity 0.14s ease, transform 0.26s cubic-bezier(0.2, 1.4, 0.4, 1); zoom: var(--tsi-text-scale, 1); }
 .wheel[data-shown] .flower, .flower[data-shown] { opacity: 1; transform: none; pointer-events: auto; }
@@ -15,7 +15,7 @@
   transform: translate(-50%, -50%) translate(var(--x), var(--y)) scale(var(--s, 1)); transition: transform 0.16s cubic-bezier(0.2, 1.6, 0.4, 1), background 0.12s, color 0.12s;
   animation: petalIn 0.28s cubic-bezier(0.2, 1.4, 0.4, 1) both; animation-delay: calc(var(--i) * 20ms); }
 @keyframes petalIn { from { opacity: 0; transform: translate(-50%, -50%) translate(calc(var(--x) * 0.3), calc(var(--y) * 0.3)) scale(0.4); } }
-.flower[data-ring="dances"] .petal { background: #fff3e8; }
+.flower[data-ring="dances"] .petal { background: var(--ui-emote-petal); }
 .petal[data-chosen] { --s: 1.22; z-index: 2; background: var(--butter); box-shadow: 0 4px 0 rgb(var(--ui-shade) / 0.15), 0 10px 22px rgb(var(--ui-shade) / 0.19); }
 .petal[data-chosen] .icon { animation: bob 0.5s ease-in-out infinite alternate; }
 @keyframes bob { from { transform: translateY(1px) rotate(-6deg); } to { transform: translateY(-2px) rotate(6deg); } }

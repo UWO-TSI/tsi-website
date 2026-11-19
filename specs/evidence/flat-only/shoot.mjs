@@ -67,7 +67,15 @@ const still = (name, url, fn = async () => {}, opts = {}) => () => open(url, asy
 const PACK_SHEETS = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "closet", "fitting", "oracle", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest", "bag", "donate"];
 const PACKS = ["clean", "vintage"];
 
+/** Pixel baseline for the packs residue work: the UI over a hidden world, Clean only. */
+const BASE = (name, url) => () => open(url, async page => { await page.waitForTimeout(900); await shot(page, `base-${name}`); }, { hideCanvas: true });
+const W = "/lab/island?at=14:05&time=day&weather=clear&collections=demo&progression=demo";
+
 const SCENES = {
+  "base-hud": BASE("hud", W), "base-settings": BASE("settings", `${W}&sheet=settings`), "base-bag": BASE("bag", `${W}&sheet=bag`),
+  "base-letters": BASE("letters", `${W}&sheet=letters`), "base-cafe": BASE("cafe", `${W}&sheet=cafe`), "base-counter": BASE("counter", `${W}&sheet=counter`),
+  "base-journal": BASE("journal", `${W}&sheet=journal`), "base-path": BASE("path", `${W}&sheet=path&oracle=demo&combat=demo`),
+  "base-tourney": BASE("tourney", `${W}&sheet=tourney`), "base-vboard": BASE("vboard", `${W}&sheet=vboard`),
   // ── fo-sheets: the sheets that were cream ──
   settings: sheet("settings"), path: sheet("path", "&oracle=demo&combat=demo"), oracle: sheet("oracle", "&oracle=demo"), tourney: sheet("tourney"), posters: sheet("posters"),
   cafe: sheet("cafe"), wallet: sheet("wallet"), donate: sheet("donate"), chest: sheet("chest"), bag: sheet("bag"),

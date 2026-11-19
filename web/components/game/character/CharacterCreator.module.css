@@ -92,7 +92,7 @@
 
 /* A face part on a patch of the character's skin, where it sits on the face. */
 .face { position: relative; display: block; width: 88%; aspect-ratio: 1; border-radius: 42% 46% 44% 40% / 44% 40% 46% 42%;
-  background: radial-gradient(circle at 42% 36%, color-mix(in srgb, var(--skin) 80%, #fff), var(--skin) 75%); box-shadow: inset 0 -3px 0 rgb(120 80 50 / 0.12); }
+  background: radial-gradient(circle at 42% 36%, color-mix(in srgb, var(--skin) 80%, #fff), var(--skin) 75%); box-shadow: inset 0 -3px 0 rgb(120 80 50 / 0.12); } /* world */
 .face i { position: absolute; background-repeat: no-repeat; }
 
 /* Swatches: round dots, the chosen one ringed in ink (the kit's ColourDots). */
@@ -105,15 +105,15 @@
 .swatches button[aria-pressed="true"] { transform: none; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.08), 0 0 0 2px var(--ui-card), 0 0 0 4px var(--ui-ink); }
 .swatches button:disabled { opacity: 0.35; cursor: not-allowed; }
 /* round 2: the hairstyle's own colours (its texture's), named on the swatch */
-.swatches button[data-own] { color: var(--ui-on-scrim); font: 700 11px/1 var(--gui-font); text-shadow: 0 1px 2px rgb(0 0 0 / 0.65); letter-spacing: 0.02em; }
+.swatches button[data-own] { color: var(--ui-on-scrim); font: 700 11px/1 var(--gui-font); text-shadow: 0 1px 2px rgb(var(--ui-shade) / 0.65); letter-spacing: 0.02em; }
 .swatches button[data-locked] { opacity: 0.45; outline: 1.5px dashed var(--ui-line); outline-offset: 2px; box-shadow: inset 0 0 0 1px rgb(var(--ui-shade) / 0.08); }
 
 /* The hair colour wheel (head-v10, ColourWheel.tsx): a hue and saturation disc at the chosen brightness, beside the presets. */
 .wheel { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 18px; }
 .wheelDisc { position: relative; flex: none; width: 120px; aspect-ratio: 1; border-radius: 50%; cursor: crosshair; touch-action: none;
-  background: radial-gradient(circle closest-side, #fff, rgb(255 255 255 / 0)), conic-gradient(from 90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  background: radial-gradient(circle closest-side, #fff, rgb(255 255 255 / 0)), conic-gradient(from 90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); /* world */
   box-shadow: 0 0 0 1px var(--ui-line); }
-.wheelDisc::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #000; opacity: var(--dim, 0); pointer-events: none; }
+.wheelDisc::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: #000; opacity: var(--dim, 0); pointer-events: none; } /* world */
 .wheelDisc:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 3px; }
 .wheelMark { position: absolute; z-index: 1; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 2.5px var(--ui-card), 0 0 0 4px var(--ui-ink); }
 .wheel[data-active] .wheelMark { width: 20px; height: 20px; margin: -10px 0 0 -10px; box-shadow: 0 0 0 2.5px var(--ui-card), 0 0 0 4px var(--ui-ink); }
@@ -181,5 +181,5 @@
   .tile, .swatches button, .rail img, .topClose { transition: none; }
   .baking { animation: none; }
 }
-:global(html[data-contrast="high"]) .creator .tile { background: #ffffff; box-shadow: inset 0 0 0 2px #000000; }
-:global(html[data-contrast="high"]) .creator .tile[aria-pressed="true"] { box-shadow: inset 0 0 0 4px #000000; }
+:global(html[data-contrast="high"]) .creator .tile { background: var(--ui-on-scrim); box-shadow: inset 0 0 0 2px var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .creator .tile[aria-pressed="true"] { box-shadow: inset 0 0 0 4px var(--ui-contrast-ink); }

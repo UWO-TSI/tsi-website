@@ -18,7 +18,7 @@
 .note { color: var(--gui-muted); font-size: var(--gui-text-sm); }
 .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
 .swatches figure { margin: 0; display: grid; gap: 4px; }
-.swatches span { height: 46px; border-radius: 14px; box-shadow: inset 0 0 0 1.5px rgb(114 92 78 / 0.18); }
+.swatches span { height: 46px; border-radius: 14px; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ui-shadow-paper) 18%, transparent); }
 .swatches figcaption { display: grid; font-size: var(--gui-text-sm); font-weight: 800; line-height: 1.2; }
 .swatches small { color: var(--gui-muted); font-size: var(--gui-text-xs); font-weight: 600; }
 .typeScale p { display: flex; align-items: baseline; gap: 14px; margin: 0 0 6px; color: var(--gui-ink-strong); line-height: 1.2; }
@@ -30,8 +30,8 @@
 .form { display: grid; gap: 10px; max-width: 560px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; align-items: start; }
 .cards p { margin: 4px 0 0; color: var(--gui-ink-2); }
-.toastStage { position: relative; height: 150px; border-radius: 18px; background: linear-gradient(180deg, #9fd3e6, #cfe8d8); overflow: hidden; --game-toast-bottom: 16px; }
+.toastStage { position: relative; height: 150px; border-radius: 18px; background: linear-gradient(180deg, #9fd3e6, #cfe8d8); overflow: hidden; --game-toast-bottom: 16px; } /* world */
 .overlay { margin-top: 18px; }
 .overlay h3 { margin: 0 0 8px; color: var(--gui-ink-strong); font-size: var(--gui-text-lg); font-weight: 800; }
-.stage { position: relative; height: 520px; overflow: hidden; transform: translateZ(0); border-radius: 18px; background: linear-gradient(180deg, #9fd3e6 0%, #cfe8d8 55%, #9cc58a 56%, #86b878 100%); }
+.stage { position: relative; height: 520px; overflow: hidden; transform: translateZ(0); border-radius: 18px; background: linear-gradient(180deg, #9fd3e6 0%, #cfe8d8 55%, #9cc58a 56%, #86b878 100%); } /* world */
 .stage[data-tall] { height: calc(100vh - 40px); border-radius: 0; }

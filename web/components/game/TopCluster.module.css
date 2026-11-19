@@ -1,5 +1,5 @@
 /* The island clock under the minimap (HudClock): the sky's icon and the hour, on a soft paper wash. */
-.time { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 4px 11px 4px 9px; border-radius: 999px; background: rgb(255 251 231 / 0.9); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); font-size: var(--gui-text-sm); zoom: var(--tsi-text-scale, 1); }
+.time { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 4px 11px 4px 9px; border-radius: 999px; background: color-mix(in srgb, var(--ui-hud-pill) 90%, transparent); color: var(--gui-ink-strong); box-shadow: var(--gui-shadow-sm); font-size: var(--gui-text-sm); zoom: var(--tsi-text-scale, 1); }
 .time b { font-weight: 900; font-variant-numeric: tabular-nums; }
 .time svg { color: var(--gui-warn); }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }

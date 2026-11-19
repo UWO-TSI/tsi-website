@@ -78,4 +78,19 @@ describe("flat is the only look (rows 334, 335)", () => {
     fail(hits(SOURCE.filter(p => !allowed(p) && !p.startsWith(THEMES)), re),
       "Components read --ui-* tokens and never name a theme: <body data-ui-theme> wears the player's pack (styles/themes/index.ts setUiTheme).");
   });
+
+  it("game UI colours come from tokens (or are marked /* world */)", () => {
+    const dirs = ["components/game", "components/gui", "components/economy", "components/progression", "components/portal", "components/study", "app/lab"];
+    const bad: string[] = [];
+    for (const d of dirs) for (const f of files(d).filter(p => p.endsWith(".module.css"))) {
+      read(f).split("\n").forEach((l, i) => {
+        if (/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(l) && !l.includes("var(--ui-") && !l.includes("/* world */")) bad.push(`${f}:${i + 1}`);
+      });
+    }
+    expect(bad, "a literal colour in game UI CSS: use a --ui-* token, or mark a world colour /* world */").toEqual([]);
+  });
+
+  it("the themes index is server-safe (the root layout imports it)", () => {
+    expect(read("styles/themes/index.ts")).not.toMatch(/from "react"/);
+  });
 });

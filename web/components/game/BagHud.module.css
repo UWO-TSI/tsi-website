@@ -25,4 +25,4 @@
 @media (prefers-reduced-motion: reduce) {
   .bagButton, .bagButton[data-bump], .fullNote { animation: none; transition: none; }
 }
-:global(html[data-contrast="high"]) .bagButton, :global(html[data-contrast="high"]) .fullNote { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
+:global(html[data-contrast="high"]) .bagButton, :global(html[data-contrast="high"]) .fullNote { background: var(--ui-contrast-ink); color: var(--ui-on-scrim); box-shadow: 0 0 0 2px var(--ui-on-scrim); }

@@ -1,6 +1,6 @@
 /* The corner minimap (playtest round 1): a paper-edged round-cornered square, small while you play, bigger in the UI view. */
-.corner { position: relative; width: var(--minimap-size, 156px); aspect-ratio: 1; border-radius: var(--gui-r-card); overflow: hidden; background: #76b4c6;
-  box-shadow: var(--gui-shadow-md), inset 0 0 0 3px rgb(255 251 231 / 0.92); transition: width 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1); }
+.corner { position: relative; width: var(--minimap-size, 156px); aspect-ratio: 1; border-radius: var(--gui-r-card); overflow: hidden; background: #76b4c6; /* world */
+  box-shadow: var(--gui-shadow-md), inset 0 0 0 3px color-mix(in srgb, var(--ui-hud-pill) 92%, transparent); transition: width 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1); }
 .corner[data-big] { width: var(--minimap-big, 248px); }
 .corner .plot { display: block; width: 100%; height: 100%; }
 /* The whole map is the button to the island map (only in the UI view, where the cursor is free). */
@@ -11,7 +11,7 @@
 
 /* The island map in its sheet. */
 .sheetBody { padding-top: 16px; }
-.bigPlot { display: block; width: min(100%, 62dvh); margin: 0 auto; aspect-ratio: 1; border-radius: var(--gui-r-card); background: #76b4c6; }
+.bigPlot { display: block; width: min(100%, 62dvh); margin: 0 auto; aspect-ratio: 1; border-radius: var(--gui-r-card); background: #76b4c6; } /* world */
 .legend { min-height: 32px; display: flex; align-items: center; justify-content: center; gap: 18px; padding-top: 10px; font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-ink-2); }
 .you { display: flex; align-items: center; gap: 5px; }
 .you::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--gui-highlight); border: 1.5px solid var(--gui-warn); }
