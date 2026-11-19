@@ -2,7 +2,7 @@
 
 /**
  * A rod's stats and add-ons (David 2026-10-27 and 10-28, v1-gameplay m4 and x-shop), wherever a rod is shown. The hex
- * radar grades the six stats out of 100: in the shop the rod alone; on your own rod the build with its add-ons, the
+ * radar grades the six stats up to STAT_MAX (legendary about 100, Divine past it): in the shop the rod alone; on your own rod the build with its add-ons, the
  * rod alone faint behind it, sliding as an add-on goes on. Only your own rods carry the bait and bobber slots (the
  * stage's bottom-right corner), and what's on them hangs from the rod's tip (their low-poly copies). An add-on's own
  * detail shows just the add-on and its own radar.
@@ -16,30 +16,52 @@ import { STAT_ICON } from "./statIcons";
 import { GearSlot, HexRadar } from "@/components/gui/flat";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { worldModel } from "@/lib/game/world/active";
-import { keyModel } from "@/lib/icons/itemModel";
+import { rodSpec } from "@/lib/icons/itemModel";
 import { shopIcon } from "@/lib/icons/keys";
 import { RARITY_LABEL } from "@/lib/rarity";
-import { RODS, SLOTS, STAT_INFO, TACKLE, STAT_KEYS, STAT_MAX, hookCap, rig, tackleByKey, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
+import { SLOTS, STAT_INFO, TACKLE, STAT_KEYS, STAT_MAX, awakened, nextAwakening, rig, secretAwakenings, tackleByKey, type RodStat, type RodTier, type Tackle, type TackleSlot } from "@/lib/game/rods";
 import type { InventoryRow } from "@/lib/wallet/store";
 import { FittedModel } from "./ItemViewer";
 import TurnStage from "./TurnStage";
 
-export const rodOf = (ref: string | null | undefined): RodTier | null => RODS.find(r => r.key === ref) ?? null;
 /** The add-ons a member has on (equipped inventory rows), by key. */
 export const equippedTackle = (rows: readonly InventoryRow[]): string[] =>
   rows.flatMap(r => (r.equipped && tackleByKey(r.item.catalogue_ref) ? [r.item.catalogue_ref!] : []));
 /** "+20 Luck, +10 Lure". */
 export const gainsText = (t: Tackle) => STAT_KEYS.flatMap(k => (t.gains[k] ? [`+${t.gains[k]} ${STAT_INFO[k].label}`] : [])).join(", ");
-/** "Rare rod · hooks up to epic". */
-export const rodLine = (r: RodTier) => `${RARITY_LABEL[r.rarity]} rod · hooks up to ${RARITY_LABEL[hookCap(r.rarity)].toLowerCase()}`;
+const RECORD_LINE = { display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--ui-ink-2)", font: "500 13px var(--gui-font)" } as const;
+/**
+ * The rod card's record (rod_catches), small lines under its title (David 2026-11-03: "you dont need a whole bar to
+ * say"; 2026-11-04: no levels, only awakenings). The fish landed with it; on a rod that awakens in the open (epic and
+ * up) a small bar of the way to its next awakening (the Training rod's stay a surprise: its count only); and its
+ * passive, a line kept empty on rods without one so every card lines up. `rod` is the rod as bought; the line shows it
+ * as `catches` have awakened it.
+ */
+export function RodRecord({ rod, catches = 0 }: { rod: RodTier; catches?: number }) {
+  const now = awakened(rod, catches), open = rod.awakenings.length > 0 && !secretAwakenings(rod), next = nextAwakening(rod, catches);
+  const from = rod.awakenings[now.stage - 1]?.at ?? 0, done = next ? (catches - from) / (next.at - from) : 1;
+  const fish = `${catches.toLocaleString()} fish caught`;
+  return <div data-testid="rod-record" style={{ display: "grid", gap: 4, margin: "0 0 4px" }}>
+    <p style={RECORD_LINE} title={open && next ? `${(next.at - catches).toLocaleString()} more fish to its next awakening` : undefined}>
+      {open && <span role="progressbar" aria-label="To its next awakening" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(done * 100)}
+        style={{ flex: "none", width: 64, height: 4, borderRadius: 2, background: "var(--ui-line)", overflow: "hidden" }}>
+        <span style={{ display: "block", width: `${done * 100}%`, height: "100%", background: "var(--ui-chart)" }} />
+      </span>}
+      <span>{!open ? fish : next ? `${catches.toLocaleString()} / ${next.at.toLocaleString()} fish to awaken` : `${fish} · fully awakened`}</span>
+    </p>
+    <p data-testid="rod-passive" style={{ ...RECORD_LINE, minHeight: 18 }}>{now.passive && <><b style={{ fontWeight: 600, color: "var(--ui-ink)" }}>{now.passive.name}</b>{now.passive.text}</>}</p>
+  </div>;
+}
+/** "Rare rod · hooks up to epic" (the rod as it is now: an awakening can hook rarer fish). */
+export const rodLine = (r: RodTier) => `${RARITY_LABEL[r.rarity]} rod · hooks up to ${RARITY_LABEL[r.hooks].toLowerCase()}`;
 
 const axis = (k: RodStat, value: number, base?: number) => ({ label: STAT_INFO[k].label, hint: STAT_INFO[k].does, icon: STAT_ICON[k], value, base });
 
-/** A rod's radar: the rod alone, or (`tackle`) the build with its add-ons over the rod alone. */
-export function RodRadar({ rod, tackle }: { rod: RodTier; tackle?: readonly string[] }) {
-  const on = tackle ? rig(rod, tackle) : null;
-  return <HexRadar label={`${rod.name} stats`} max={STAT_MAX} testId="rod-radar"
-    axes={STAT_KEYS.map(k => axis(k, on ? on.stats[k] : rod.base[k], on ? rod.base[k] : undefined))} />;
+/** A rod's radar: the rod alone, or (`tackle`) the build with its add-ons over the rod alone, or (`from`) the rod over what it was. */
+export function RodRadar({ rod, tackle, from, size }: { rod: RodTier; tackle?: readonly string[]; from?: RodTier; size?: number }) {
+  const on = tackle ? rig(rod, tackle) : null, under = on ? rod : from;
+  return <HexRadar label={`${rod.name} stats`} max={STAT_MAX} size={size} testId="rod-radar" baseLabel={on ? undefined : "before"}
+    axes={STAT_KEYS.map(k => axis(k, on ? on.stats[k] : rod.base[k], under?.base[k]))} />;
 }
 
 /** An add-on's own radar: only what it adds (David 2026-10-28: "only show the bobber and not on a rod"). */
@@ -60,7 +82,7 @@ export function RodSlots({ rows, busy, onEquip }: { rows: readonly InventoryRow[
 }
 
 /** How far the tackle hangs below the tip, and each piece's size (stage units: the rod spans 1.7). */
-const LINE = 0.34, LEADER = 0.1, SIZE: Record<TackleSlot, number> = { bobber: 0.13, bait: 0.1 };
+const LINE = 0.34, LEADER = 0.1, SIZE: Record<TackleSlot, number> = { bobber: 0.09, bait: 0.07 };
 // A light, fine line (David 10-29: "make the line not black and thinner more subtle").
 const lineMat = new THREE.MeshBasicMaterial({ color: 0xb4bcc4 });
 const lineGeo = new THREE.CylinderGeometry(0.0035, 0.0035, 1, 5).translate(0, -0.5, 0);
@@ -113,9 +135,9 @@ function Hang({ tackle }: { tackle: readonly Tackle[] }) {
   </group>;
 }
 
-/** Your rod large and turning, with what's on its slots hanging from the tip; `corner` holds the slots. */
+/** Your rod (as awakened) large and turning, with what's on its slots hanging from the tip; `corner` holds the slots. */
 export function RodStage({ rod, tackle, className }: { rod: RodTier; tackle: readonly string[]; className?: string }) {
-  const spec = keyModel(rod.key);
+  const spec = rodSpec(rod);
   const on = rig(rod, tackle).tackle.map(k => tackleByKey(k)!);
   if (!spec) return null;
   return <TurnStage className={className} label={rod.name}>

@@ -44,8 +44,10 @@ const tool = (slug: string, name: string, slot: "rod" | "net" | "shovel", tier: 
  * catalogue's one-price rule (their nominal value); nothing charges it.
  */
 export const CRAFTED_ITEMS: CatalogueEntry[] = [
-  tool("rod-lighthouse", "Lighthouse rod", "rod", 4, { catalogue_ref: "rod_lighthouse", description: "A rare rod: epic fish will bite." }),
-  tool("rod-tidewarden", "Tidewarden rod", "rod", 5, { catalogue_ref: "rod_tidewarden", description: "An epic rod with the widest bite window on the island." }),
+  // Rods' nominal values follow the shop's hours-of-fishing rule (lib/wallet/catalogue.ts): about 4 hours on a rare rod
+  // for the Lighthouse, 8 for the epics.
+  tool("rod-lighthouse", "Lighthouse rod", "rod", 4, { catalogue_ref: "rod_lighthouse", price_coins: 8000, description: "A rare rod: epic fish will bite." }),
+  tool("rod-tidewarden", "Tidewarden rod", "rod", 5, { catalogue_ref: "rod_tidewarden", price_coins: 16000, description: "An epic rod with the widest bite window on the island." }),
   tool("net-silk", "Silk net", "net", 3),
   tool("net-dragonfly", "Dragonfly net", "net", 4),
   tool("net-emperor", "Emperor net", "net", 5),
@@ -66,6 +68,11 @@ export const CRAFTED_ITEMS: CatalogueEntry[] = [
   // The backpack's second upgrade (specs/game-ui-questions.md 23): crafted only. Owning it is the bag's size (lib/collections/bag.ts).
   withIcon({ slug: "bag-40", display_name: "Roomiest pocket", category: "tool", description: "Your backpack holds 40 things. Crafted at a workbench.",
     price_coins: 3000, price_gems: null, tier: null, slot: null, special_pool: false, stackable: false, stock: null, catalogue_ref: "bag:40", sprite_url: null, position: 120 }),
+  // Round 6's crafted rods (David 2026-11-04): their own positions after every catalogue row, so nothing moves.
+  withIcon({ slug: "rod-riptide", display_name: "Riptide rod", category: "tool", description: "A rare rod that rides the current. Crafted at a workbench.",
+    price_coins: 6500, price_gems: null, tier: "premium", slot: "rod", special_pool: false, stackable: false, stock: null, catalogue_ref: "rod_riptide", sprite_url: null, position: 1101 }),
+  withIcon({ slug: "rod-titanium", display_name: "Titanium rod", category: "tool", description: "An epic rod that never gives. Crafted at a workbench.",
+    price_coins: 14000, price_gems: null, tier: "premium", slot: "rod", special_pool: false, stackable: false, stock: null, catalogue_ref: "rod_titanium", sprite_url: null, position: 1102 }),
 ];
 
 const r = (id: string, ingredients: Record<string, number>, sources: RecipeSource[], kind: "item" | "weapon" = "item", qty = 1): Recipe =>
@@ -113,6 +120,10 @@ export const RECIPES: Recipe[] = [
   // The backpack's upgrades (specs/game-ui-questions.md 23): 30 slots, known by everyone (or bought, 1,500 coins); 40, from the bottle.
   r("bag-30", { bug_bagworm: 4, wood_branch: 6 }, ["starter"]),
   r("bag-40", { bug_bagworm: 6, rock_gold_nugget: 1, flower_windflower: 2 }, ["bottle"]),
+  // Round 6's crafted rods (David 2026-11-04), last so the seeded recipes keep their positions: like the Lighthouse and
+  // the Tidewarden, a quest or the bottle teaches them.
+  r("rod-riptide", { wood_branch: 6, rock_iron_nugget: 2, shell_whelk: 2, fish_mahi_mahi: 1 }, ["quest", "bottle"]),
+  r("rod-titanium", { rock_iron_nugget: 8, rock_gold_nugget: 2, rock_crystal: 2, fish_sturgeon: 1 }, ["quest", "bottle"]),
 ];
 
 /**

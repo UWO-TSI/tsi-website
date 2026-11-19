@@ -213,7 +213,7 @@ describe("POST /api/collections: seasonal events on the server's catches", () =>
 
   it("never lands a limited-time fish outside its window, even one rolled inside it", async () => {
     clock = new Date("2026-10-01T03:59:58Z"); // 23:59:58 on Sep 30 in Toronto
-    const roll = await m.store.cast(A, "fish_yellow_perch", 25, true);
+    const roll = await m.store.cast(A, "fish_yellow_perch", 25, true, "rod_flimsy");
     later(5000); // the window closed at midnight
     const land = await post({ action: "land", roll });
     expect(land).toMatchObject({ status: 409, body: { code: "out_of_season" } });
@@ -222,7 +222,7 @@ describe("POST /api/collections: seasonal events on the server's catches", () =>
     // With no club goals at all the limited-time fish stay shut too.
     mock.goals = [];
     later(60_000);
-    const shut = await m.store.cast(A, "fish_sturgeon", 150, true);
+    const shut = await m.store.cast(A, "fish_sturgeon", 150, true, "rod_flimsy");
     later(5000);
     expect((await post({ action: "land", roll: shut })).status).toBe(409);
   });
@@ -261,7 +261,7 @@ describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)
   const byCatch = async (member = A) => (await c.store.learned(member)).filter((r) => r.source === "catch").map((r) => r.recipe_id);
   const fish = async (key: string) => {
     later(10_000);
-    const roll = await m.store.cast(A, key, 50, true);
+    const roll = await m.store.cast(A, key, 50, true, "rod_flimsy");
     later(5000);
     return post({ action: "land", roll });
   };
@@ -329,7 +329,7 @@ describe("POST /api/collections: rare catches can teach a recipe (rows 199, 258)
   it("records the drop with the catch: a refused land or harvest teaches nothing", async () => {
     // Too fast: the reel was under 3 s.
     later(10_000);
-    const quick = await m.store.cast(A, "fish_black_bass", 40, true);
+    const quick = await m.store.cast(A, "fish_black_bass", 40, true, "rod_flimsy");
     later(1000);
     expect((await post({ action: "land", roll: quick })).status).toBe(429);
     // Out of season: a limited-time rare fish with its event shut.
@@ -387,6 +387,39 @@ describe("POST /api/collections: the held tool (row 279, specs/game-ui.md)", () 
     later(5000);
     expect((await cast("rod_tidewarden")).status).toBe(200);
     expect(rolledTier()).toBe(5);
+  });
+
+  it("rolls round 4's rods by key, and an awakening rod as its catches have awakened it", async () => {
+    const rolled = () => vi.mocked(fishRoll).mock.calls.at(-1)![2];
+    m.own(A, ["rod_carrot", "rod_training"]);
+    expect((await cast("rod_carrot")).status).toBe(200);
+    expect(rolled().key).toBe("rod_carrot");
+    later(5000);
+    expect((await cast("rod_training")).status).toBe(200);
+    expect([rolled().stage, rolled().hooks]).toEqual([0, "rare"]);
+    m.caught(A, "rod_training", 50);
+    later(5000);
+    expect((await cast("rod_training")).status).toBe(200);
+    expect([rolled().stage, rolled().hooks]).toEqual([1, "epic"]);
+    // Traded for the Training rod, the Flimsy is the rod seller's now.
+    later(5000);
+    expect((await cast(ROD)).body.code).toBe("tool_not_owned");
+  });
+
+  it("counts each landed fish for its rod; a land never grants a rod (the rod seller trades the Training rod)", async () => {
+    m.caught(A, ROD, 48);
+    later(5000);
+    const first = (await cast(ROD)).body.catch.roll;
+    later(4000);
+    expect((await post({ action: "land", roll: first })).body.catch).toMatchObject({ rod: { key: ROD, catches: 49 } });
+    expect(await m.store.rodCatches(A)).toEqual({ [ROD]: 49 });
+    expect(await m.store.ownedGear(A)).not.toContain("rod_training");
+    later(5000);
+    const roll = (await cast(ROD)).body.catch.roll;
+    later(4000);
+    const land = await post({ action: "land", roll });
+    expect(land.body.catch).toMatchObject({ rod: { key: ROD, catches: 50 } });
+    expect(await m.store.ownedGear(A)).not.toContain("rod_training");
   });
 
   it("nets a bug only with a net the member owns", async () => {

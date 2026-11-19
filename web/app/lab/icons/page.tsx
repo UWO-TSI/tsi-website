@@ -18,6 +18,7 @@ import { CRAFTED_ITEMS, RECIPE_CARDS } from "@/lib/crafting/recipes";
 import { levelFish } from "@/components/game/peaceful/TankFish";
 import { RAW_TURN_X } from "@/lib/game/fishing";
 import { prepareModel } from "@/lib/game/modelMaterials";
+import { openSections } from "@/lib/game/fx/sections";
 
 const SIZE = 256, PAD = 0.08;
 const SPECS = iconSpecs([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS, ...CRAFTED_ITEMS, ...RECIPE_CARDS]);
@@ -147,6 +148,20 @@ async function subjectFor(spec: IconSpec): Promise<THREE.Object3D> {
     return matte(g);
   }
   const model = spec.skinned ? cloneSkinned(scene) : prepareModel(scene, spec.url);
+  // A rod's effect GLB (RodAura) holds its soft parts (the Cedar's foliage, the library's Sway): they are its design, so
+  // the picture has them (and the awakened Titanium's floating sections); its light (Glow, Light, Aura, water) is left out.
+  if (typeof scene.userData.rodFx === "string") {
+    const fx = (await loader.loadAsync(`/assets/game/props/rodfx-${scene.userData.rodFx}.glb`)).scene;
+    for (const part of [...fx.children]) {
+      // the awakened Titanium's floating sections, opened as they float (lib/game/fx/sections.ts)
+      const g = (part as THREE.Mesh).geometry;
+      if (part.userData.sections && g) {
+        openSections(g.getAttribute("position").array as Float32Array, (g.getAttribute("normal")?.array as Float32Array) ?? null, g.getAttribute("uv").array, part.userData.sections as number[]);
+        g.computeBoundingBox(); g.computeBoundingSphere();
+      }
+      if (part.userData.sway || part.userData.sections) model.add(part);
+    }
+  }
   const g = new THREE.Group();
   let atlas: THREE.Texture | undefined;
   if (spec.atlas) {

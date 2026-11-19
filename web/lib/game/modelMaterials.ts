@@ -1,4 +1,4 @@
-import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshStandardMaterial, Object3D, SRGBColorSpace, ShaderChunk, Texture, TextureLoader, Vector2, type WebGLProgramParametersWithUniforms } from "three";
+import { Color, DoubleSide, FrontSide, Material, Mesh, MeshBasicMaterial, MeshDepthMaterial, MeshPhysicalMaterial, MeshStandardMaterial, Object3D, SRGBColorSpace, ShaderChunk, Texture, TextureLoader, Vector2, type WebGLProgramParametersWithUniforms } from "three";
 import { CASTER_MATERIAL, meshShadow, shadowClassFor, type ShadowClass } from "./shadows";
 import { addCutout } from "./occluders";
 import { SHAKE, SHAKE_RADIUS, SHAKE_SLOTS, TREE_SHAKE } from "./treeShake";
@@ -168,7 +168,7 @@ const METAL_BODY = /\/(props\/streetlamp|props\/park-clock)\.glb:m(ReBody|Body)$
  * Shared material presets for plain-colour parts (lane rules, David 2026-10-17: textures only where they show, and a
  * plain colour must still read as its material). A GLB part made of one is named `P_<Preset>` (P_Wood, P_Stone,
  * P_Metal, P_Paint, P_Glass, P_Cloth, P_Leather, P_Velvet) with its colour in COLOR_0, so every part of one preset in a model shares a
- * material and draws as one; prepareModel gives it the preset's roughness and metalness whatever it was authored with,
+ * material and draws as one (P_Polished too); prepareModel gives it the preset's roughness and metalness whatever it was authored with,
  * and lookClassFor its look class (metal and glass reflect, the rest are props). Paint is painted wood and plastic.
  * Leather is a smooth hide with a gentle highlight; velvet a soft pile whose sheen at grazing angles comes in its GLB
  * (KHR_materials_sheen: the HQ build, art/interiors/build_hq.py; David, 2026-10-22: "make the textures of things more
@@ -178,14 +178,30 @@ export const MATERIAL_PRESETS = {
   wood: { roughness: 0.9, metalness: 0, look: "props" },
   stone: { roughness: 0.95, metalness: 0, look: "props" },
   metal: { roughness: 0.4, metalness: 0.75, look: "metal" },
+  // Polished titanium (the Titanium rod): grey steel, streaks of the room and the sky sliding over its flats (the
+  // studio's room seen brighter in it than in a matte part; the island's sky at its own brightness: lookPreset), and a
+  // thin film over it (its GLB's KHR_materials_iridescence) that shows only where the light meets it at a slant
+  // (FILM_GRAZE): a rainbow sheen coming and going as it turns, the metal's own grey facing you.
+  polished: { roughness: 0.26, metalness: 0.85, look: "metal", env: 2.2, film: { amount: 1, ior: 1.8, thickness: [160, 420] } },
   paint: { roughness: 0.45, metalness: 0, look: "props" },
   glass: { roughness: 0.08, metalness: 0, look: "glass" },
   cloth: { roughness: 1, metalness: 0, look: "props" },
   leather: { roughness: 0.36, metalness: 0, look: "props" },
   velvet: { roughness: 0.85, metalness: 0, look: "props" },
-} as const satisfies Record<string, { roughness: number; metalness: number; look: "props" | "glass" | "metal" }>;
+} as const satisfies Record<string, { roughness: number; metalness: number; look: "props" | "glass" | "metal"; env?: number;
+  film?: { amount: number; ior: number; thickness: readonly [number, number] } }>;
 export type MaterialPreset = keyof typeof MATERIAL_PRESETS;
-const PRESET = /^P_(Wood|Stone|Metal|Paint|Glass|Cloth|Leather|Velvet)(?:\.\d+)?$/;
+/**
+ * A thin film shows at grazing angles only (David 2026-11-13, rti2-titanium: "the rainbow glow should work like a
+ * texture and should still show that its the metal steel color, just when its hit in a angle you see the shade, cuz rn
+ * the wholething looks rainbow"): three's iridescence weighted by a Fresnel term, about none facing you and all of it
+ * edge-on. In the shared chunk, so every iridescent material has it however it was made or cloned (the stages'
+ * prepareModel, a hand's merged copy, an effect's parts); only the Titanium's GLBs carry a film.
+ */
+export const FILM_GRAZE = "0.03 + 0.97 * pow(1.0 - dotNVi, 1.8)";
+ShaderChunk.lights_fragment_begin = ShaderChunk.lights_fragment_begin.replace(
+  "material.iridescence = saturate( material.iridescence );", `material.iridescence = saturate( material.iridescence ) * (${FILM_GRAZE});`);
+const PRESET = /^P_(Wood|Stone|Metal|Polished|Paint|Glass|Cloth|Leather|Velvet)(?:\.\d+)?$/;
 /** The preset a material's name asks for (Blender's ".001" suffixes allowed), or null. */
 export function presetFor(name: string): MaterialPreset | null {
   const m = PRESET.exec(name);
@@ -263,6 +279,13 @@ export function prepareModel(source: Object3D, url: string, emissiveIntensity?: 
       if (preset && material instanceof MeshStandardMaterial) {
         material.roughness = MATERIAL_PRESETS[preset].roughness;
         material.metalness = MATERIAL_PRESETS[preset].metalness;
+        const p = MATERIAL_PRESETS[preset];
+        if ("env" in p) material.envMapIntensity = p.env;
+        if ("film" in p && material instanceof MeshPhysicalMaterial) {
+          material.iridescence = p.film.amount;
+          material.iridescenceIOR = p.film.ior;
+          material.iridescenceThicknessRange = [...p.film.thickness];
+        }
       }
       material.side = glassShell ? FrontSide : DoubleSide;
       if (role.front) material.shadowSide = FrontSide;

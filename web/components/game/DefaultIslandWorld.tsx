@@ -143,6 +143,7 @@ import { lastCall } from "@/lib/game/lastCall";
 import { loadGameWorld } from "@/lib/game/world/load";
 import { placeAt, type Place } from "@/lib/game/world/places";
 import TalkBox from "./TalkBox";
+import RodSellerTalk from "./RodSellerTalk";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
 import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
@@ -184,7 +185,7 @@ import { clickAction, heldItem, toolNeeded, wheelContents, type Reach, type Whee
 import { holdItem, swapHeld, useHeld } from "@/lib/game/heldStore";
 import { useRuinsHand } from "@/lib/game/ruinsHand";
 import { useWheelKeys } from "@/lib/game/movement/keys";
-import { rig, rodByTier, withMeal } from "@/lib/game/rods";
+import { ROD_SELLER, heldRig, trainingQuest, withMeal } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
@@ -256,7 +257,7 @@ import styles from "./DefaultIslandWorld.module.css";
 const BIOME_REACH = 8;
 type Biome = { water: WaterType | null; place: Place | null };
 type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "mine" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | "leaderboard" | "catchboard" | "tasks" | "tackle" | "chef" | null;
-type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | "tank" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | "tank" | "rodseller" | null;
 const DEV = process.env.NODE_ENV !== "production";
 const DEV_SHEETS: readonly Sheet[] = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
@@ -975,6 +976,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   useEffect(loadFriends, []);
   const peacefulRaw = usePeacefulContext(weather, conditions.now);
   const peaceful = useMemo(() => ({ ...peacefulRaw, glider: peacefulRaw.glider && unlocks.glider }), [peacefulRaw, unlocks.glider]);
+  // Gary's quest (David 2026-11-04): 35 fish on the Flimsy rod, until the Training rod is yours.
+  const rodQuest = useMemo(() => trainingQuest(peaceful.catches, peaceful.owned), [peaceful.catches, peaceful.owned]);
   // Audio pass (row 169 / polish-ownership item 9): the hourly music player
   // follows the real clock everywhere on this island; cafe and other
   // interiors override the outdoor block with their own bed.
@@ -1158,8 +1161,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // A first arrival starts with an empty tool bag: the wheel holds only what Bram has handed over (lib/game/arrival/tools.ts).
   const arrivalTools = useArrivalTools();
   // After it (row 312), a new arrival's net and shovel come from residents: `taught`, and `owned` with what they've handed over.
-  const wheelItems = useMemo(() => gateWheel(wheelContents({ site: wheelSite, owned: hq.owned, chosen: heldState.chosen, weapons: weaponList.split(","), defaultWeapon, armed, pins: heldState.pins, stock, taught: hq.taught }), arrivalTools),
-    [wheelSite, hq.owned, hq.taught, heldState.chosen, weaponList, defaultWeapon, armed, heldState.pins, stock, arrivalTools]);
+  const wheelItems = useMemo(() => gateWheel(wheelContents({ site: wheelSite, owned: hq.owned, chosen: heldState.chosen, weapons: weaponList.split(","), defaultWeapon, armed, pins: heldState.pins, stock, taught: hq.taught, catches: peaceful.catches }), arrivalTools),
+    [wheelSite, hq.owned, hq.taught, heldState.chosen, weaponList, defaultWeapon, armed, heldState.pins, stock, arrivalTools, peaceful.catches]);
   // Indoors you walk with empty hands (the wheel is outdoors and in the ruins).
   const held = inside ? null : heldItem(heldState, wheelItems);
   const [eating, setEating] = useState(false);
@@ -1180,7 +1183,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "sell") { setSheet("sell"); return; }
     if (action === "catchboard") { setSheet("outnow"); return; }
     if (action === "tasks") { setSheet("tasks"); return; }
-    if (action === "tackle") { setSheet("tackle"); return; }
+    // Gary's quest (rods.ts trainingQuest): while it's on, the counter's E is his ask first.
+    if (action === "tackle") { setSheet(rodQuest ? "rodseller" : "tackle"); return; }
     if (action === "chef") { setSheet("chef"); return; }
     if (action === "owner") { window.dispatchEvent(new CustomEvent("tsi:cafe-owner-talk")); return; }
     if (action === "talk") { requestTalk(talkStore.near.id); return; }
@@ -1265,7 +1269,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       // A fresh warm-up probe for the next scene: the fade lifts when it has loaded and compiled.
       setSceneShown(n => n + 1);
     }, 320);
-  }, [fading, chapterActions, homeActions, inside, gate, layout, startTrip, atHome, hq.waiting, barSeated, barLook]);
+  }, [fading, chapterActions, homeActions, inside, gate, layout, startTrip, atHome, hq.waiting, barSeated, barLook, rodQuest]);
   // The arrival (components/game/arrival): it starts once the island is up on the village; the crossing is the boat's.
   const arrivalPlays = step === "arrival" && ready && !inside && site === "village";
   const startCrossing = useCallback(() => arriveByBoat("village", true, true), [arriveByBoat]);
@@ -1469,8 +1473,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const tutorialQuest = useTutorialQuest(hintKeys);
   // The main quest (t-next, m1 to m6): the member's chapter, its people's words, and the dropdown's guide arrow.
   const main = useMainQuest(player);
-  const quests = useMemo(() => [tutorialQuest ?? hq.quest, main.quest].filter((q): q is NonNullable<typeof q> => !!q),
-    [tutorialQuest, hq.quest, main.quest]);
+  const quests = useMemo(() => [tutorialQuest ?? hq.quest, main.quest, rodQuest].filter((q): q is NonNullable<typeof q> => !!q),
+    [tutorialQuest, hq.quest, main.quest, rodQuest]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       // Arriving, the keys are the arrival's (components/game/arrival: a press skips the beat showing).
@@ -1620,7 +1624,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       </section>}
       {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(reveal && inside === "oracle") && !(barSeated && near === "stool") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "tackle" && rodQuest ? `Talk to ${ROD_SELLER}` : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
       {/* Seated at the bar (tasting-book round 4, David: "remove menu and leave bar button, have menu be on the table, and character
           look down and press e to open"): looking down at the menu on the counter, E (a tap) reads it; moving gets you up. */}
       {barSeated && !sheet && !cinematic && !talking && (barLook
@@ -1631,7 +1635,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
         : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
-      <MemberFishing rod={withMeal(held?.kind === "rod" && held.tier ? rig(rodByTier(held.tier), peaceful.tackle) : peaceful.rod, meal)} onActiveChange={setFishing} />
+      <MemberFishing rod={withMeal(held?.kind === "rod" ? heldRig(held.key, peaceful.tackle, peaceful.catches) : peaceful.rod, meal)} onActiveChange={setFishing} />
       {fishBosses() && !fishing && !inside && <RaidCall />}
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
         enabled={ready && !inMatch && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView) && !barSeated} />
@@ -1693,6 +1697,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <ChestSheet open={sheet === "chest"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <FishMarketSheet open={sheet === "sell"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <TaskBoardSheet open={sheet === "tasks"} onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <RodSellerTalk open={sheet === "rodseller"} onClose={() => setSheet(null)} />
       <TackleCounterSheet open={sheet === "tackle"} onClose={() => setSheet(null)} onRods={() => setSheet("rods")} keys={STATION_KEY} />
       <ChefOrderDialog open={sheet === "chef"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} waters={catchWaters} />

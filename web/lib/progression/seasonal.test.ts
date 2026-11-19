@@ -99,7 +99,7 @@ describe("tourney board privacy (principle 6)", () => {
     m.name(id(2), "Jordan");
     const land = async (member: string, key: string, size: number | null, now: string) => {
       clock = at(now);
-      const roll = await m.store.cast(member, key, size, size !== null);
+      const roll = await m.store.cast(member, key, size, size !== null, "rod_flimsy");
       clock = new Date(clock.getTime() + 5000);
       return m.store.land(member, roll, landSeason(DEFAULT_GOALS, clock));
     };
@@ -108,7 +108,7 @@ describe("tourney board privacy (principle 6)", () => {
     await land(id(1), "sea_scallop", 12, "2026-09-20T16:02:00Z");
     await land(id(2), "fish_black_bass", 50, "2026-09-20T16:03:00Z");
     await land(id(2), "fish_black_bass", 55, "2026-10-02T16:00:00Z"); // after the tourney
-    await m.store.cast(id(2), "fish_pike", 90, true); // a lost reel: never landed
+    await m.store.cast(id(2), "fish_pike", 90, true, "rod_flimsy"); // a lost reel: never landed
     const r = await tourney(m.store, DEFAULT_GOALS, id(2), at("2026-09-20T16:00:00Z"));
     expect(r.ok && r.data).toMatchObject({ slug: "fall-fishing-tourney", cycle: 2026, open: true });
     const [fish, sea] = r.ok && r.data ? r.data.boards : [];

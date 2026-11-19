@@ -10,7 +10,7 @@
  */
 import type { Rarity } from "@/lib/rarity";
 import { Fragment, useId, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X, Zap } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
@@ -19,7 +19,7 @@ import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
-export { CardOverlay, COIN_SLOTS, FLY_HOME_MS, FLY_MS, FlyHome, FlyIn, coinCount, coinHeat, coinShares, flyCoins, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
+export { AWAKEN_CARD_MS, AWAKEN_MS, AWAKEN_ROOM, Awakening, boardLabel, CardOverlay, COIN_SLOTS, coinCount, coinHeat, coinShares, FLY_HOME_MS, FLY_MS, flyCoins, FlyHome, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, type AwakenPhase, type BoardKey } from "./moments";
 export { CountUp, WalletSlot } from "./wallet";
 export { Phone, type PhoneApp, type PhoneView } from "./phone";
 export { box, frame, sprite, text, textWidth, type Ink } from "./phoneScreen";
@@ -189,17 +189,20 @@ const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out"
  * button; without, a picture. `size`: "lg" (the shop's), "md" or "sm" for many to a screen. `price`: the pill shows it
  * (its amount and currency's icon), or "Price to come" while it has none; `pill` is any other short value.
  */
-export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag, arrow = true, cover, selected, size = "lg", label, testId, onClick, className, rarity, ...rest }:
+export function ItemCard({ picture, px = 44, name, line, price, pill: other, tag, arrow = true, cover, selected, size = "lg", label, testId, onClick, className, rarity, awakened, ...rest }:
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick" | "children"> & {
     picture: string | ReactNode; px?: number; name: ReactNode; line?: ReactNode; price?: Price | null; pill?: ReactNode; tag?: ReactNode; arrow?: boolean;
     cover?: CardCover | null; selected?: boolean; size?: "lg" | "md" | "sm"; label?: string; testId?: string; onClick?: () => void;
     /** Its rung on the rarity ladder, as a thin outline round the card. */
     rarity?: Rarity | null;
+    /** It has awakened (a rod that has landed enough fish): a small mark in its top right corner, in its rung's colour. */
+    awakened?: boolean;
   }) {
   const pill = price ? (price.amount ? <>{price.amount.toLocaleString()}<CurrencyIcon currency={price.currency} size={14} /></> : PRICE_TO_COME) : other;
   const face = <>
     {tag ? <span className={f.tag}><Sparkles size={12} aria-hidden />{tag}</span> : null}
     {arrow ? <ArrowUpRight className={f.arrow} size={16} aria-hidden /> : null}
+    {awakened ? <span className={f.awake} title="Awakened"><Zap size={13} strokeWidth={2.4} aria-hidden /></span> : null}
     {typeof picture === "string" ? <PixelImage src={picture} px={px} className={f.cardArt} /> : <span className={f.cardArt} aria-hidden>{picture}</span>}
     <span className={f.cardFoot}>
       <span className={f.cardText}>
@@ -270,7 +273,7 @@ export type Action = { label: ReactNode; onClick: () => void; disabled?: boolean
  * action, `pay`, then the fine print, `fine`); the `SpecBand` along the bottom. A priced item with no price yet says
  * "Price to come" and its action is off.
  */
-export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Drag to turn", info, pay, fine, specs, testId, rarity, corner }: {
+export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Drag to turn", info, pay, fine, specs, testId, rarity, corner, quiet }: {
   stage: ReactNode; onBack: () => void; backLabel?: string; steps?: { prev: Step; next: Step } | null; hint?: string | null;
   info: ReactNode; pay?: { price?: Price | null; was?: ReactNode; action?: Action } | null; fine?: ReactNode;
   specs?: readonly (readonly [string, ReactNode])[] | null; testId?: string;
@@ -278,13 +281,22 @@ export function DetailView({ stage, onBack, backLabel = "All", steps, hint = "Dr
   rarity?: Rarity | null;
   /** Small things in the stage's bottom-right corner (a rod's bait and bobber slots). */
   corner?: ReactNode;
+  /**
+   * Quiet paging (a rod's box, David 2026-11-04: "remove the all top left"): no back on the stage (the rail goes back),
+   * previous and next as faint small chevrons at the sides.
+   */
+  quiet?: boolean;
 }) {
   return <div className={f.detail} data-testid={testId}>
     <div className={f.stageWrap} {...rarityEdge(rarity)}>
       {stage}
       {corner ? <span className={f.stageCorner}>{corner}</span> : null}
-      <button type="button" className={f.back} onClick={onBack}><ArrowLeft size={16} aria-hidden />{backLabel}</button>
-      {steps && <span className={f.steps}>
+      {!quiet && <button type="button" className={f.back} onClick={onBack}><ArrowLeft size={16} aria-hidden />{backLabel}</button>}
+      {steps && quiet && <>
+        <button type="button" className={f.faintStep} data-side="prev" aria-label={steps.prev.label} onClick={steps.prev.onClick}><ChevronLeft size={16} strokeWidth={1.5} aria-hidden /></button>
+        <button type="button" className={f.faintStep} data-side="next" aria-label={steps.next.label} onClick={steps.next.onClick}><ChevronRight size={16} strokeWidth={1.5} aria-hidden /></button>
+      </>}
+      {steps && !quiet && <span className={f.steps}>
         <RoundButton label={steps.prev.label} onClick={steps.prev.onClick}><ChevronLeft size={18} aria-hidden /></RoundButton>
         <RoundButton label={steps.next.label} onClick={steps.next.onClick}><ChevronRight size={18} aria-hidden /></RoundButton>
       </span>}

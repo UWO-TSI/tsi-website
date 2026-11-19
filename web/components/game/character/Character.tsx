@@ -37,6 +37,7 @@ import { createHairAtlas } from "@/lib/game/character/hairAtlas";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import FishingRig from "./FishingRig";
 import LanternGlow, { LANTERN_URL } from "./LanternGlow";
+import RodAura, { rodFxUrl } from "./RodAura";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 /** v6 is 1.045 m tall; at 1.3 a character stands ~1.36 world units, a little over one tile (ACNH). */
@@ -847,6 +848,7 @@ function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet
     return m;
   }, [scene, url, hold, fit]);
   const casters = useMemo(() => meshesOf(model), [model]);
+  const fxUrl = hold === "rod" ? rodFxUrl(model) : null;
   const grip = HELD_GRIPS[hold];
   const age = useRef(0);
   useEffect(() => {
@@ -865,6 +867,8 @@ function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet
   return <>
     {hold === "rod" && !remote && <FishingRig motion={motion} rod={model} hands={puppet.sockets} />}
     {url === LANTERN_URL && <LanternGlow rod={model} root={puppet.root} clip={puppet} />}
+    {/* A rare or epic rod's glow, aura and idle animation (RodAura), named by its own GLB. */}
+    {fxUrl && <Suspense fallback={null}><RodAura rod={model} url={fxUrl} /></Suspense>}
   </>;
 }
 /** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */

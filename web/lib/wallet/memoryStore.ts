@@ -3,6 +3,7 @@ import { boxPool, dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS, WELCOME_
 import { seedItems, speciesSellPrice, torontoDay, type ShopItem, speciesClass, tastingMarks, tastingWater } from "./rules";
 import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff, type TastingServe, type TastingSlot } from "./store";
 import { prizeItems } from "./tackle";
+import { TRAINING } from "@/lib/game/rods";
 
 export function memoryEconomyStore(clock: () => Date = () => new Date(), random: () => number = Math.random) {
   const items: ShopItem[] = [...seedItems(), ...prizeItems()];
@@ -13,6 +14,7 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
   const collections = new Map<string, number>(); // `${member}:${key}`
   const fills: { member: string; day: string; item: string }[] = []; // chef_order_fills
   const landed: { member: string; key: string; at: Date }[] = []; // catch_rolls' landed casts and weekly_catch_bests
+  const rodCatches = new Map<string, Record<string, number>>(); // rod_catches
   const taskClaims = new Set<string>(); // fishing_task_claims: `${member}:${start}:${period}:${id}`
   const rolls = new Map<string, { balance: number; prizes: string[] }>(); // tackle_rolls, by member:key
   const buffs = new Map<string, ActiveBuff>(); // member_buffs
@@ -54,6 +56,17 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
     },
     async catalogue() {
       return items.map((i) => ({ ...i }));
+    },
+    async rodCatches(m) {
+      return { ...rodCatches.get(m) };
+    },
+    async tradeForTraining(m) {
+      if ((rodCatches.get(m)?.[TRAINING.quest.rod] ?? 0) < TRAINING.quest.catches) throw new EconomyError("not_ready");
+      const it = items.find((i) => i.catalogue_ref === TRAINING.key);
+      if (!it) throw new EconomyError("not_found");
+      if (inventory.has(`${m}:${it.id}`)) return { traded: false };
+      inventory.set(`${m}:${it.id}`, { item: it, qty: 1, equipped: false, acquired_at: clock().toISOString() });
+      return { traded: true };
     },
     async inventory(m) {
       return [...inventory.entries()].filter(([k]) => k.startsWith(`${m}:`)).map(([, v]) => ({ ...v, item: { ...v.item } }));
@@ -293,6 +306,8 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
     give: (m: string, key: string, n: number) => collections.set(`${m}:${key}`, (collections.get(`${m}:${key}`) ?? 0) + n),
     /** A fish landed by rod at `at` (the tasks' catches). */
     land: (m: string, key: string, at: Date = clock()) => landed.push({ member: m, key, at }),
+    /** `n` more fish landed with `rod` (rod_catches). */
+    caught: (m: string, rod: string, n: number) => rodCatches.set(m, { ...rodCatches.get(m), [rod]: (rodCatches.get(m)?.[rod] ?? 0) + n }),
     lock: (m: string, key: string, on: boolean) => (on ? locks.add(`${m}:${key}`) : locks.delete(`${m}:${key}`)),
     setTier: (m: string, t: number) => tiers.set(m, t),
     name: (m: string, n: string) => names.set(m, n),

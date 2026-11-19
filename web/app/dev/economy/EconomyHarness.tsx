@@ -1,11 +1,20 @@
 "use client";
 
-/** /dev/economy?view=shop|overlay|bag|sell|inventory|wallet|admin[&tab=specials][&section=items|merch|rods: the shop overlay's two answers, or the rod shop] */
+/**
+ * /dev/economy?view=shop|overlay|bag|sell|inventory|wallet|admin|unlock[&tab=specials][&section=items|merch|rods: the shop
+ * overlay's two answers, or the rod shop][&found=0: before the Training rod is found][&tide=1: a Tidewarden rod in the bag][&ti=<fish>: a Titanium rod]
+ * /dev/economy?view=awakening[&rod=rod_training][&stage=1]: a rod's awakening cutscene (RodAwakening), again on Nice!
+ */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { InventorySheet, SellSheet, ShopBody, WalletSheet } from "@/components/economy/EconomySheets";
 import MerchFulfilment from "@/components/economy/MerchFulfilment";
 import ShopOverlay from "@/components/economy/ShopOverlay";
 import { BagSheet } from "@/components/game/Bag";
+import RodAwakening from "@/components/game/RodAwakening";
+import RodSellerTalk from "@/components/game/RodSellerTalk";
+import RewardCard from "@/components/game/RewardCard";
+import { rodNews } from "@/lib/game/useFishingSession";
+import { rodByKey } from "@/lib/game/rods";
 import { merchViewer } from "@/components/game/ShopCounter";
 import { memoryEconomyStore } from "@/lib/wallet/memoryStore";
 import { memoryEconomyTransport } from "@/lib/wallet/memoryTransport";
@@ -30,16 +39,35 @@ async function seed(): Promise<EconomyTransport> {
   await m.store.credit(ME, "gems", 900, "admin", "Bounty: landing page", "demo-gems-1");
   for (const [k, n] of [["fish_coelacanth", 1], ["fish_carp", 4], ["fish_dace", 6], ["bug_monarch_butterfly", 2], ["apple", 5], ["shell_whelk", 1]] as const) m.give(ME, k, n);
   const id = (slug: string) => m.items.find((i) => i.slug === slug)!.id;
+  await m.store.credit(ME, "coins", 2500, "event", "fishing week", "demo-event-3");
   await S.buy(m.store, ME, { item_id: id("rod-cedar"), qty: 1, idempotency_key: "demo-buy-1" }, now);
   await S.buy(m.store, ME, { item_id: id("bobber-lucky"), qty: 1, idempotency_key: "demo-buy-4" }, now);
   await S.equip(m.store, ME, { item_id: id("bobber-lucky"), equipped: true });
-  await m.store.credit(ME, "coins", 1500, "event", "fishing derby", "demo-event-2");
+  await m.store.credit(ME, "coins", 7500, "event", "fishing derby", "demo-event-2");
   await S.buy(m.store, ME, { item_id: id("rod-glass"), qty: 1, idempotency_key: "demo-buy-5" }, now);
   await S.buy(m.store, ME, { item_id: id("bait-sweet"), qty: 1, idempotency_key: "demo-buy-6" }, now);
   await S.buy(m.store, ME, { item_id: id("acc-straw-hat"), qty: 1, idempotency_key: "demo-buy-2" }, now);
   await S.equip(m.store, ME, { item_id: id("acc-straw-hat"), equipped: true });
   await S.sell(m.store, ME, { item_key: "fish_dace", qty: 2, idempotency_key: "demo-sell-1" });
   await S.reserveMerch(m.store, ME, { item_id: id("merch-genesis-sticker"), idempotency_key: "demo-merch-me" });
+  // The fish each rod has landed (rod_catches; &tc= the Training rod's, &tdc= the Tidewarden's), and the Training rod
+  // traded for at the rod seller's (unless ?found=0: the Flimsy's 50 fish have the quest on).
+  const q = new URLSearchParams(window.location.search);
+  for (const [rod, n] of [["rod_flimsy", 50], ["rod_cedar", 37], ["rod_glass", 12], ["rod_training", Number(q.get("tc") ?? 31)], ["rod_tidewarden", Number(q.get("tdc") ?? 120)]] as const) m.caught(ME, rod, n);
+  if (q.get("found") !== "0") await m.store.tradeForTraining(ME);
+  // ?tide=1: a Tidewarden rod in the bag (made at the workbench; its effect shows on the stage, RodAura).
+  if (q.get("tide") === "1") {
+    const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-tidewarden", slug: "rod-tidewarden", display_name: "Tidewarden rod", catalogue_ref: "rod_tidewarden",
+      description: "An epic rod with the widest bite window on the island." };
+    m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
+  }
+  // ?ti=<fish>: a Titanium rod in the bag with that many fish landed (AWAKEN_AT, 600, awakens it: it wears its awakened model).
+  if (q.get("ti") !== null) {
+    const item = { ...m.items.find((i) => i.slug === "rod-training")!, id: "dev-rod-titanium", slug: "rod-titanium", display_name: "Titanium rod", catalogue_ref: "rod_titanium",
+      description: "An epic rod that never gives. Crafted at a workbench.", sprite_url: null };
+    m.inventory.set(`${ME}:${item.id}`, { item, qty: 1, equipped: false, acquired_at: now.toISOString() });
+    m.caught(ME, "rod_titanium", Number(q.get("ti")));
+  }
   m.fund(MAYA, 0, 800);
   m.fund(JORDAN, 0, 2000);
   await S.reserveMerch(m.store, MAYA, { item_id: id("merch-tsi-lanyard"), idempotency_key: "demo-merch-maya" });
@@ -71,6 +99,27 @@ export default function EconomyHarness() {
       {view === "inventory" ? <InventorySheet open onClose={close} transport={t} /> : null}
       {view === "wallet" ? <WalletSheet open onClose={close} transport={t} /> : null}
       {view === "admin" ? <div style={{ maxWidth: 1000, margin: "0 auto" }}><MerchFulfilment transport={t} /></div> : null}
+      {/* An awakening, as the fishing session shows it: the Training rod's 50th fish (?view=awaken) */}
+      {view === "awaken" ? <Awaken /> : null}
+      {/* The awakening as a cutscene, the pitch (David's review): ?view=awakening&rod=rod_training&stage=1 */}
+      {view === "awakening" ? <Cutscene rod={q.get("rod") ?? "rod_training"} stage={Number(q.get("stage") ?? 1)} /> : null}
+      {/* Gary's ask (use with &found=0): ?view=trade */}
+      {view === "trade" ? <><RodSellerTalk open onClose={close} transport={t} /><RewardCard /></> : null}
     </main>
   );
+}
+
+function Awaken() {
+  useEffect(() => {
+    const t = window.setTimeout(() => rodNews({ item_key: "fish_dace", size_cm: 12, rod: { key: "rod_training", catches: 50 } }), 300);
+    return () => window.clearTimeout(t);
+  }, []);
+  return <RewardCard />;
+}
+
+function Cutscene({ rod, stage }: { rod: string; stage: number }) {
+  const [n, setN] = useState(0);
+  const r = rodByKey(rod);
+  if (!r || !r.awakenings[stage - 1]) return <p style={{ padding: 20 }}>No awakening {stage} on {rod}.</p>;
+  return <RodAwakening key={n} rod={r} stage={stage} onClose={() => setN(x => x + 1)} />;
 }

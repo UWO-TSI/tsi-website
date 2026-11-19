@@ -1,0 +1,11 @@
+# New fish (template)
+
+Fill the four slots from the fish-list lane's proposal: `{NAME}`, `{ONE_LINE}` (what it looks like, in one line), `{RARITY}` and `{SIZE}` (the roster's real size in cm). Attach `art/pipeline/out/fish/collage.webp` (the reference sheet) with the prompt. Step 3 of `art/pipeline/tools.md`; the picked sheet goes to `blueprint.py` with `--views side,top,three-quarter --turn top=90` and `--length` the fish's length (step 4).
+
+## Prompt
+
+Design a NEW fish for our game: the {NAME}, a {RARITY} fish about {SIZE} cm long. {ONE_LINE}
+
+Match the style of the attached reference sheet of our game's fish exactly: storybook aquarium fish for a cozy island game. It is clearly a real-looking species, with a true silhouette, fin layout and markings, but simplified and softened, a little chunky, with a slightly large head and a big friendly eye. A smooth low-poly body with gentle facets you can just see. All the colour is hand-painted: a soft gradient from a darker back to a pale belly, crisp simple markings on top (stripes, spots, bands), no scales drawn one by one, no photo detail. The eye is painted: a dark pupil, a bright ring, a white catch-light. Fins and tails are thin flat fans, lighter or semi-transparent at the edges, with a few painted ribs. Clean, saturated, natural colours, no black outlines, no cel shading. A rarer fish earns a special colour or a striking shape, not more detail. The vibe: a picture-book aquarium, bright and friendly, a real fish made toy-soft.
+
+Output one image: a reference sheet on a pure white background with three views of the same fish in one row, left to right: side, top, three-quarter. Side: a flat side profile, nose pointing left, fins spread. Top: looking straight down on its back, nose pointing left. Three-quarter: from the front left, slightly above, nose toward the viewer's left. The side and top views are orthographic with no perspective, at exactly the same scale, the nose and the tail tip at the same left and right positions in both, so they line up as modelling blueprints. The views evenly spaced with clear white space between them, never touching. Even, flat, soft lighting from above, no cast shadows, no water, no bubbles, no floor. The fish alone: no hook, no hands, no other fish, no text, no labels, no arrows, no dimension lines, no glow or particles.

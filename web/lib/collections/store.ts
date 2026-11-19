@@ -19,6 +19,15 @@ export interface LandSeason {
   tourney: TourneyRef | null;
 }
 
+/**
+ * A landed cast's rod and the fish landed with it so far (rod_catches, 20261102170000): collections_land counts it. The
+ * client reads it for the rod seller's quest and an awakening (lib/game/rods.ts).
+ */
+export interface RodCount {
+  key: string;
+  catches: number;
+}
+
 /** A recipe a rare catch taught (20260930100000 crafting_catch_drop). */
 export interface LearnedRecipe {
   id: string;
@@ -65,14 +74,16 @@ export interface CollectionsStore {
   /** Every hand-in (the club's museum drive). */
   handIns(): Promise<{ member_id: string; species_key: string }[]>;
   weeklyBests(weekStart: string): Promise<WeeklyBest[]>;
-  /** Atomic: a server-rolled cast waiting to be landed (too_fast within CAST_GAP_MS of the last). Returns its id. */
-  cast(memberId: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean): Promise<string>;
+  /** Atomic: a server-rolled cast with the held `rod` (its key), waiting to be landed (too_fast within CAST_GAP_MS of the last). Returns its id. */
+  cast(memberId: string, itemKey: string, sizeCm: number | null, trophyEligible: boolean, rod: string): Promise<string>;
   /**
    * Atomic: record the member's latest cast once, MIN_REEL_MS to ROLL_TTL_MS after it (collections_record_catch's caps apply).
    * `seasonal` (20260929120000): refuse a limited-time catch whose event is `closed`, and enter the open `tourney`.
    * A rare catch may teach a recipe with it (20260930100000).
    */
-  land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null }>;
+  land(memberId: string, rollId: string, seasonal?: LandSeason): Promise<CatchResult & { item_key: string; size_cm: number | null; rod: RodCount | null }>;
+  /** Fish landed with each rod (rod_catches, counted by collections_land): rod key to count. */
+  rodCatches(memberId: string): Promise<Record<string, number>>;
   /** The species of a member's cast roll (landed or not, while it's kept: a day), or null: a raid's opener really had it on the line. */
   rolled(memberId: string, rollId: string): Promise<string | null>;
   /** Atomic: one harvest per node per hour, recorded with collections_record_catch's caps (a capped one leaves the node unharvested); a rare one may teach a recipe. */

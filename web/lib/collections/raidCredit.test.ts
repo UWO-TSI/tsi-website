@@ -35,7 +35,7 @@ describe("a raid helper's credit", () => {
 
   it("records the opener's divine once per helper, never for someone else's token or a fish nobody rolled", async () => {
     const { store } = memoryCollectionsStore(() => NOW);
-    const roll = await store.cast(OPENER, divine.key, 50, true);
+    const roll = await store.cast(OPENER, divine.key, 50, true, "rod_flimsy");
     const credit = (m: string, over: Partial<RaidCredit> = {}) => sign({ m, f: divine.key, r: roll, o: OPENER, i: "raid1", e: NOW.getTime() + 60_000, ...over });
     const claim = (member: string, token: string) => catchAction(store, member, { action: "raid", credit: token }, NOW, async () => "clear", async () => [], Math.random, undefined, SECRET);
 
@@ -53,7 +53,7 @@ describe("a raid helper's credit", () => {
   it("is off without the boss fights' flag", async () => {
     vi.stubEnv("NEXT_PUBLIC_FISH_BOSSES", "");
     const { store } = memoryCollectionsStore(() => NOW);
-    const roll = await store.cast(OPENER, divine.key, 50, true);
+    const roll = await store.cast(OPENER, divine.key, 50, true, "rod_flimsy");
     const token = sign({ m: HELPER, f: divine.key, r: roll, o: OPENER, i: "raid1", e: NOW.getTime() + 60_000 });
     expect((await catchAction(store, HELPER, { action: "raid", credit: token }, NOW, async () => "clear", async () => [], Math.random, undefined, SECRET)).ok).toBe(false);
     vi.stubEnv("NEXT_PUBLIC_FISH_BOSSES", "1");

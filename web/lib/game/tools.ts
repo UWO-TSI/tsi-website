@@ -5,17 +5,22 @@
  * inventory's: a rod's catalogue_ref, a net's or shovel's shop slug (they have no ref). Tools never break (row 279).
  * Rod tiers' effects are rods.ts; nets and shovels have none yet (specs/game-ui-questions.md).
  */
-import { RODS } from "./rods";
+import { RODS, ownsRod } from "./rods";
 
 export type ToolKind = "rod" | "net" | "shovel" | "pickaxe";
 export type ToolTier = 1 | 2 | 3 | 4 | 5;
-export interface Tool { kind: ToolKind; tier: ToolTier; key: string; name: string; source: "starter" | "shop" | "crafted"; model: string; icon: string }
+export interface Tool { kind: ToolKind; tier: ToolTier; key: string; name: string; source: "starter" | "shop" | "crafted" | "found"; model: string; icon: string }
 
 const tool = (kind: ToolKind, tier: ToolTier, key: string, name: string, source: Tool["source"]): Tool =>
   ({ kind, tier, key, name, source, model: `/assets/game/tools/${kind}-${tier}.glb`, icon: `/assets/icons/${key}.webp` });
 
+/** A rod's model: the launch five's tools/rod-<tier>.glb, the rest's tools/rod-<name>.glb. */
+const LAUNCH_RODS = ["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "rod_tidewarden"];
+const rodTool = (r: (typeof RODS)[number]): Tool =>
+  ({ ...tool("rod", r.tier, r.key, r.name, r.source), model: LAUNCH_RODS.includes(r.key) ? `/assets/game/tools/rod-${r.tier}.glb` : `/assets/game/tools/${r.key.replace("_", "-")}.glb` });
+
 export const TOOLS: readonly Tool[] = [
-  ...RODS.map(r => tool("rod", r.tier, r.key, r.name, r.source)),
+  ...RODS.map(rodTool),
   tool("net", 1, "net-basic", "Bug net", "starter"), tool("net", 2, "net-mid", "Wide net", "shop"),
   tool("net", 3, "net-silk", "Silk net", "crafted"), tool("net", 4, "net-dragonfly", "Dragonfly net", "crafted"), tool("net", 5, "net-emperor", "Emperor net", "crafted"),
   tool("shovel", 1, "shovel-basic", "Shovel", "starter"), tool("shovel", 2, "shovel-mid", "Iron shovel", "shop"),
@@ -32,9 +37,9 @@ export const toolByKey = (key: unknown): Tool | null => TOOLS.find(t => t.key ==
  * has handed them over (an inventory row, lib/game/arrival/hq/grant.ts). Everyone else keeps them as starters.
  */
 export const TAUGHT_KINDS: readonly ToolKind[] = ["net", "shovel"];
-/** Owned gear keys (inventory catalogue_refs and slugs): tier 1 is everyone's, but a taught kind's only once given. */
+/** Owned gear keys (inventory catalogue_refs and slugs): tier 1 is everyone's, but a taught kind's only once given, and the starter rod only until it's traded (rods.ts ownsRod). */
 export const ownsTool = (t: Tool, owned: readonly string[], taught = false) =>
-  owned.includes(t.key) || (t.source === "starter" && !(taught && TAUGHT_KINDS.includes(t.kind)));
+  t.kind === "rod" ? ownsRod(t, owned) : owned.includes(t.key) || (t.source === "starter" && !(taught && TAUGHT_KINDS.includes(t.kind)));
 /** A kind's tools this member has, lowest tier first. */
 export const ownedTools = (kind: ToolKind, owned: readonly string[], taught = false) => TOOLS.filter(t => t.kind === kind && ownsTool(t, owned, taught));
 /** The wheel's default for a kind: the best one owned (null: none yet, a taught kind no resident has given). */

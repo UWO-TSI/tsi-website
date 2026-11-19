@@ -14,7 +14,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "./audio";
 import { castLine, claimRaid, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "./collections";
-import { BITE_WINDOW_MS, rodByTier, type RodTier } from "./rods";
+import { RARITY_LABEL } from "@/lib/rarity";
+import { BITE_WINDOW_MS, ROD_SELLER, TRAINING, inPlay, rodByKey, rodByTier, stageAt, type RodTier } from "./rods";
+import type { CatchReply } from "@/lib/collections/service";
 import { rollFishFor } from "./peaceful";
 import type { WaterType } from "./fishingSpots";
 import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "./cameraJuice";
@@ -48,7 +50,7 @@ export interface FishingSessionOptions {
   rod?: RodTier;
 }
 
-export function useFishingSession({ onActiveChange, collectionScope, zoneOverride, rod = rodByTier(1) }: FishingSessionOptions) {
+export function useFishingSession({ onActiveChange, collectionScope, zoneOverride, rod: held = rodByTier(1) }: FishingSessionOptions) {
   const [phase, setPhase] = useState<FishingPhase>("idle");
   const phaseRef = useRef<FishingPhase>("idle");
   const releaseRequestedRef = useRef(false);
@@ -70,6 +72,8 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
   const [device, setDevice] = useState<CastDevice>("mouse");
   useEffect(() => trackCastDevice(), []);
   const waterRef = useRef<WaterType | null>(null);
+  // The rod as it fishes here and now: its passive on when the water, hour and weather fit (rods.ts inPlay; the server's roll applies the same).
+  const rod = inPlay(held, { water: waterRef.current, ...currentFishingContext() });
   const castFromRef = useRef<{ site: "village" | "home"; from: [number, number] } | null>(null);
   // The server's roll for this cast (null: roll here), and once hooked, the roll to land.
   const rollRef = useRef<Promise<CatchAnswer | null> | null>(null);
@@ -364,6 +368,7 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
             collect(fish.key);
             intoBag(fish.key);
             setLearned(answer?.catch.recipe?.name ?? null);
+            if (answer) rodNews(answer.catch);
             const beat = localRecord(fish.key, size);
             setNewRecord(!isNew && (answer ? answer.catch.new_record === true && answer.catch.total_collected !== 1 : beat));
           });
@@ -442,4 +447,23 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
     /** How long the card waits for the world's beat (a boss's landing takes longer). */
     revealDelay: bossMode ? BOSS_REVEAL_DELAY_MS : REVEAL_DELAY_MS,
   };
+}
+
+/**
+ * What a land did to its rod (rod_catches): the Flimsy rod's quest catch starts Gary's quest (a toast; the
+ * tracker re-reads the counts), and a rod's awakening lands as a surprise (David 2026-11-04: "its supposed to be
+ * sudden"): the reward card in the rarity its stats now match, and the rod's stats re-read.
+ */
+export function rodNews(reply: CatchReply) {
+  const r = reply.rod && rodByKey(reply.rod.key);
+  if (!reply.rod || !r) return;
+  const n = reply.rod.catches, stage = stageAt(r, n);
+  if (r.key === TRAINING.quest.rod && n === TRAINING.quest.catches) {
+    window.dispatchEvent(new CustomEvent("tsi:toast", { detail: { text: `A new quest: ${ROD_SELLER} at the tackle shop wants a word.` } }));
+  } else if (stage > stageAt(r, n - 1)) {
+    const looks = r.awakenings[stage - 1].looks;
+    window.dispatchEvent(new CustomEvent("tsi:gift", { detail: { key: r.key.replace("_", "-"), name: r.name, rarity: looks, // its shop row: the icon (lib/game/reward.ts madeIcon)
+      title: "Awakened!", note: looks === r.rarity ? "Something in it woke up. Every stat is up." : `Something in it woke up. It fishes like a ${RARITY_LABEL[looks].toLowerCase()} rod now.` } }));
+  } else return;
+  window.dispatchEvent(new Event("tsi:gear-changed"));
 }

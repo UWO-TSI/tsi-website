@@ -66,3 +66,15 @@ To rebuild: `python3 art/audio/synth_ambience.py <wav dir>`, then the ffmpeg lin
 | `bed-rain.ogg` | a soft wash of rain, its low body on leaves and sand, a gentle rounded patter (round 4: no hiss, no clicks), the sea under it | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
 | `bed-snow.ogg` | a soft wind, everything muffled | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
 | `bed-fog.ogg` | the sea, slow and muffled | synth_ambience.py | game/sky-ambient (Tethos) | CC0 |
+## The rod awakening (rods round 10)
+
+Every `aw-*.ogg` is self-made the same way: synthesised from sines and noise by `art/audio/synth_awaken.py` (2026-11-06, game/rod-gear), nothing
+fetched or sampled, released as CC0 1.0. Rebuild: `python3 art/audio/synth_awaken.py <wav dir>`, then encode as above.
+
+| File | What it is | Source | Author | Licence |
+|---|---|---|---|---|
+| `aw-riser.ogg` | the build-up under the glow and the pulse: a drone and a band of air rising, a tremolo quickening, cut dead at the hush | synth_awaken.py | game/rod-gear (Tethos) | CC0 |
+| `aw-heart.ogg` | one heartbeat (lub, dub) under each pulse beat | synth_awaken.py | game/rod-gear (Tethos) | CC0 |
+| `aw-impact.ogg` | the hit at the burst: a sub boom dropping, a crack, a shimmer ringing out | synth_awaken.py | game/rod-gear (Tethos) | CC0 |
+| `aw-thunder.ogg` | a lightning strike: the crack, then the rumble rolling away | synth_awaken.py | game/rod-gear (Tethos) | CC0 |
+| `aw-wave.ogg` | a wave: the swell rushing in over the hush, the crash on the burst, its spray hissing back | synth_awaken.py | game/rod-gear (Tethos) | CC0 |

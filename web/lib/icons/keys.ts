@@ -25,7 +25,7 @@ export function iconKey(e: IconRow): string {
     if (e.slug === "rod-basic") return "rod_flimsy";
     if (ref === "glider_leaf") return "glider_leaf";
     const tool = toolByKey(ref) ?? toolByKey(e.slug);
-    return tool?.key ?? e.slug;
+    return tool ? tool.key : e.slug;
   }
   if (e.category === "hair") return ref.startsWith("hair:") ? `dye-${ref.slice(5)}` : ref || e.slug;   // a dye, or a hairstyle (wardrobe batch 2)
   if (e.category === "face") return `face-${ref.replace(/^face:/, "").replace(/_/g, "-")}`;   // a whole face (wardrobe batch 2)

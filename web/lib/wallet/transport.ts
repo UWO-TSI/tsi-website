@@ -30,6 +30,8 @@ export interface EconomyTransport {
   inventory(): Promise<InventoryView>;
   equip(itemId: string, equipped: boolean): Promise<InventoryView>;
   dailyGift(): Promise<GiftView>;
+  /** The rod seller's quest: the Flimsy rod for the Training rod. */
+  tradeForTraining(): Promise<{ traded: boolean }>;
   merch(): Promise<MerchView>;
   reserve(itemId: string, key: string): Promise<{ reservation: Reservation | null; gems_balance: number; replayed: boolean }>;
   adminReservations(status?: string): Promise<Reservation[]>;
@@ -59,6 +61,7 @@ export const httpEconomyTransport: EconomyTransport = {
   inventory: () => call("inventory", "inventory"),
   equip: (item_id, equipped) => call("equip", "inventory", { item_id, equipped }),
   dailyGift: () => call("daily-gift", "gift", {}),
+  tradeForTraining: () => call("rod-trade", "trade", {}),
   merch: () => call("merch", "merch"),
   reserve: (item_id, idempotency_key) => call("merch/reserve", "reservation", { item_id, idempotency_key }),
   adminReservations: (status) => call(`admin/merch${status ? `?status=${status}` : ""}`, "reservations"),

@@ -75,6 +75,11 @@ div.card:hover { box-shadow: none; }
 .tag { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px;
   background: color-mix(in srgb, var(--gui-tethos-blue) 12%, var(--ui-card)); color: var(--gui-tethos-blue); font: 500 12px/1.2 var(--gui-font); }
 .arrow { position: absolute; top: 14px; right: 14px; color: var(--ui-ink); }
+/* Awakened: a small round mark top right in the card's rung (its outline's colour), its bolt white. */
+.awake { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--edge, var(--ui-ink)); color: var(--ui-on-divine); box-shadow: 0 0 0 2px var(--ui-card), 0 2px 6px rgb(var(--ui-shade) / 0.18); }
+.card[data-rarity="divine"] .awake { background: var(--ui-holo); background-size: 300% 100%; }
+.card[data-size="sm"] .awake { top: 6px; right: 6px; width: 18px; height: 18px; }
 .soldOut { position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: color-mix(in srgb, var(--ui-card) 65%, transparent); color: var(--ui-quiet); font: 600 14px var(--gui-font); }
 /* Picked (the bag's slot, the recipe): a black ring, and lifted off the grey. */
 .card[data-selected] { box-shadow: inset 0 0 0 2px var(--ui-ink), 0 10px 26px rgb(var(--ui-shade) / 0.11); transition-duration: 0.4s; }
@@ -160,6 +165,12 @@ div.card:hover { box-shadow: none; }
 .back { all: unset; position: absolute; top: 4px; left: 10px; display: inline-flex; align-items: center; gap: 6px; color: var(--ui-quiet); font: 500 14px var(--gui-font); cursor: pointer; }
 .back:hover { color: var(--ui-ink); }
 .steps { position: absolute; top: 2px; right: 8px; display: inline-flex; gap: 8px; }
+/* A rod's box pages quietly (David 2026-11-04: "very faint and small and light"): bare chevrons at the stage's sides. */
+.faintStep { all: unset; position: absolute; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 28px; height: 44px; color: var(--ui-ink); opacity: 0.18; cursor: pointer; transition: opacity 0.2s; }
+.faintStep[data-side="prev"] { left: 2px; }
+.faintStep[data-side="next"] { right: 2px; }
+.faintStep:hover { opacity: 0.5; }
+.faintStep:focus-visible { opacity: 0.7; outline: 2px solid var(--ui-ink); outline-offset: -2px; border-radius: 6px; }
 /* Round buttons (David, 2026-10-18: "lighter black in a blue color"): the Tethos navy of the keycap and the lanyard, a
    step lighter so it sits well on the white stage; the glyphs stay white. */
 .round { all: unset; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ui-round); color: white; cursor: pointer;

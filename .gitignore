@@ -55,3 +55,9 @@ specs/tools/*/dist/
 
 # Meshy output never ships raw (art/meshy/meshy.mjs)
 art/meshy/raw/
+
+# The tool pipeline's measured dimensions (art/pipeline/profile.py, art/pipeline/tools.md)
+!art/pipeline/out/**/*.json
+
+# Evidence composites that hold a third-party reference picture (never committed; the review page links the local file)
+specs/evidence/**/*-vs-ref.*
