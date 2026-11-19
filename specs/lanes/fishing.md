@@ -50,6 +50,14 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
    - **Launch set** (proposed): Worms (faster bites), Sweet bait (rarer fish), Glow bait (night and bad weather), and the Legend lure (that water's legendary, craft-only).
    - Bait sells at the tackle shop's Bait tab. Farming bait comes with the personal island, after launch.
 
+5. **Christmas rods** (David, 2026-11-19):
+   - **Candy Cane rod** (rare): "make that the rod new players get at launch when pre reg". It is the pre-registration reward rod.
+   - **North Star rod** (legendary): "very similar to fallen star rod"; "will be limited and can only get during christmas". Earned during the Christmas event, December 20 to January 6.
+   - **Fallen Star rod:** stays the permanent legendary, crafted from the three legendary materials.
+   - **No rod skins** ("no rod skins").
+   - **The tackle counter's four "legendary" seasonal rods** (Pumpkin, Icicle, Bamboo shoot, summer): to be removed. Their baits stay.
+   - Hero concept shots run on ElevenLabs flow C7WgY7cJR04g0sitR3VW.
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
