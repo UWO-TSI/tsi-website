@@ -81,6 +81,10 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
    - **Style:** 117, a gold star with violet crystal hands: "should be anime genshin impact style".
    - **First:** a 2D anime concept illustration, not a 3D model ("make the rod in the art style not in a 3d model style, so that we have a first iteration of what the art look of the rod will be").
 
+11. **Round 5 marks** (2026-11-19):
+   - The style sheet and the Candy Cane art (`candy-cane/art-3.png`) are approved.
+   - North Star: "better, but the actual star is the reference star color very bright light with blue hue, make the hand around the star better looking".
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
