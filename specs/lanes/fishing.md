@@ -62,6 +62,10 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
    - Candy Cane take A approved ("i like this one"): `art/pipeline/concepts/b/candy-cane/hero-1.png`.
    - North Star redo: "not cool enough. legendary rods need to feel super well desined and crazy"; "it doesnt even have to be rod looking as long as it looks super cool". David's reference is in the vault at `References/Rod references/north-star-ref.png`: a blazing star, a vine shaft with molten filaments, a fire orb, smoke.
 
+7. **Christmas Rods 1, round 2 marks** (2026-11-19):
+   - The fiery dark takes (`north-star/hero-5.png`, `hero-6.png`): "this looks like the fallen star rod". They become the **Fallen Star rod's** concept.
+   - **North Star:** "need to make this more christmas looking and look like the north star, also the effects should be modeled layered on after the base model". David's reference: `References/Rod references/north-star-bethlehem-ref.png` (the Star of Bethlehem: a white eight-point star over a deep blue sky). Generate the base model alone first, then add the effects as layers.
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
