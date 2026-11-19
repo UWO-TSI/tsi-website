@@ -423,7 +423,7 @@ export function Phone({ open, apps, away, hint, onClose, pixelated = true, touch
   const usable = open && !away;
   const focus = (i: number, keys: boolean) => () => setPick({ at: i, keys });
   const blur = () => setPick({ at: null, keys: false });
-  return <div ref={host} className={`${p.phone} gui`} data-gui-flat="" data-state={open ? "open" : shown ? "closing" : undefined} data-away={away || undefined}
+  return <div ref={host} className={`${p.phone} gui`} data-state={open ? "open" : shown ? "closing" : undefined} data-away={away || undefined}
     style={box ? { left: box.left, top: box.top, width: box.w, height: box.h, visibility: shown ? undefined : "hidden" } : { visibility: "hidden" }}
     aria-hidden={!usable || undefined} data-testid={testId}>
     {live && box && <Canvas className={p.stage} frameloop="demand" dpr={[1, 2]} camera={{ fov: 30, position: [0, 0, CAM_Z] }} gl={{ antialias: true, alpha: true }}

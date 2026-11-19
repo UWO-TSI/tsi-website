@@ -1,11 +1,11 @@
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { BackLink, Fold, Folds, QuietButton, Section } from ".";
+import { BackLink, Fold, Folds, QuietButton, Section } from "./folds";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
 
-// The cream menus' pieces (specs/polish/flat-ui.md round 2, step 7).
+// The menus' layout pieces (specs/polish/flat-ui.md round 2, step 7).
 describe("a row that opens in place", () => {
   it("is a button that says whether it's open, and shows its body only when open", () => {
     const closed = html(h(Folds, { label: "Chapters", children: h(Fold, { title: "Settle in", line: "Chapter 1", onToggle: () => {}, children: "the steps" }) }));

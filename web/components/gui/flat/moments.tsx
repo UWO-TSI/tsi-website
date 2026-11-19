@@ -47,7 +47,7 @@ export function Spotlight({ open, label, eyebrow, title, lead, text, story, ligh
 }) {
   const ref = useWorldDialog<HTMLElement>(open, noop, [], true);
   if (!open) return null;
-  return <div className={`${m.layer} gui`} data-gui-flat="">
+  return <div className={`${m.layer} gui`}>
     {!light && <div className={m.scrim} aria-hidden="true" />}
     <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.spotlight} data-story={story || undefined} data-light={light || undefined} data-testid={testId} {...dataset}>
       {(eyebrow || title || lead || text) && <header className={m.head}>
@@ -387,7 +387,7 @@ export function CardOverlay({ open, label, children, action, testId, dataset }: 
 }) {
   const ref = useWorldDialog<HTMLElement>(open, noop, [], true);
   if (!open) return null;
-  return <div className={`${m.layer} gui`} data-gui-flat="">
+  return <div className={`${m.layer} gui`}>
     <div className={m.scrim} aria-hidden="true" />
     <section ref={ref} role="dialog" aria-modal aria-label={label} tabIndex={-1} data-gui-overlay className={m.held} data-testid={testId} {...dataset}>
       {children}

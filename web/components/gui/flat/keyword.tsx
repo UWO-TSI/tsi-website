@@ -19,7 +19,7 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   Anchor, Apple, Archive, ArrowLeftRight, Axe, Backpack, BadgeCheck, Barrel, BatteryMedium, Bird, Bone, BookMarked, BookOpen, Bug,
   Building2, Camera, Castle, ClipboardList, CloudRain, Coffee, Compass, CookingPot, Crown, Droplets, Eye, Fish, Flag, Flame, Flower2,
-  Footprints, Gamepad2, Gift, Hammer, HandCoins, HandHeart, Heart, HeartPulse, House, IdCard, KeyRound, LandPlot, Landmark, Leaf,
+  Footprints, Gamepad2, Gift, Hammer, HandCoins, HandHeart, Heart, HeartPulse, House, KeyRound, LandPlot, Landmark, Leaf,
   Library, Mail, Map as MapIcon, MessageCircle, Milestone, Moon, Mountain, MoveUp, Music, NotebookPen, PackageCheck, PackageOpen,
   Paintbrush, PartyPopper, Pickaxe, QrCode, ScrollText, Settings, Shell, Shield, Shirt, Ship, ShoppingBasket, ShoppingCart, Shovel,
   Skull, Smartphone, Smile, Snowflake, Sofa, Sparkles, Sprout, Star, Sticker, Store, Sunrise, Sword, Swords, TreeDeciduous, TreePalm,
@@ -76,7 +76,6 @@ const KEYWORDS = {
   recipe: { icon: <NotebookPen />, tone: "item", words: ["recipe", "recipes"] },
   quest: { icon: <ScrollText />, tone: "item", words: ["quest", "quests", "task", "tasks"] },
   gift: { icon: <Gift />, tone: "item", words: ["gift", "gifts"] },
-  id: { icon: <IdCard />, tone: "item", words: ["ID", "ID card"] },
   mail: { icon: <Mail />, tone: "item", words: ["mail", "mailbox", "letter", "letters"] },
   map: { icon: <MapIcon />, tone: "item", words: ["map", "minimap"] },
   phone: { icon: <Smartphone />, tone: "item", words: ["phone"] },

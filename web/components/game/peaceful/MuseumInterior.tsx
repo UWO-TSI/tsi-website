@@ -54,8 +54,9 @@ export function wingCases(wing: MuseumWing | undefined, capacity = CASES_PER_WIN
 /** Mirrors build_interiors.py LABEL_SIGN_H, LABEL_ROW_H, LABEL_H and the 3 columns. */
 const COL_W = 384, SIGN_H = 96, ROW_H = 192, ATLAS_H = SIGN_H + CASES_PER_WING * ROW_H;
 const FONT = '"Tethos Nunito", Nunito, ui-rounded, "Segoe UI", system-ui, sans-serif';
-/** The kit's bark plaques (the GUI sheet's .plaque): paper type on bark, a dashed paper outline round an empty case. */
-const BARK = "#725c4e", PAPER = "#fffbe7", PAPER_SOFT = "#f3ead2";
+/** The flat kit's plaques (ledger row 334; the clean theme's card, ink and quiet): ink type on a white plaque, a dashed
+ * line round an empty case. A canvas texture can't read the theme, so these are the clean theme's values. */
+const BOARD = "#ffffff", INK = "#151515", INK_SOFT = "#8a8a8a";
 
 class LabelAtlas {
   readonly texture: THREE.CanvasTexture;
@@ -78,18 +79,18 @@ class LabelAtlas {
       const x0 = k * COL_W, w = byWing.get(wing);
       // The sign over the wing.
       board(g, x0, 0, COL_W, SIGN_H);
-      fitText(g, `${WING_TITLE[wing]} · ${w ? `${w.donated}/${w.total}` : "…"}`, x0 + COL_W / 2, SIGN_H / 2 + 2, COL_W - 40, 46, 800, PAPER);
+      fitText(g, `${WING_TITLE[wing]} · ${w ? `${w.donated}/${w.total}` : "…"}`, x0 + COL_W / 2, SIGN_H / 2 + 2, COL_W - 40, 46, 800, INK);
       const cases = wingCases(w);
       for (let i = 0; i < CASES_PER_WING; i++) {
         const y0 = SIGN_H + i * ROW_H, e = cases[i];
         board(g, x0, y0, COL_W, ROW_H);
         if (e?.donated) {
-          fitText(g, e.name ?? "", x0 + COL_W / 2, y0 + ROW_H * 0.42, COL_W - 48, 52, 800, PAPER);
-          fitText(g, `Donated by ${e.donor_name ?? "a member"}`, x0 + COL_W / 2, y0 + ROW_H * 0.72, COL_W - 48, 30, 700, PAPER_SOFT);
+          fitText(g, e.name ?? "", x0 + COL_W / 2, y0 + ROW_H * 0.42, COL_W - 48, 52, 800, INK);
+          fitText(g, `Donated by ${e.donor_name ?? "a member"}`, x0 + COL_W / 2, y0 + ROW_H * 0.72, COL_W - 48, 30, 700, INK_SOFT);
         } else {
-          g.save(); g.strokeStyle = "rgba(243,234,210,0.75)"; g.lineWidth = 4; g.setLineDash([14, 10]);
+          g.save(); g.strokeStyle = "rgba(0,0,0,0.12)"; g.lineWidth = 4; g.setLineDash([14, 10]);
           g.strokeRect(x0 + 26, y0 + 26, COL_W - 52, ROW_H - 52); g.restore();
-          fitText(g, "Empty case", x0 + COL_W / 2, y0 + ROW_H / 2 + 2, COL_W - 80, 40, 700, PAPER_SOFT);
+          fitText(g, "Empty case", x0 + COL_W / 2, y0 + ROW_H / 2 + 2, COL_W - 80, 40, 700, INK_SOFT);
         }
       }
     });
@@ -97,12 +98,7 @@ class LabelAtlas {
   }
 }
 function board(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  g.fillStyle = BARK; g.fillRect(x, y, w, h);
-  // A little grain in the bark and a soft bevel along the top.
-  g.globalAlpha = 0.07; g.fillStyle = "#000000";
-  for (let i = 0; i < h; i += 6) g.fillRect(x, y + i + ((i * 7) % 3), w, 1);
-  g.globalAlpha = 0.18; g.fillStyle = "#ffffff"; g.fillRect(x, y, w, 3);
-  g.globalAlpha = 1;
+  g.fillStyle = BOARD; g.fillRect(x, y, w, h);
 }
 function fitText(g: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, size: number, weight: number, color: string) {
   let s = size;

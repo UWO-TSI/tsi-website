@@ -41,7 +41,7 @@ export default function FlatPieces() {
     return <MenuDish key={id} standIn open={open} picture={<PixelImage src={iconUrl(id === "tuna_roll" ? "fish_tuna" : "fish_salmon")} px={64} />} name={d.name}
       price={<>{d.price}<CurrencyIcon size={13} /></>} stats={dishStats(d.buff)} note={d.blurb}>Its action, when picked.</MenuDish>;
   };
-  return <div data-ui-theme="clean" data-gui-flat="" style={{ display: "grid", gap: 28, maxWidth: 1120, padding: 24, background: "var(--ui-panel)", borderRadius: 22, fontFamily: "var(--gui-font)", color: "var(--ui-ink)" }}>
+  return <div data-ui-theme="clean" style={{ display: "grid", gap: 28, maxWidth: 1120, padding: 24, background: "var(--ui-panel)", borderRadius: 22, fontFamily: "var(--gui-font)", color: "var(--ui-ink)" }}>
     <section style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
       {RARITIES.map((r, i) => <Thumb key={r} picture={iconUrl(SAMPLE[i])} rarity={r} size={64} count={i + 1} mark={i === 2} label={r}
         tip={<TipBody picture={iconUrl(SAMPLE[i])} rarity={r} kind={RARITY_LABEL[r]} name={SAMPLE[i].slice(5)} facts={[[<Clock key="c" size={14} />, "All day"], [<MapPin key="m" size={14} />, "River"], [<Ruler key="r" size={14} />, "10 to 18 cm"]]}>

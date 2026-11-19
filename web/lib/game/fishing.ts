@@ -325,10 +325,11 @@ export function fishOdds(fish: FishDef): number {
 export const catchShake = (rarity: Rarity) => REVEAL[rarity].shake;
 
 /**
- * Soft paper confetti for a catch from rare up (none below): a few small pastel pieces in the rarity's colour, cream
- * and butter, drifting down from `origin` (the card), more bursts for the rarer. No-op with reduced motion.
+ * Soft confetti for a catch from rare up (none below): a few small pieces in `colors` (the rarity's colour first, then
+ * the caller's own: the applicant island's card adds its paper ones), drifting down from `origin` (the card), more
+ * bursts for the rarer. No-op with reduced motion.
  */
-export function celebrate(rarity: Rarity, color: string, origin: { x: number; y: number } = { x: 0.5, y: 0.72 }) {
+export function celebrate(rarity: Rarity, colors: readonly string[], origin: { x: number; y: number } = { x: 0.5, y: 0.72 }) {
   const bursts = REVEAL[rarity].confetti;
   for (let i = 0; i < bursts; i++) {
     window.setTimeout(() => {
@@ -343,7 +344,7 @@ export function celebrate(rarity: Rarity, color: string, origin: { x: number; y:
         ticks: 240,
         shapes: ["circle", "square"],
         origin,
-        colors: [color, "#fffbe7", "#ffeea0"],
+        colors: [...colors],
         disableForReducedMotion: true,
       });
     }, i * 260);

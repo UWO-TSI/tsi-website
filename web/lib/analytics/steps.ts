@@ -18,7 +18,6 @@ export const STEPS = [
   ["tut_hqfirst", "Walked to HQ", "log"],
   ["hq_report", "HQ: at the desk", "log"],
   ["hq_lore", "HQ: the island's story", "log"],
-  ["hq_id", "HQ: island ID", "log"],
   ["hq_coins", "HQ: coins", "log"],
   ["hq_gems", "HQ: gems", "log"],
   ["hq_events", "HQ: event check-in", "log"],

@@ -20,9 +20,9 @@
   --hud-stick-bottom: calc(var(--hud-floor) + 40px);
 }
 /* The island wears the GUI sheet (styles/game-tokens.css): the root also carries the global `gui` class. */
-.world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: var(--gui-ink); }
+.world { position: relative; width: 100%; height: calc(100dvh - var(--island-top, 40px)); min-height: 480px; overflow: hidden; background: #b7dce0; color: var(--gui-ink); } /* world */
 /* The place name, under the vitals in the top left corner. */
-.heading { position: absolute; top: 86px; left: 36px; pointer-events: none; color: var(--gui-ink-strong); text-shadow: 0 1px 0 #fffbe7b3, 0 2px 14px #fffbe7d9; transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
+.heading { position: absolute; top: 86px; left: 36px; pointer-events: none; color: var(--gui-ink-strong); text-shadow: 0 1px 0 color-mix(in srgb, var(--ui-hud-pill) 70.1961%, transparent), 0 2px 14px color-mix(in srgb, var(--ui-hud-pill) 85.0980%, transparent); transition: opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s; }
 /* The scene title fades out with a door fade and back in, renamed, once the next scene shows. */
 .heading[data-fading="true"] { opacity: 0; transform: translateY(-4px); transition-duration: 0.25s; transition-delay: 0s; }
 .heading h1 { margin: 0; font: 800 clamp(22px, 2.6vw, 34px)/1.1 var(--gui-font); letter-spacing: -0.01em; }
@@ -56,21 +56,21 @@
 @media (pointer: coarse), (pointer: none) {
   /* Touch: the hint line is the floor; the lane and the toasts go up over the stick. */
   .world { --hud-bar: 32px; --hud-lane-bottom: calc(var(--hud-stick-bottom) + var(--touch-stick, 132px) + var(--hud-gap)); --hud-side-bottom: var(--hud-stick-bottom); }
-  .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-sm); }
+  .touchControls { display: block; position: absolute; bottom: var(--hud-floor); left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 16px; border-radius: var(--gui-r-pill); background: color-mix(in srgb, var(--ui-hud-pill) 95%, transparent); color: var(--gui-ink); white-space: nowrap; font-size: var(--gui-text-xs); font-weight: 700; box-shadow: var(--gui-shadow-sm); }
 }
 
-.world[data-light="night"] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px #11152a; }
+.world[data-light="night"] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px var(--ui-heading-night); }
 .world[data-light="evening"] .heading { color: var(--gui-ink-strong); }
 
 /* Interaction prompt and room fade, as on the applicant island: the kit's cream pill with a round keycap. */
 .interact { position: absolute; bottom: var(--hud-lane-bottom); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 18px 8px 9px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; box-shadow: var(--gui-shadow-md); cursor: pointer; }
 .interact kbd { min-width: 28px; height: 28px; font-size: var(--gui-text-sm); }
-.fade { position: absolute; inset: 0; z-index: 40; background: #14100c; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+.fade { position: absolute; inset: 0; z-index: 40; background: #14100c; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; } /* world */
 .fade[data-active="true"] { opacity: 1; transition-duration: 0.3s; }
 /* Signs over the village, in paper. */
-.cue { padding: 4px 12px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.95); color: var(--gui-ink-strong); font: 800 var(--gui-text-xs)/1.3 var(--gui-font); white-space: nowrap; pointer-events: none; box-shadow: var(--gui-shadow-sm); }
+.cue { padding: 4px 12px; border-radius: var(--gui-r-pill); background: color-mix(in srgb, var(--ui-hud-pill) 95%, transparent); color: var(--gui-ink-strong); font: 800 var(--gui-text-xs)/1.3 var(--gui-font); white-space: nowrap; pointer-events: none; box-shadow: var(--gui-shadow-sm); }
 @media (prefers-reduced-motion: reduce) { .fade, .heading { transition: none; } }
-.cue[data-closed="true"] { background: var(--gui-paper-deep); color: var(--gui-warn); outline: 2px dashed rgb(138 90 18 / 0.45); outline-offset: -4px; }
+.cue[data-closed="true"] { background: var(--gui-paper-deep); color: var(--gui-warn); outline: 2px dashed color-mix(in srgb, var(--ui-closed-outline) 45%, transparent); outline-offset: -4px; }
 p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-warn); }
 
 /* Top right (playtest round 1, decision 3): the UI view's coins, level and gear, then the quest line (David, 2026-10-14:
@@ -99,7 +99,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .hudColumn[data-new] { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .hudLead[data-new] > .questSlot { animation: objectiveIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) both, objectiveGlow 2.2s ease-out 0.5s both; }
 @keyframes objectiveIn { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
-@keyframes objectiveGlow { 0%, 100% { box-shadow: var(--gui-shadow-sm); } 30% { box-shadow: 0 0 0 4px #e2826a66, var(--gui-shadow-sm); } }
+@keyframes objectiveGlow { 0%, 100% { box-shadow: var(--gui-shadow-sm); } 30% { box-shadow: 0 0 0 4px #e2826a66, var(--gui-shadow-sm); } } /* world */
 @media (prefers-reduced-motion: reduce) { .hudColumn[data-new], .hudLead[data-new] > .questSlot { animation: none; } }
 .objectiveMarker { animation: markerPulse 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 @keyframes markerPulse { 50% { opacity: 0.45; } }
@@ -110,7 +110,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 
 /* The decorate panel itself is components/game/home/DecorateSheet.module.css (the flat UI). */
 .decorateToggle { position: absolute; right: var(--hud-edge); bottom: var(--hud-side-bottom); min-height: 44px; padding: 0 16px 0 10px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-paper); color: var(--gui-ink-strong); font: inherit; font-size: var(--gui-text-sm); font-weight: 800; cursor: pointer; box-shadow: var(--gui-shadow-md); z-index: 11; display: inline-flex; align-items: center; gap: 7px; }
-.world[data-inside] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px #11152a; }
+.world[data-inside] .heading { color: var(--gui-paper); text-shadow: 0 2px 12px var(--ui-heading-night); }
 /* The player's level ring and vitals (HudBars): the top left corner, level with the quest line top right (bible UI 8b). */
 .hudBars { position: absolute; left: var(--hud-edge); top: max(16px, env(safe-area-inset-top)); z-index: 11; display: flex; align-items: flex-start; gap: 8px; pointer-events: none; zoom: var(--tsi-text-scale, 1); }
 .bagButtons { position: absolute; left: 16px; top: 150px; z-index: 11; display: flex; align-items: center; gap: 8px; }
@@ -125,68 +125,68 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .cue small { display: block; font-weight: 600; font-size: var(--gui-text-xs); }
 @media (max-width: 700px) { .wardrobeBody { grid-template-columns: 1fr; } }
 /* Oracle quiz sheet: the Oracle keeps its lavender, in the kit's paper. */
-.keeperLine { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--gui-r-card); background: #ebe2f5; }
-.keeperLine p { margin: 0; font-style: italic; color: #3d3250; }
-.keeperFace { flex: none; width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 50% 62%, #f1c8a2 0 36%, transparent 37%), #5a4a7e; box-shadow: inset 0 -6px 0 #43365f; }
-.oracleProgress { height: 8px; border-radius: 99px; background: #e2d8ee; overflow: hidden; }
-.oracleProgress span { display: block; height: 100%; border-radius: inherit; background: #7b5ea7; transition: width 0.2s ease; }
-.oracleCount { margin: 6px 0 0; font-size: var(--gui-text-xs); font-weight: 800; color: #5f4f78; text-align: right; font-variant-numeric: tabular-nums; }
+.keeperLine { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--gui-r-card); background: #ebe2f5; } /* world */
+.keeperLine p { margin: 0; font-style: italic; color: #3d3250; } /* world */
+.keeperFace { flex: none; width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 50% 62%, #f1c8a2 0 36%, transparent 37%), #5a4a7e; box-shadow: inset 0 -6px 0 #43365f; } /* world */
+.oracleProgress { height: 8px; border-radius: 99px; background: #e2d8ee; overflow: hidden; } /* world */
+.oracleProgress span { display: block; height: 100%; border-radius: inherit; background: #7b5ea7; transition: width 0.2s ease; } /* world */
+.oracleCount { margin: 6px 0 0; font-size: var(--gui-text-xs); font-weight: 800; color: #5f4f78; text-align: right; font-variant-numeric: tabular-nums; } /* world */
 .oracleStatement { margin: 16px 0 18px; font-size: var(--gui-text-lg); line-height: 1.45; font-weight: 800; text-align: center; min-height: 3em; color: var(--gui-ink-strong); }
 .oracleScale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.oracleScale button { min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 4px; border: 0; border-radius: 16px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #d8cce6; font: inherit; font-size: var(--gui-text-xs); font-weight: 800; color: #3d3250; cursor: pointer; }
-.oracleScale button:hover { background: #efe7f8; }
-.oracleScale kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 99px; background: #5a4a7e; color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); }
+.oracleScale button { min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 4px; border: 0; border-radius: 16px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #d8cce6; font: inherit; font-size: var(--gui-text-xs); font-weight: 800; color: #3d3250; cursor: pointer; } /* world */
+.oracleScale button:hover { background: #efe7f8; } /* world */
+.oracleScale kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 99px; background: #5a4a7e; color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); } /* world */
 .oracleBack, .oracleBegin { margin-top: 14px; min-height: 44px; padding: 8px 20px; border-radius: 999px; font: inherit; font-weight: 800; cursor: pointer; }
-.oracleBegin { border: 0; background: #5a4a7e; color: #fbf7ff; box-shadow: 0 3px 0 #43365f; }
-.oracleBack { border: 0; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px #c9b8dd; color: #4a3d6a; }
+.oracleBegin { border: 0; background: #5a4a7e; color: #fbf7ff; box-shadow: 0 3px 0 #43365f; } /* world */
+.oracleBack { border: 0; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px #c9b8dd; color: #4a3d6a; } /* world */
 .oracleBack:disabled, .oracleBegin:disabled { opacity: 0.45; cursor: default; }
 /* The tie-breaker (its styles were missing, so it showed raw browser buttons): two lavender choices. */
 .tieBreaker { display: grid; gap: 8px; margin: 4px 0 12px; padding: 0; border: 0; min-width: 0; }
 .tieBreaker legend { margin-bottom: 8px; padding: 0; color: var(--gui-ink-strong); font-weight: 800; }
 .tieBreaker button[aria-pressed="true"] { background: var(--gui-butter); box-shadow: inset 0 0 0 2px var(--gui-highlight); color: var(--gui-ink-strong); }
-.tieBreaker button { min-height: 52px; padding: 10px 16px; border: 0; border-radius: 18px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #c9b8dd; color: #3d3250; font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
-.tieBreaker button:hover { background: #efe7f8; }
+.tieBreaker button { min-height: 52px; padding: 10px 16px; border: 0; border-radius: 18px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #c9b8dd; color: #3d3250; font: inherit; font-weight: 800; text-align: left; cursor: pointer; } /* world */
+.tieBreaker button:hover { background: #efe7f8; } /* world */
 .oracleResult { margin: 0; padding: 14px; border-left: 5px solid var(--family); border-radius: 14px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm); }
 /* The Oracle's path sheet: subclass choice, loadout, stats (combat B) */
 .pathSheet { width: min(760px, calc(100% - 32px)); }
 .pathCards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
-.pathCards article { display: grid; align-content: start; gap: 6px; padding: 10px; border-radius: 12px; background: #fff; border-top: 4px solid var(--family); font-size: 12px; }
+.pathCards article { display: grid; align-content: start; gap: 6px; padding: 10px; border-radius: 12px; background: #fff; border-top: 4px solid var(--family); font-size: 12px; } /* world */
 .pathCards article[data-current] { box-shadow: 0 0 0 2px var(--family); }
 .pathCards header { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
 .pathCards header b { font-size: 15px; }
-.pathCards header small, .pathNote { color: #6f5f86; font-size: 11px; }
+.pathCards header small, .pathNote { color: #6f5f86; font-size: 11px; } /* world */
 .pathCards p { margin: 0; }
 .pathCards .oracleBegin { margin-top: 4px; min-height: 36px; padding: 6px 12px; }
 .pathAbility { display: grid; gap: 1px; }
-.pathAbility small { color: #5b5068; line-height: 1.35; }
-.runeTag { justify-self: start; margin: 1px 0; padding: 0 6px; border-radius: 6px; background: #ece4f7; color: #5b4a86; font-style: normal; font-size: 10px; font-weight: 600; }
-.pathBadge { justify-self: start; padding: 4px 10px; border-radius: 999px; background: var(--family); color: #fff; font-weight: 700; }
-.pathConfirm { grid-column: 1 / -1; padding: 12px; border-radius: 12px; background: #fff6e6; border: 1px solid #e0b660; }
+.pathAbility small { color: #5b5068; line-height: 1.35; } /* world */
+.runeTag { justify-self: start; margin: 1px 0; padding: 0 6px; border-radius: 6px; background: #ece4f7; color: #5b4a86; font-style: normal; font-size: 10px; font-weight: 600; } /* world */
+.pathBadge { justify-self: start; padding: 4px 10px; border-radius: 999px; background: var(--family); color: #fff; font-weight: 700; } /* world */
+.pathConfirm { grid-column: 1 / -1; padding: 12px; border-radius: 12px; background: #fff6e6; border: 1px solid #e0b660; } /* world */
 .pathConfirm p { margin: 0 0 4px; }
 .pathConfirm button { margin-right: 8px; }
-.pathCards article[data-suggested] { box-shadow: 0 0 0 2px #e0b660; }
+.pathCards article[data-suggested] { box-shadow: 0 0 0 2px #e0b660; } /* world */
 .pathLoadout li[data-locked] { opacity: 0.5; }
 /* Classes v2: the choice ceremony (§1.11): the class emblem over the family's light, the keeper's line, the weapon forming. */
 .ceremony { display: grid; justify-items: center; gap: 6px; margin: 4px 0 12px; padding: 18px 14px; border-radius: 14px; text-align: center;
-  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--class) 45%, #fff) 0, #fff 70%); border: 2px solid var(--family); animation: bannerIn 0.4s ease-out; }
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--class) 45%, #fff) 0, #fff 70%); border: 2px solid var(--family); animation: bannerIn 0.4s ease-out; } /* world */
 .ceremony img { width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 0 0 6px color-mix(in srgb, var(--family) 35%, transparent), 0 0 30px var(--class); animation: ceremonyForm 1.2s ease-out both; }
 .ceremony b { font-size: 18px; }
-.ceremony small { color: #5b5068; }
+.ceremony small { color: #5b5068; } /* world */
 @keyframes ceremonyForm { 0% { transform: scale(0.2) rotate(-40deg); opacity: 0; filter: brightness(3); } 60% { transform: scale(1.15) rotate(6deg); opacity: 1; filter: brightness(1.6); } 100% { transform: none; filter: none; } }
 @media (prefers-reduced-motion: reduce) { .ceremony, .ceremony img { animation: none; } }
 .pathLoadout { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.pathLoadout button { width: 100%; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #d8cce6; border-radius: 10px; background: #fffdfb; font: inherit; font-size: 12px; text-align: left; color: #2e2640; cursor: pointer; }
-.pathLoadout button[aria-pressed="true"] { border-color: #5a4a7e; background: #efe7f8; }
-.pathLoadout kbd { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: #e9e0f3; font: 700 12px "IBM Plex Mono", monospace; }
-.pathLoadout button[aria-pressed="true"] kbd { background: #5a4a7e; color: #fff; }
-.pathLoadout em { font-style: normal; font-size: 10px; color: #6f5f86; text-transform: capitalize; }
+.pathLoadout button { width: 100%; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #d8cce6; border-radius: 10px; background: #fffdfb; font: inherit; font-size: 12px; text-align: left; color: #2e2640; cursor: pointer; } /* world */
+.pathLoadout button[aria-pressed="true"] { border-color: #5a4a7e; background: #efe7f8; } /* world */
+.pathLoadout kbd { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: #e9e0f3; font: 700 12px "IBM Plex Mono", monospace; } /* world */
+.pathLoadout button[aria-pressed="true"] kbd { background: #5a4a7e; color: #fff; } /* world */
+.pathLoadout em { font-style: normal; font-size: 10px; color: #6f5f86; text-transform: capitalize; } /* world */
 .pathStats { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .pathStats li { display: grid; grid-template-columns: 80px 36px 40px 40px 1fr; gap: 6px; align-items: center; font-size: 13px; }
 .pathStats b { text-align: right; font: 700 14px "IBM Plex Mono", monospace; }
-.pathStats button { min-height: 36px; border: 1px solid #c9b8dd; border-radius: 8px; background: #fffdfb; font: 700 16px inherit; color: #5a4a7e; cursor: pointer; }
+.pathStats button { min-height: 36px; border: 1px solid #c9b8dd; border-radius: 8px; background: #fffdfb; font: 700 16px inherit; color: #5a4a7e; cursor: pointer; } /* world */
 .pathStats button:disabled { opacity: 0.35; cursor: default; }
-.pathStats small { color: #8a7d99; font-size: 11px; }
-.pathStatus { margin: 10px 0 0; font-weight: 600; color: #3d3250; }
+.pathStats small { color: #8a7d99; font-size: 11px; } /* world */
+.pathStatus { margin: 10px 0 0; font-weight: 600; color: #3d3250; } /* world */
 /* Reveal ceremony card: paper lit by the family's colour (it was a dark glass card). */
 .reveal { position: absolute; left: 36px; top: 250px; width: min(360px, calc(100% - 32px)); padding: 22px 24px 20px; border-radius: var(--gui-r-paper); background: var(--gui-paper); color: var(--gui-ink); box-shadow: 0 0 0 3px var(--family), 0 0 40px color-mix(in srgb, var(--family) 45%, transparent), var(--gui-shadow-lg); text-align: center; z-index: 20; animation: reveal-in 0.9s 1.4s both ease-out; zoom: var(--tsi-text-scale, 1); }
 .reveal p { margin: 4px 0; font-size: var(--gui-text-md); line-height: 1.5; }
@@ -218,49 +218,49 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* Text size (row 220): the HUD scales, the world doesn't. Sheets and dialogs scale through [data-gui-overlay]. */
 .world .interact, .world .bagButton, .world .heading, .world .decorateToggle { zoom: var(--tsi-text-scale, 1); }
 /* High contrast (row 220) */
-:global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .cue { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
-:global(html[data-contrast="high"]) .world .interact kbd { background: #ffe14d; color: #000000; }
-:global(html[data-contrast="high"]) .world kbd { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 1px #000000; }
-:global(html[data-contrast="high"]) .world .hint, :global(html[data-contrast="high"]) .world small { color: #000000; }
-:global(html[data-contrast="high"]) .world .keeperLine { background: #ffffff; border: 2px solid #000000; }
-:global(html[data-contrast="high"]) .world .oracleScale button, :global(html[data-contrast="high"]) .world .segmented button, :global(html[data-contrast="high"]) .world .keyList button, :global(html[data-contrast="high"]) .world .return { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
-:global(html[data-contrast="high"]) .world .segmented button[aria-pressed="true"] { background: #000000; color: #ffffff; }
-:global(html[data-contrast="high"]) .world .heading { text-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff; color: #000000; }
-:global(html[data-contrast="high"]) .world :focus-visible { outline: 3px solid #ffb000 !important; outline-offset: 2px; }
+:global(html[data-contrast="high"]) .world .interact, :global(html[data-contrast="high"]) .world .bagButton, :global(html[data-contrast="high"]) .world .cue { background: var(--ui-contrast-ink); color: var(--ui-on-scrim); box-shadow: 0 0 0 2px var(--ui-on-scrim); }
+:global(html[data-contrast="high"]) .world .interact kbd { background: var(--ui-contrast-key); color: var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .world kbd { background: var(--ui-on-scrim); color: var(--ui-contrast-ink); box-shadow: inset 0 0 0 1px var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .world .hint, :global(html[data-contrast="high"]) .world small { color: var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .world .keeperLine { background: var(--ui-on-scrim); border: 2px solid var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .world .oracleScale button, :global(html[data-contrast="high"]) .world .segmented button, :global(html[data-contrast="high"]) .world .keyList button, :global(html[data-contrast="high"]) .world .return { background: var(--ui-on-scrim); color: var(--ui-contrast-ink); box-shadow: inset 0 0 0 2px var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .world .segmented button[aria-pressed="true"] { background: var(--ui-contrast-ink); color: var(--ui-on-scrim); }
+:global(html[data-contrast="high"]) .world .heading { text-shadow: 0 0 4px var(--ui-on-scrim), 0 0 8px var(--ui-on-scrim); color: var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .world :focus-visible { outline: 3px solid var(--ui-contrast-focus) !important; outline-offset: 2px; }
 :global(html[data-contrast="high"]) .world .keyList kbd { border: 0; background: transparent; }
 .oracleEmbedded, .revealEmbedded { position: static; transform: none; margin: 24px auto; animation: none; }
 /* Text size reaches the collection book too (coordinator 2026-09-26). */
 .world :global(.collection-book) { zoom: var(--tsi-text-scale, 1); max-height: calc(82vh / var(--tsi-text-scale, 1)); }
-:global(html[data-contrast="high"]) .world :global(.collection-book) { background: #ffffff !important; color: #000000 !important; border: 2px solid #000000 !important; }
+:global(html[data-contrast="high"]) .world :global(.collection-book) { background: var(--ui-on-scrim) !important; color: var(--ui-contrast-ink) !important; border: 2px solid var(--ui-contrast-ink) !important; }
 /* Combat HUD (ruins) */
 /* Combat HUD (ruins), in the cream UI kit (row 124). */
-.combatHud { position: absolute; left: 50%; bottom: var(--hud-lane-bottom); transform: translateX(-50%); display: grid; gap: 7px; width: min(660px, calc(100% - 32px)); box-sizing: border-box; padding: 11px 14px 12px; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; background: #f8f7e9f2; color: #293e3b; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; z-index: 12; }
-.hpBar { position: relative; height: 18px; border-radius: 9px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; }
-.hpBar span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #ee8d6e, #f4b27e); transition: width 0.15s; }
-.hpBar b { position: relative; display: block; text-align: center; font: 700 11px/18px "IBM Plex Mono", monospace; color: #293e3b; }
+.combatHud { position: absolute; left: 50%; bottom: var(--hud-lane-bottom); transform: translateX(-50%); display: grid; gap: 7px; width: min(660px, calc(100% - 32px)); box-sizing: border-box; padding: 11px 14px 12px; border: 1px solid #5c746c40; border-radius: 14px 14px 5px 14px; background: #f8f7e9f2; color: #293e3b; box-shadow: 0 6px 0 #47625218, 0 12px 36px #29464118; font-size: 12px; z-index: 12; } /* world */
+.hpBar { position: relative; height: 18px; border-radius: 9px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; } /* world */
+.hpBar span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #ee8d6e, #f4b27e); transition: width 0.15s; } /* world */
+.hpBar b { position: relative; display: block; text-align: center; font: 700 11px/18px "IBM Plex Mono", monospace; color: #293e3b; } /* world */
 .weaponLine { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .weaponLine span { font-weight: 700; }
-.weaponLine small { color: #4f625b; }
+.weaponLine small { color: #4f625b; } /* world */
 .dodgePip { margin-left: auto; opacity: 0.5; }
 .dodgePip[data-ready] { opacity: 1; }
-.dodgePip kbd { font: 600 10px "IBM Plex Mono", monospace; background: #e0e6d8; color: #293e3b; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
+.dodgePip kbd { font: 600 10px "IBM Plex Mono", monospace; background: #e0e6d8; color: #293e3b; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; } /* world */
 .abilityBar { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.abilityBar li { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 7px; align-items: center; min-height: 44px; padding: 5px 8px 5px 6px; border: 1px solid #d8cbaa; border-radius: 9px; background: #fffdf3; }
-.abilityBar li[data-cooling] .slotName { color: #6c7a73; }
-.abilityBar li[data-rune] { border-color: #b39ce6; box-shadow: inset 0 0 0 1px #b39ce6; }
+.abilityBar li { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 7px; align-items: center; min-height: 44px; padding: 5px 8px 5px 6px; border: 1px solid #d8cbaa; border-radius: 9px; background: #fffdf3; } /* world */
+.abilityBar li[data-cooling] .slotName { color: #6c7a73; } /* world */
+.abilityBar li[data-rune] { border-color: #b39ce6; box-shadow: inset 0 0 0 1px #b39ce6; } /* world */
 /* The radial sweep: a ring whose dark wedge is the cooldown left (--sweep), its edge turning clockwise; the key in its middle. */
 @property --sweep { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-.sweep { grid-row: span 2; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: conic-gradient(#426b5b calc(360deg - var(--sweep)), #293e3bb8 0); transition: --sweep 0.1s linear; }
-.sweep kbd { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fffdf3; color: #293e3b; font: 700 11px "IBM Plex Mono", monospace; }
+.sweep { grid-row: span 2; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: conic-gradient(#426b5b calc(360deg - var(--sweep)), #293e3bb8 0); transition: --sweep 0.1s linear; } /* world */
+.sweep kbd { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fffdf3; color: #293e3b; font: 700 11px "IBM Plex Mono", monospace; } /* world */
 .slotName { min-width: 0; font-weight: 600; font-size: 11px; line-height: 1.2; overflow-wrap: anywhere; }
-.abilityBar li small { font: 600 10px "IBM Plex Mono", monospace; color: #607069; }
+.abilityBar li small { font: 600 10px "IBM Plex Mono", monospace; color: #607069; } /* world */
 /* A key pressed with too much cooldown left (runInputs): the slot shakes once. */
 .abilityBar li[data-denied] { animation: slotDenied 0.3s ease-out; }
-@keyframes slotDenied { 0% { transform: translateX(0); } 25% { transform: translateX(-3px); box-shadow: inset 0 0 0 2px #e8704a; } 50% { transform: translateX(3px); } 75% { transform: translateX(-1px); } 100% { transform: translateX(0); } }
-@keyframes slotDeniedStill { 0%, 60% { box-shadow: inset 0 0 0 2px #e8704a; } 100% { box-shadow: none; } }
+@keyframes slotDenied { 0% { transform: translateX(0); } 25% { transform: translateX(-3px); box-shadow: inset 0 0 0 2px #e8704a; } 50% { transform: translateX(3px); } 75% { transform: translateX(-1px); } 100% { transform: translateX(0); } } /* world */
+@keyframes slotDeniedStill { 0%, 60% { box-shadow: inset 0 0 0 2px #e8704a; } 100% { box-shadow: none; } } /* world */
 @media (prefers-reduced-motion: reduce) { .abilityBar li[data-denied] { animation-name: slotDeniedStill; } }
-.hpBar i { position: absolute; inset: 0 auto 0 0; background: #8fc3e8a0; }
-.kitLine { color: #4f625b; }
+.hpBar i { position: absolute; inset: 0 auto 0 0; background: #8fc3e8a0; } /* world */
+.kitLine { color: #4f625b; } /* world */
 /* Classes v2 bar: keys 1–5 and the round ult slot (1.4× a key), the meter a clockwise ring in the class colour. */
 .classBar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
 .abilityBar li[data-locked] { opacity: 0.5; }
@@ -269,87 +269,87 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .classBar .sweep { width: 28px; height: 28px; }
 .slotIcon { width: 16px; height: 16px; margin-right: 3px; vertical-align: -3px; }
 .kitLine .slotIcon { display: inline-block; } /* the class line's passive and movement icons sit in the text */
-.classBar .abilityBar li[data-form] { box-shadow: inset 0 -3px 0 var(--class, #b39ce6); }
+.classBar .abilityBar li[data-form] { box-shadow: inset 0 -3px 0 var(--class, #b39ce6); } /* world */
 /* A channelled ult's mash (Cataclysm): three keycaps, the front one big. */
 .mash { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); display: grid; justify-items: center; gap: 8px; padding: 10px 16px 12px; border-radius: 18px;
-  background: #fffdf3f0; border: 2px solid #293e3b; box-shadow: 0 4px 0 #293e3b33; color: #293e3b; pointer-events: none; z-index: 30; }
+  background: #fffdf3f0; border: 2px solid #293e3b; box-shadow: 0 4px 0 #293e3b33; color: #293e3b; pointer-events: none; z-index: 30; } /* world */
 .mash b { font-size: 13px; }
 .mash ol { display: flex; gap: 10px; align-items: center; margin: 0; padding: 0; list-style: none; animation: mashSlide 0.12s ease-out; }
 .mash li { display: grid; justify-items: center; gap: 2px; opacity: 0.6; }
 .mash li[data-front] { opacity: 1; }
-.mash kbd { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #fffdf3; border: 2px solid var(--note); border-bottom-width: 4px; font: 700 15px "IBM Plex Mono", monospace; color: #293e3b; }
+.mash kbd { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #fffdf3; border: 2px solid var(--note); border-bottom-width: 4px; font: 700 15px "IBM Plex Mono", monospace; color: #293e3b; } /* world */
 .mash li[data-front] kbd { width: 52px; height: 52px; font-size: 22px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--note) 40%, transparent); }
 .mash small { font-size: 12px; }
-.mash > span { width: 180px; height: 6px; border-radius: 3px; background: #d8cbaa; overflow: hidden; }
-.mash > span i { display: block; height: 100%; background: #293e3b; }
+.mash > span { width: 180px; height: 6px; border-radius: 3px; background: #d8cbaa; overflow: hidden; } /* world */
+.mash > span i { display: block; height: 100%; background: #293e3b; } /* world */
 @keyframes mashSlide { from { transform: translateX(14px); opacity: 0.5; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mash ol { animation: none; } }
 .abilityBar li[data-unarmed] { filter: grayscale(0.8); }
-.abilityBar li[data-held] { border-color: var(--class, #b39ce6); box-shadow: inset 0 0 0 2px var(--class, #b39ce6); }
-.abilityBar li[data-on] { background: color-mix(in srgb, var(--class, #b39ce6) 18%, #fffdf3); }
+.abilityBar li[data-held] { border-color: var(--class, #b39ce6); box-shadow: inset 0 0 0 2px var(--class, #b39ce6); } /* world */
+.abilityBar li[data-on] { background: color-mix(in srgb, var(--class, #b39ce6) 18%, #fffdf3); } /* world */
 .ultSlot { position: relative; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%;
-  background: conic-gradient(var(--class, #b39ce6) var(--meter), #e0e6d8 0); box-shadow: 0 2px 0 #47625218; }
-.ultSlot::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fffdf3; border: 1px solid #d8cbaa; }
+  background: conic-gradient(var(--class, #b39ce6) var(--meter), #e0e6d8 0); box-shadow: 0 2px 0 #47625218; } /* world */
+.ultSlot::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fffdf3; border: 1px solid #d8cbaa; } /* world */
 .ultSlot img { position: relative; width: 38px; height: 38px; filter: grayscale(1) opacity(0.55); transition: filter 0.2s; }
 .ultSlot[data-ready] img { filter: none; }
-.ultSlot[data-ready] { box-shadow: 0 0 0 2px var(--class, #b39ce6), 0 0 14px var(--class, #b39ce6); animation: ultPulse 2s ease-in-out infinite; }
-.ultSlot kbd { position: absolute; right: -4px; bottom: -4px; font: 700 10px "IBM Plex Mono", monospace; background: #fffdf3; color: #293e3b; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
+.ultSlot[data-ready] { box-shadow: 0 0 0 2px var(--class, #b39ce6), 0 0 14px var(--class, #b39ce6); animation: ultPulse 2s ease-in-out infinite; } /* world */
+.ultSlot kbd { position: absolute; right: -4px; bottom: -4px; font: 700 10px "IBM Plex Mono", monospace; background: #fffdf3; color: #293e3b; border: 1px solid #a7b59e; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; } /* world */
 .ultSlot[data-denied] { animation: slotDenied 0.3s ease-out; }
-@keyframes ultPulse { 0%, 100% { box-shadow: 0 0 0 2px var(--class, #b39ce6), 0 0 8px var(--class, #b39ce6); } 50% { box-shadow: 0 0 0 3px var(--class, #b39ce6), 0 0 22px var(--class, #b39ce6); } }
+@keyframes ultPulse { 0%, 100% { box-shadow: 0 0 0 2px var(--class, #b39ce6), 0 0 8px var(--class, #b39ce6); } 50% { box-shadow: 0 0 0 3px var(--class, #b39ce6), 0 0 22px var(--class, #b39ce6); } } /* world */
 @media (prefers-reduced-motion: reduce) { .ultSlot[data-ready] { animation: none; } }
-.masteryBar { height: 4px; border-radius: 2px; background: #e0e6d8; overflow: hidden; }
-.masteryBar span { display: block; height: 100%; background: linear-gradient(90deg, #c9a24a, #e6c66e); transition: width 0.3s; }
-.banner[data-kind="mastery"] { border: 2px solid #c9a24a; animation: bannerIn 0.35s ease-out; }
-.banner[data-kind="mastery"] b { color: #7a5a14; }
+.masteryBar { height: 4px; border-radius: 2px; background: #e0e6d8; overflow: hidden; } /* world */
+.masteryBar span { display: block; height: 100%; background: linear-gradient(90deg, #c9a24a, #e6c66e); transition: width 0.3s; } /* world */
+.banner[data-kind="mastery"] { border: 2px solid #c9a24a; animation: bannerIn 0.35s ease-out; } /* world */
+.banner[data-kind="mastery"] b { color: #7a5a14; } /* world */
 @media (max-width: 640px) { .abilityBar { grid-template-columns: repeat(2, 1fr); } }
-.safeBadge { position: absolute; top: 150px; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 12px; border-radius: 999px; background: #e7f5ea; color: #245c36; font-size: 12px; font-weight: 600; z-index: 12; }
-.missionTracker { position: absolute; left: 16px; top: 196px; display: grid; gap: 2px; max-width: 260px; padding: 10px 12px; border-radius: 10px; background: #f8f7e9f0; color: #293e3b; font-size: 12px; z-index: 12; }
-.missionTracker[data-status="complete"] { border-left: 4px solid #3d8f52; }
-.missionTracker[data-status="failed"] { border-left: 4px solid #c0463c; }
-.bossBar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); box-sizing: border-box; display: grid; gap: 5px; padding: 8px 14px 9px; border: 1px solid #5c746c40; border-radius: 12px; background: #f8f7e9f2; color: #293e3b; text-align: center; box-shadow: 0 4px 0 #47625218; z-index: 12; }
+.safeBadge { position: absolute; top: 150px; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 12px; border-radius: 999px; background: #e7f5ea; color: #245c36; font-size: 12px; font-weight: 600; z-index: 12; } /* world */
+.missionTracker { position: absolute; left: 16px; top: 196px; display: grid; gap: 2px; max-width: 260px; padding: 10px 12px; border-radius: 10px; background: #f8f7e9f0; color: #293e3b; font-size: 12px; z-index: 12; } /* world */
+.missionTracker[data-status="complete"] { border-left: 4px solid #3d8f52; } /* world */
+.missionTracker[data-status="failed"] { border-left: 4px solid #c0463c; } /* world */
+.bossBar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); box-sizing: border-box; display: grid; gap: 5px; padding: 8px 14px 9px; border: 1px solid #5c746c40; border-radius: 12px; background: #f8f7e9f2; color: #293e3b; text-align: center; box-shadow: 0 4px 0 #47625218; z-index: 12; } /* world */
 .bossBar b { font-size: 12px; }
-.bossBar small { font-size: 11px; color: #4f625b; }
-.bossBar span { height: 10px; border-radius: 5px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; }
-.bossBar i { display: block; height: 100%; background: linear-gradient(90deg, #8a6cff, #b9a3f2); transition: width 0.15s; }
+.bossBar small { font-size: 11px; color: #4f625b; } /* world */
+.bossBar span { height: 10px; border-radius: 5px; background: #e0e6d8; box-shadow: inset 0 1px 2px #29464126; overflow: hidden; } /* world */
+.bossBar i { display: block; height: 100%; background: linear-gradient(90deg, #8a6cff, #b9a3f2); transition: width 0.15s; } /* world */
 /* A mini-boss (the elder thorn crab): amber like the elites' bars, its title beside its name, a tick where each phase turns. */
-.bossBar[data-mini] { border-color: #c98f2a66; animation: bannerIn 0.3s ease-out; }
-.bossBar[data-mini] em { font-style: normal; font-weight: 500; color: #8a5a12; }
+.bossBar[data-mini] { border-color: #c98f2a66; animation: bannerIn 0.3s ease-out; } /* world */
+.bossBar[data-mini] em { font-style: normal; font-weight: 500; color: #8a5a12; } /* world */
 .bossBar[data-mini] span { position: relative; }
-.bossBar[data-mini] i { background: linear-gradient(90deg, #d9862f, #e8bd5c); }
-.bossBar u { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #29464166; z-index: 1; }
-.defeat, .banner { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); display: grid; gap: 4px; margin: 0; padding: 14px 22px; border: 1px solid #5c746c40; border-radius: 14px; background: #f8f7e9f5; color: #293e3b; text-align: center; box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; font-size: 15px; z-index: 30; }
-.defeat { border-left: 5px solid #c0463c; }
+.bossBar[data-mini] i { background: linear-gradient(90deg, #d9862f, #e8bd5c); } /* world */
+.bossBar u { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #29464166; z-index: 1; } /* world */
+.defeat, .banner { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); display: grid; gap: 4px; margin: 0; padding: 14px 22px; border: 1px solid #5c746c40; border-radius: 14px; background: #f8f7e9f5; color: #293e3b; text-align: center; box-shadow: 0 6px 0 #47625218, 0 16px 40px #29464130; font-size: 15px; z-index: 30; } /* world */
+.defeat { border-left: 5px solid #c0463c; } /* world */
 .banner b { font-size: 17px; }
-.banner span { font-size: 12px; color: #4f625b; }
-.banner[data-kind="victory"] { border: 2px solid #d9a13a; box-shadow: 0 6px 0 #a87a2a40, 0 16px 40px #29464130; animation: bannerIn 0.35s ease-out; }
-.banner[data-kind="victory"] b { color: #8a5a12; }
-.banner[data-kind="trait"] { border: 2px solid #9f86e0; animation: bannerIn 0.35s ease-out; }
-.banner[data-kind="trait"] b { color: #5b3fa8; }
+.banner span { font-size: 12px; color: #4f625b; } /* world */
+.banner[data-kind="victory"] { border: 2px solid #d9a13a; box-shadow: 0 6px 0 #a87a2a40, 0 16px 40px #29464130; animation: bannerIn 0.35s ease-out; } /* world */
+.banner[data-kind="victory"] b { color: #8a5a12; } /* world */
+.banner[data-kind="trait"] { border: 2px solid #9f86e0; animation: bannerIn 0.35s ease-out; } /* world */
+.banner[data-kind="trait"] b { color: #5b3fa8; } /* world */
 /* A mini-boss joins the fight: its name card, higher up so the fight underneath stays clear. */
-.banner[data-kind="foe"] { top: 24%; padding: 10px 26px; border: 2px solid #d9a13a; animation: bannerIn 0.35s ease-out; }
-.banner[data-kind="foe"] b { font-size: 20px; color: #8a5a12; letter-spacing: 0.02em; }
+.banner[data-kind="foe"] { top: 24%; padding: 10px 26px; border: 2px solid #d9a13a; animation: bannerIn 0.35s ease-out; } /* world */
+.banner[data-kind="foe"] b { font-size: 20px; color: #8a5a12; letter-spacing: 0.02em; } /* world */
 @keyframes bannerIn { from { opacity: 0; transform: translate(-50%, -40%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .banner { animation: none !important; } }
-.hurt { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 #e8505b00; transition: box-shadow 0.25s; z-index: 11; }
-.hurt[data-on] { box-shadow: inset 0 0 120px 20px #e8505b88; transition: none; }
+.hurt { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 0 #e8505b00; transition: box-shadow 0.25s; z-index: 11; } /* world */
+.hurt[data-on] { box-shadow: inset 0 0 120px 20px #e8505b88; transition: none; } /* world */
 .floaters { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 13; }
-.floater { position: absolute; left: 0; top: 0; opacity: 0; font: 800 20px "IBM Plex Mono", monospace; color: #fff6d8; text-shadow: 0 2px 0 #3a2400, 0 0 6px #000a; white-space: nowrap; will-change: transform; }
-.floater[data-kind="crit"] { color: #ffd34d; font-size: 26px; }
-.floater[data-kind="hurt"] { color: #ff6a6a; }
-.floater[data-kind="ult"] { color: #fff; font-size: 30px; -webkit-text-stroke: 1.5px #1d1a24; text-shadow: 0 3px 0 #1d1a24, 0 0 12px #fff8; }
-.floater[data-kind="info"] { padding: 2px 9px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; font-size: 12px; font-weight: 700; text-shadow: none; box-shadow: 0 2px 6px #29464130; }
+.floater { position: absolute; left: 0; top: 0; opacity: 0; font: 800 20px "IBM Plex Mono", monospace; color: #fff6d8; text-shadow: 0 2px 0 #3a2400, 0 0 6px #000a; white-space: nowrap; will-change: transform; } /* world */
+.floater[data-kind="crit"] { color: #ffd34d; font-size: 26px; } /* world */
+.floater[data-kind="hurt"] { color: #ff6a6a; } /* world */
+.floater[data-kind="ult"] { color: #fff; font-size: 30px; -webkit-text-stroke: 1.5px #1d1a24; text-shadow: 0 3px 0 #1d1a24, 0 0 12px #fff8; } /* world */
+.floater[data-kind="info"] { padding: 2px 9px; border-radius: 999px; background: #f8f7e9e8; color: #293e3b; font-size: 12px; font-weight: 700; text-shadow: none; box-shadow: 0 2px 6px #29464130; } /* world */
 /* Incantation */
-.incantation { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: grid; gap: 8px; justify-items: center; padding: 14px 16px; border-radius: 18px; background: #1b1626e0; color: #f4eefc; z-index: 25; }
+.incantation { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: grid; gap: 8px; justify-items: center; padding: 14px 16px; border-radius: 18px; background: #1b1626e0; color: #f4eefc; z-index: 25; } /* world */
 .incantation header { display: grid; text-align: center; font-size: 14px; }
 .incantation header small { opacity: 0.75; }
-.incantation svg { border-radius: 12px; background: radial-gradient(circle, #3b2a5a 0%, #1f1830 70%); cursor: crosshair; }
-.runeGuide { fill: none; stroke: #d9c8ff55; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; }
-.runeGuide[data-next] { stroke: #d9c8ff88; }
-.runeGuide[data-done] { stroke: #8fe3a055; }
-.runeTrace { fill: none; stroke: #fff4c8; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px #ffd34d); }
+.incantation svg { border-radius: 12px; background: radial-gradient(circle, #3b2a5a 0%, #1f1830 70%); cursor: crosshair; } /* world */
+.runeGuide { fill: none; stroke: #d9c8ff55; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; } /* world */
+.runeGuide[data-next] { stroke: #d9c8ff88; } /* world */
+.runeGuide[data-done] { stroke: #8fe3a055; } /* world */
+.runeTrace { fill: none; stroke: #fff4c8; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px #ffd34d); } /* world */
 .runeReadout { margin: 0; font: 700 14px "IBM Plex Mono", monospace; }
-.incantation[data-outcome="fail"] .runeReadout { color: #ff8a8a; }
-.incantation[data-outcome="enhanced"] .runeReadout { color: #ffd34d; }
+.incantation[data-outcome="fail"] .runeReadout { color: #ff8a8a; } /* world */
+.incantation[data-outcome="enhanced"] .runeReadout { color: #ffd34d; } /* world */
 /* Mission board */
 .missionSheet { width: min(560px, calc(100% - 32px)); }
 /* Fishing: its card takes the lane (the power gauge, the reel and a catch stand about 260 tall; a line of text about 120), so the toasts go up over it. */
@@ -361,22 +361,22 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 @media (max-width: 640px) { .world[data-site="ruins"] { --hud-combat: calc(206px * var(--tsi-text-scale, 1)); } }
 .world .combatHud, .world .missionTracker, .world .incantation, .world .bossBar, .world .safeBadge, .world .banner, .world .defeat { zoom: var(--tsi-text-scale, 1); }
 .energyBar { height: 15px; }
-.energyBar span { background: linear-gradient(90deg, #9cc3f2, #bfaaf2); }
+.energyBar span { background: linear-gradient(90deg, #9cc3f2, #bfaaf2); } /* world */
 .energyBar b { font-size: 11px; line-height: 15px; }
 .abilityBar small { margin-left: auto; opacity: 0.7; font: 600 10px "IBM Plex Mono", monospace; }
-.weaponLine small[data-broken] { color: #b23a2e; font-weight: 600; }
-.runeTimer { width: 320px; height: 5px; border-radius: 3px; background: #3b2f45; overflow: hidden; }
-.runeTimer span { display: block; height: 100%; background: #ffe08a; transition: width 0.1s linear; }
+.weaponLine small[data-broken] { color: #b23a2e; font-weight: 600; } /* world */
+.runeTimer { width: 320px; height: 5px; border-radius: 3px; background: #3b2f45; overflow: hidden; } /* world */
+.runeTimer span { display: block; height: 100%; background: #ffe08a; transition: width 0.1s linear; } /* world */
 /* Mouse-look (specs/camera-orbit.md): the hint while the mouse is free, and the ruins' crosshair while it looks. */
 /* Top centre, between the title and the top cluster: clear of the bottom stack and of the bubbles and plates over heads (world audit item 2). */
-.lookHint { position: absolute; top: max(24px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
-.crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; }
-.crosshair circle + circle { fill: #f8f3df; stroke: none; }
+.lookHint { position: absolute; top: max(24px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 16px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; box-shadow: var(--gui-shadow-sm); pointer-events: none; white-space: nowrap; zoom: var(--tsi-text-scale, 1); } /* world */
+.crosshair { position: absolute; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; fill: none; stroke: #f8f3df; stroke-width: 1.4; filter: drop-shadow(0 0 1.2px #1b2a2acc); opacity: 0.85; } /* world */
+.crosshair circle + circle { fill: #f8f3df; stroke: none; } /* world */
 /* The aim dot (playtest round 1): a small cream dot above your head under mouse-look; a ring and their name over someone it can click. */
 .aimDot { position: absolute; left: 50%; width: 0; height: 0; pointer-events: none; z-index: 12; }
-.aimDot i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #f8f3df; box-shadow: 0 0 0 1px #1b2a2a73, 0 0 3px #1b2a2a66; opacity: 0.8; transition: all 0.12s ease-out; }
-.aimDot[data-on] i { left: -9px; top: -9px; width: 18px; height: 18px; background: transparent; box-shadow: inset 0 0 0 2px #f8f3df, 0 0 0 1px #1b2a2a59, inset 0 0 0 3px #1b2a2a40; opacity: 1; }
-.aimDot span { position: absolute; left: 16px; top: -12px; padding: 3px 10px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font: 800 var(--gui-text-xs)/1.4 var(--gui-font); white-space: nowrap; box-shadow: var(--gui-shadow-sm); zoom: var(--tsi-text-scale, 1); }
+.aimDot i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #f8f3df; box-shadow: 0 0 0 1px #1b2a2a73, 0 0 3px #1b2a2a66; opacity: 0.8; transition: all 0.12s ease-out; } /* world */
+.aimDot[data-on] i { left: -9px; top: -9px; width: 18px; height: 18px; background: transparent; box-shadow: inset 0 0 0 2px #f8f3df, 0 0 0 1px #1b2a2a59, inset 0 0 0 3px #1b2a2a40; opacity: 1; } /* world */
+.aimDot span { position: absolute; left: 16px; top: -12px; padding: 3px 10px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); font: 800 var(--gui-text-xs)/1.4 var(--gui-font); white-space: nowrap; box-shadow: var(--gui-shadow-sm); zoom: var(--tsi-text-scale, 1); } /* world */
 @media (prefers-reduced-motion: reduce) { .aimDot i { transition: none; } }
 /* The clean HUD (row 283): the objective slides in when it changes and fades after; the place name fades after a scene comes in. */
 @keyframes hudFade { to { opacity: 0; transform: translateY(6px); } }
@@ -393,7 +393,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
    Appended rather than edited in place, so the classes v2 kits can keep editing the rules above. Paper, the kit's
    keycaps and one rounded face; the rune overlay leaves its dark glass for parchment. */
 .combatHud, .bossBar, .banner, .defeat, .missionTracker, .floater, .incantation, .pathSheet { font-family: var(--gui-font); }
-.combatHud, .bossBar, .defeat, .banner, .missionTracker { background: rgb(255 251 231 / 0.96); color: var(--gui-ink); border-color: transparent; box-shadow: var(--gui-shadow-md); }
+.combatHud, .bossBar, .defeat, .banner, .missionTracker { background: rgb(255 251 231 / 0.96); color: var(--gui-ink); border-color: transparent; box-shadow: var(--gui-shadow-md); } /* world */
 .combatHud { border-radius: var(--gui-r-card); }
 .hpBar { background: var(--gui-paper-deep); }
 .hpBar b, .sweep kbd, .ultSlot kbd, .dodgePip kbd, .abilityBar li small, .abilityBar small, .runeReadout, .pathLoadout kbd, .pathStats b { font-family: var(--gui-font); font-weight: 800; }
@@ -414,24 +414,24 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .incantation { background: var(--gui-paper); color: var(--gui-ink); border-radius: var(--gui-r-paper); box-shadow: var(--gui-shadow-lg); zoom: var(--tsi-text-scale, 1); }
 .incantation header { font-weight: 800; color: var(--gui-ink-strong); }
 .incantation header small { color: var(--gui-muted); opacity: 1; font-size: var(--gui-text-xs); }
-.incantation svg { background: radial-gradient(circle, var(--gui-paper-hi) 0%, #f3ead2 78%); box-shadow: inset 0 0 0 2px var(--gui-paper-edge); }
-.runeGuide { stroke: rgb(114 92 78 / 0.2); }
-.runeGuide[data-next] { stroke: rgb(114 92 78 / 0.42); }
-.runeGuide[data-done] { stroke: rgb(138 198 138 / 0.55); }
-.runeTrace { stroke: #5b3fa8; filter: drop-shadow(0 0 3px #b77dee99); }
+.incantation svg { background: radial-gradient(circle, var(--gui-paper-hi) 0%, #f3ead2 78%); box-shadow: inset 0 0 0 2px var(--gui-paper-edge); } /* world */
+.runeGuide { stroke: rgb(114 92 78 / 0.2); } /* world */
+.runeGuide[data-next] { stroke: rgb(114 92 78 / 0.42); } /* world */
+.runeGuide[data-done] { stroke: rgb(138 198 138 / 0.55); } /* world */
+.runeTrace { stroke: #5b3fa8; filter: drop-shadow(0 0 3px #b77dee99); } /* world */
 .runeReadout { font-size: var(--gui-text-sm); color: var(--gui-ink-strong); }
 .incantation[data-outcome="fail"] .runeReadout { color: var(--gui-danger); }
 .incantation[data-outcome="enhanced"] .runeReadout { color: var(--gui-warn); }
 .runeTimer { height: 6px; background: var(--gui-paper-deep); }
 .runeTimer span { background: var(--gui-wood-light); }
 .pathCards article { border-radius: var(--gui-r-card); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm); }
-.pathCards header small, .pathNote { font-size: var(--gui-text-xs); color: #5f4f78; }
+.pathCards header small, .pathNote { font-size: var(--gui-text-xs); color: #5f4f78; } /* world */
 .pathAbility small { font-size: var(--gui-text-xs); }
 .runeTag { font-size: var(--gui-text-xs); }
-.pathLoadout em { font-size: var(--gui-text-xs); color: #5f4f78; }
-.pathStats small { font-size: var(--gui-text-xs); color: #6b5f7a; }
+.pathLoadout em { font-size: var(--gui-text-xs); color: #5f4f78; } /* world */
+.pathStats small { font-size: var(--gui-text-xs); color: #6b5f7a; } /* world */
 /* A channelled ult's mash (classes v2 Arcane): the HUD's paper and face; the keycaps keep their element colours. */
-.mash { border: 0; border-radius: var(--gui-r-card); background: rgb(255 251 231 / 0.96); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); }
+.mash { border: 0; border-radius: var(--gui-r-card); background: rgb(255 251 231 / 0.96); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); } /* world */
 .mash b { font-weight: 800; color: var(--gui-ink-strong); }
 .mash kbd { font-family: var(--gui-font); font-weight: 800; color: var(--gui-ink-strong); }
 .mash small { color: var(--gui-ink-2); font-weight: 700; }
@@ -465,7 +465,7 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 }
 .touchControls[data-flash="out"] { animation: hintFade 0.32s ease-in forwards; }
 @keyframes hintFade { to { opacity: 0; } }
-:global(html[data-contrast="high"]) .world .menuButton { background: #000000; color: #ffffff; box-shadow: 0 0 0 2px #ffffff; }
+:global(html[data-contrast="high"]) .world .menuButton { background: var(--ui-contrast-ink); color: var(--ui-on-scrim); box-shadow: 0 0 0 2px var(--ui-on-scrim); }
 /* A phone on its side: the controls size from the short side, the stick moves to the corner with the map above it, and
    the world no longer insists on 480px of height (it ran the stick and buttons off the bottom). */
 @media (pointer: coarse) and (max-height: 430px) {

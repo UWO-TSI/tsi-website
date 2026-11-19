@@ -1,8 +1,9 @@
 "use client";
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { AlertTriangle, Info, TrendingDown, TrendingUp } from "lucide-react";
 import { BarRows, CHART, ChartCard, Columns, Delta, Heatmap, Legend, Pill, Segmented, StatTile, TimeChart } from "@/components/gui/flat";
+import { useSchemeTheme } from "@/styles/themes/useSchemeTheme";
 import { GONE_DAYS, RANGES, type Change, type Rate, type Report } from "@/lib/analytics/report";
 
 const short = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" }) : "never");
@@ -11,15 +12,6 @@ const ofWhom = (r: Rate) => (r.of ? `of ${r.of} old enough` : "nobody old enough
 /** Minutes, read the way a person says them. */
 const took = (min: number | null) => min === null ? "none yet" : min < 90 ? `${Math.round(min)} min` : min < 48 * 60 ? `${Math.round(min / 60)} h` : `${Math.round(min / 1440)} days`;
 const H3 = "mb-2 mt-5 text-[13px] font-extrabold text-[var(--ui-ink)]";
-
-/** The viewer's light or dark, worn as the kit's theme (one palette, styles/themes). */
-function useDark() {
-  return useSyncExternalStore((on) => {
-    const m = window.matchMedia("(prefers-color-scheme: dark)");
-    m.addEventListener("change", on);
-    return () => m.removeEventListener("change", on);
-  }, () => window.matchMedia("(prefers-color-scheme: dark)").matches, () => false);
-}
 
 const TONE = {
   up: [TrendingUp, "var(--ui-good)", "Up"],
@@ -40,14 +32,14 @@ function Tiles({ children }: { children: ReactNode }) {
 
 /** The admin game analytics page's body (app/student/dashboard/admin/game): world names only. */
 export default function GameAnalytics({ report: r, days, onDays }: { report: Report; days: number; onDays: (d: number) => void }) {
-  const dark = useDark();
+  const theme = useSchemeTheme();
   const change = (k: string) => r.changes.find((c) => c.key === k);
   const logged = r.funnel.filter((f) => f.of);
   const unlogged = r.funnel.filter((f) => !f.of);
   const lostAt = (i: number) => (i > 0 ? logged[i - 1].reached - logged[i].reached : 0);
   const goneTotal = r.quitGone.reduce((a, q) => a + q.n, 0), endTotal = r.quitSession.reduce((a, q) => a + q.n, 0);
 
-  return <div data-gui-flat data-ui-theme={dark ? "dark" : "clean"} className="rounded-[22px] bg-[var(--ui-bg)] p-3 font-[family-name:var(--gui-font)] text-[var(--ui-ink-body)] sm:p-5">
+  return <div data-ui-theme={theme} className="rounded-[22px] bg-[var(--ui-bg)] p-3 font-[family-name:var(--gui-font)] text-[var(--ui-ink-body)] sm:p-5">
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3 px-1">
       <div>
         <h1 className="text-2xl font-extrabold text-[var(--ui-ink)]">Players</h1>

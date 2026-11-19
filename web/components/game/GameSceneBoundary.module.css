@@ -1,5 +1,5 @@
 /* The island's recovery card when a scene throws: paper in the GUI sheet. */
-.recovery { display: grid; place-items: center; min-height: 480px; height: 100%; padding: 24px; background: #b7dce0; color: var(--gui-ink); font-family: var(--gui-font); }
+.recovery { display: grid; place-items: center; min-height: 480px; height: 100%; padding: 24px; background: #b7dce0; color: var(--gui-ink); font-family: var(--gui-font); } /* world */
 .recovery > div { max-width: 400px; padding: 28px; border-radius: var(--gui-r-paper); background: var(--gui-paper); box-shadow: var(--gui-shadow-lg); }
 .recovery h2 { margin: 0 0 12px; color: var(--gui-ink-strong); font-size: var(--gui-text-xl); font-weight: 800; line-height: 1.3; }
 .recovery p { margin: 0 0 20px; font-size: var(--gui-text-sm); line-height: 1.6; }
