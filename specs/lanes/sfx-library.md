@@ -4,6 +4,90 @@ Worktree `.claude/worktrees/sfx-library`, branch `game/sfx-library`, cut from or
 
 **Read first:** `specs/lanes/README.md`, `specs/lane-rules.md`, `web/public/audio/CREDITS.md`, `web/public/audio/sfx/SOURCES.md` and `MANIFEST.md` (today's sounds, where each plays, the missing list), `web/lib/game/audio.ts`, `art/audio/synth_*.py`. The VFX library (`specs/fx-library.md` on game/rod-gear) is the model: a standard set of types, each with parameters, a preview, and a template future work copies.
 
+## Round 3: David's marks on SFX Library 2 (2026-11-19, verbatim; https://claude.ai/artifact/5zmkmULjVWmwPaaXThGUzi)
+
+Approved with no note: sfx2-footsteps.
+- sfx2-footstep-grass (approve): "sounds good, a is walking, d is running, c will be the grass sound going through bushes, what about dashing and sliding t horugh grass?"
+- sfx2-footstep-wood (approve): "a is walk b is run"
+- sfx2-footstep-stone (redo): "a deeper version of c and d"
+- sfx2-footstep-sand (redo): "a and b is good but i think a lighter softer version of c would be better"
+- sfx2-footstep-water (redo): "make the woosh sound effect from a and b quieter and softer"
+- sfx2-coin-out (approve): "i like a and b"
+- sfx2-gem (approve): "a"
+- sfx2-sell (approve): "a"
+- sfx2-bag-thunk (approve): "a"
+- sfx2-upgrade (approve): "a"
+- sfx2-stamp (approve): "a"
+- sfx2-quest-complete (approve): "a"
+- sfx2-item-get (approve): "b"
+- sfx2-level-up (approve): "a"
+- sfx2-land (approve): "a"
+- sfx2-rustle (approve): "use all 3 for different cases a is shaking tree, b is like walking through a bush, c is like shaking a bush"
+- sfx2-splash (approve): "B"
+- sfx2-place (approve): "a"
+- sfx2-forage (redo): "redo based on the rustle sounds i approved"
+- sfx2-dig (approve): "digging should be a mixure of these 3 sound effects"
+- sfx2-cast (approve): "a"
+- sfx2-fish-escape (redo): "a, but make the aww like closer to the plop sound"
+- sfx2-equip (approve): "a"
+- sfx2-reel (redo): "a but softer and lighter"
+- sfx2-catch (approve): "a"
+- sfx2-jump (redo): "too loud too aggressive"
+- sfx2-voice-blip (redo): "a but do some new talking optiosn like look at tomodachi life and animal crossing"
+- sfx2-amb-sea (approve): "a"
+- sfx2-amb-shore (approve): "a"
+- sfx2-amb-shore-deep (redo): "deep ocean should have this like deep feeling and hum to it like a datacenter hum deep and there soundingfdar away"
+- sfx2-amb-birds-day (approve): "a"
+- sfx2-amb-crickets (approve): "a"
+- sfx2-amb-rain (approve): "a"
+- sfx2-buy (approve): "a"
+- sfx2-craft-done (approve): "a"
+- sfx2-amb-wind (approve): "a"
+- sfx2-approved (approve): "im mainly worried about hwo loud everything will be, so i want everything to be very soft and in the background when playingthe game and simply layered ambient sounds"
+- sfx2-questions (approve): "1. synthesis it in teh game like the site, make the tone of it different for different people, i want it to mimic more human speaking tone, and have male and femail tonation and stuff / 2idk / 3 its good / 4 its good"
+
+Picks to lock, each from David's mark:
+- **Footsteps:**
+  - grass: a is walking, d is running, c is going through bushes;
+  - wood: a is walk, b is run.
+- **Coins and items:** coin out a and b; gem a; sell a; bag thunk a; upgrade a; stamp a; quest complete a; item get b; level up a; buy a; craft done a.
+- **Movement and placing:** land a; place a; equip a.
+- **Rustle:** a is shaking a tree, b is walking through a bush, c is shaking a bush.
+- **Fishing:** splash B; cast a; catch a.
+- **Dig:** a mixture of its three takes.
+- **Ambient:** open sea a; shore a; birds day a; crickets a; rain a; wind a.
+
+The 19 untouched round 1 picks stay as they are.
+
+Build:
+1. **Lock the picks** as Next 2 describes: files, credits, `audio.ts`.
+   - Dig picks one of its three takes per dig, at random.
+   - The rustle's three takes are wired to their three cases.
+   - Grass and wood footsteps follow the walk and run picks, speed-matched.
+2. **The mix (sfx2-approved):** everything very soft and in the background, with ambient as quiet layered beds.
+   - Lower the game's SFX bus and the UI sounds under the world sounds.
+   - Layer the ambient beds quietly.
+   - Show the loudness before and after on the page.
+3. **Redo from existing takes**, processed by you:
+   - **Stone:** a deeper version of c and d.
+   - **Sand:** a lighter, softer version of c; a and b stay.
+   - **Shallow water:** the whoosh in a and b quieter and softer.
+   - **Reel:** a, softer and lighter.
+   - **Jump:** quieter and less aggressive.
+   - **Fish escape:** a, with the "aw" moved closer to the plop.
+   - **Forage:** rebuilt from the approved rustle takes.
+4. **New sounds through the asset pipeline** (row 339, `specs/asset-pipeline.md` §2). The coordinator writes `art/audio/sfx-style.md` and runs the ElevenLabs generation; you process the takes.
+   - **Deep ocean:** a deep, far-away hum, like a datacenter heard from a distance.
+   - **Grass:** dashing through grass and sliding through grass (David asked).
+5. **Talk blips, synthesised live in the game** like davidliu.work (answer 1):
+   - each character gets its own voice: pitch, timbre and speed;
+   - the intonation follows human speech;
+   - male and female ranges;
+   - new options in the spirit of Tomodachi Life and Animal Crossing babble.
+   Put three or four presets on the page to pick from.
+
+Page "SFX Library 3": only the redone and new sounds, plus the mix card.
+
 ## Round 2: David's SFX Library 1 review (2026-11-13, verbatim; https://claude.ai/artifact/ACLhH8idW4KJzayiDgpoE9)
 
 Each card's mark and note. A letter is the candidate he picked (a, b, c as the page labelled them).
