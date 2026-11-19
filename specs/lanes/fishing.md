@@ -58,6 +58,10 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
    - **The tackle counter's four "legendary" seasonal rods** (Pumpkin, Icicle, Bamboo shoot, summer): to be removed. Their baits stay.
    - Hero concept shots run on ElevenLabs flow C7WgY7cJR04g0sitR3VW.
 
+6. **Christmas Rods 1 marks** (2026-11-19):
+   - Candy Cane take A approved ("i like this one"): `art/pipeline/concepts/b/candy-cane/hero-1.png`.
+   - North Star redo: "not cool enough. legendary rods need to feel super well desined and crazy"; "it doesnt even have to be rod looking as long as it looks super cool". David's reference is in the vault at `References/Rod references/north-star-ref.png`: a blazing star, a vine shaft with molten filaments, a fire orb, smoke.
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
