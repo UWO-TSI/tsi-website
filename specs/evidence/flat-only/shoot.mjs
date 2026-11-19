@@ -55,13 +55,17 @@ const shot = async (page, name) => { await page.mouse.move(1, 1); await page.wai
 const sheet = (sheetName, extra = "", size = "desktop", theme = "") => () => open(`/lab/island?at=14:05&time=day&weather=clear&sheet=${sheetName}&collections=demo&progression=demo${extra}${theme ? `&uitheme=${theme}` : ""}`,
   async page => { await page.waitForTimeout(900); await shot(page, `sheet-${sheetName}-${size}${theme ? `-${theme}` : ""}`); }, { size });
 /** Escape into the UI view (the menu dock), then `fn`. */
-const dock = (name, fn, size = "desktop") => () => open("/lab/island?at=14:05&time=day&weather=clear&collections=demo&progression=demo", async page => {
+const dock = (name, fn, size = "desktop", theme = "") => () => open(`/lab/island?at=14:05&time=day&weather=clear&collections=demo&progression=demo${theme ? `&uitheme=${theme}` : ""}`, async page => {
   await page.locator("canvas").first().click({ position: { x: 700, y: 500 } }).catch(() => {});
   await page.keyboard.press("Escape"); await page.waitForTimeout(700);
-  await fn(page); await page.waitForTimeout(900); await shot(page, `${name}-${size}`);
+  await fn(page); await page.waitForTimeout(900); await shot(page, `${name}-${size}${theme ? `-${theme}` : ""}`);
 }, { size });
 /** A page with no world, canvases hidden, for the 0 px comparisons. */
 const still = (name, url, fn = async () => {}, opts = {}) => () => open(url, async page => { await fn(page); await shot(page, name); }, { world: false, hideCanvas: true, ...opts });
+
+/** Every game surface for the packs check (Clean and Vintage side by side). */
+const PACK_SHEETS = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "closet", "fitting", "oracle", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest", "bag", "donate"];
+const PACKS = ["clean", "vintage"];
 
 const SCENES = {
   // ── fo-sheets: the sheets that were cream ──
@@ -78,6 +82,21 @@ const SCENES = {
     await page.locator("canvas").first().click({ position: { x: 700, y: 500 } }).catch(() => {}); await page.keyboard.press("Escape"); await page.waitForTimeout(1500); await shot(page, "pack-hud-clean"); }),
   "pack-hud-dark": () => open("/lab/island?at=14:05&time=day&weather=clear&collections=demo&progression=demo&uitheme=dark", async page => {
     await page.locator("canvas").first().click({ position: { x: 700, y: 500 } }).catch(() => {}); await page.keyboard.press("Escape"); await page.waitForTimeout(1500); await shot(page, "pack-hud-dark"); }),
+  // ── packs: every game surface in Clean and Vintage (David, 2026-11-19: all game UI hot swapped by design packs) ──
+  ...Object.fromEntries(PACK_SHEETS.flatMap(n => PACKS.map(t => [`packs-${n}-${t}`, sheet(n, n === "oracle" ? "&oracle=demo" : "", "desktop", t)]))),
+  ...Object.fromEntries(PACKS.map(t => [`packs-path-${t}`, sheet("path", "&oracle=demo&combat=demo", "desktop", t)])),
+  ...Object.fromEntries(PACKS.map(t => [`packs-menu-${t}`, dock("esc-menu", async () => {}, "desktop", t)])),
+  ...Object.fromEntries(PACKS.map(t => [`packs-friends-${t}`, dock("friends", async page => { await page.getByRole("button", { name: /^Friends/ }).first().click().catch(() => console.log("no friends")); }, "desktop", t)])),
+  ...Object.fromEntries(PACKS.map(t => [`packs-hud-${t}`, () => open(`/lab/island?at=14:05&time=day&weather=clear&collections=demo&progression=demo&uitheme=${t}`, async page => {
+    await page.locator("canvas").first().click({ position: { x: 700, y: 500 } }).catch(() => {}); await page.keyboard.press("Escape"); await page.waitForTimeout(1500); await shot(page, `hud-desktop-${t}`);
+  })])),
+  ...Object.fromEntries(PACKS.map(t => [`packs-phone-${t}`, sheet("settings", "", "phone", t)])),
+  // Hot swap: the settings sheet in Clean, then the pack switched live on the open page (no reload), then back.
+  "packs-hotswap": () => open("/lab/island?at=14:05&time=day&weather=clear&sheet=settings&collections=demo&progression=demo", async page => {
+    await page.waitForTimeout(900); await shot(page, "hotswap-1-clean");
+    await page.evaluate(() => { document.body.dataset.uiTheme = "vintage"; }); await page.waitForTimeout(600); await shot(page, "hotswap-2-vintage-live");
+    await page.evaluate(() => { document.body.dataset.uiTheme = "clean"; }); await page.waitForTimeout(600); await shot(page, "hotswap-3-clean-again");
+  }),
   // ── fo-pieces ──
   "lab-gui": () => open("/lab/gui", async page => {
     for (const id of ["buttons", "tabs", "lists", "controls", "dialogue", "badges", "tooltips", "banners", "cards", "sheets", "states"]) {

@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { AlertTriangle, Info, TrendingDown, TrendingUp } from "lucide-react";
 import { BarRows, CHART, ChartCard, Columns, Delta, Heatmap, Legend, Pill, Segmented, StatTile, TimeChart } from "@/components/gui/flat";
-import { useSchemeTheme } from "@/styles/themes";
+import { useSchemeTheme } from "@/styles/themes/useSchemeTheme";
 import { GONE_DAYS, RANGES, type Change, type Rate, type Report } from "@/lib/analytics/report";
 
 const short = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-CA", { month: "short", day: "numeric", timeZone: "UTC" }) : "never");
