@@ -72,6 +72,8 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
    - Radial speed streaks.
    - Saved in the vault at `References/Rod references/north-star-vfx-ref.jpg`; third-party, so kept out of git.
 
+9. **North Star round 3 rejected** (David, 2026-11-19): "its ugly and horrible, i will just start giving you pinterest references". Generation pauses until his references arrive. Each one is saved to the vault, and the design is built from them, not from my own prompts.
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
