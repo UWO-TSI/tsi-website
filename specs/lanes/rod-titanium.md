@@ -4,6 +4,28 @@ Worktree `.claude/worktrees/rod-titanium`, branch `game/rod-titanium`, cut from 
 
 rod-gear owns the rods and runs round 9 in parallel (the Tidewarden and a `Water` effect type) in `art/pipeline/build_rods.py`, `fx_library.py`, `web/lib/game/fx/library.ts` and `RodAura`. Keep your edits to the Titanium's own functions and lines so the two branches merge cleanly; this branch merges into `game/rod-gear`. Read `specs/lanes/rod-gear.md` (Status, Tools and gotchas, Rules) and `specs/fx-library.md` first: the effects library, the awakening cutscene, rodMotion and the Blender pipeline are all there.
 
+## Round 4: David's marks on Rods Titanium 3 (2026-11-19, verbatim; https://claude.ai/artifact/JFZaJZnxyt3iPUuq5TEW1D)
+
+Approved with no note: rti3-walk, rti3-shelf, rti3-hand, rti3-bag, rti3-phone, rti3-perf.
+- rti3-material (approve): "has  a slight purple rainbow tint when the light hits it in the right angle"
+- rti3-awaken (redo): "why did the handle and reel dissapear? 3 start slow, open and release slow, and the gass needs to hiss out lightly and naturally"
+- rti3-idle (redo): "the inside energy rod needs more glow effect and sparks of electricity once in a while"
+- rti3-workbench (redo): "needs a lot of titanium ore redo recipe"
+- rti3-questions (redo): "1. st ronger,  / 2 right / 3 start slow, open and release slow, and the gass needs to hiss out lightly and naturally / 4. good"
+
+Keep (approved): walking and casting, the bag shelf mark, in hand, in the bag, on a phone, performance. The material is approved with a change; seven sections are right (answer 2); the bolt mark is good (answer 4).
+
+Build:
+1. **The film (rti3-material, answer 1):** stronger, with a slight purple rainbow tint when the light hits at the right angle.
+2. **The awakening (rti3-awaken, answer 3):**
+   - **Bug:** the handle and the reel disappear during the awakening. They stay.
+   - **Pace:** it starts slow, opens slow and releases slow.
+   - **The gas:** it hisses out lightly and naturally. Softer, thinner smoke, plus a hiss sound made through the asset pipeline (`specs/asset-pipeline.md` §2).
+3. **Awakened at rest (rti3-idle):** the inner energy beam gets more glow, and every so often a spark of electricity.
+4. **The workbench (rti3-workbench):** the recipe needs a lot of titanium ore. Raise the ore count and propose the number on the page.
+
+Page "Rods Titanium 4": the awakening at normal and half speed with sound, the idle with sparks, the film turning, the new recipe. The merge still goes into `game/rod-gear` (Next).
+
 ## Round 3: David's Rods Titanium 2 review (2026-11-13, verbatim; https://claude.ai/artifact/4iNo5j7Um8GXPMKfxaZQsm)
 
 Approved: none.
