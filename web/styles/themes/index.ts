@@ -5,10 +5,11 @@
  */
 import "./clean.css";
 import "./dark.css";
+import "./vintage.css";
 
 import { useSyncExternalStore } from "react";
 
-export const UI_THEMES = ["clean", "dark"] as const;
+export const UI_THEMES = ["clean", "dark", "vintage"] as const;
 export type UiTheme = (typeof UI_THEMES)[number];
 
 /** Wears a pack from now on (later the shop's purchase; today the dev switch). */

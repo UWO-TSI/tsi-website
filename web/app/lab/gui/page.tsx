@@ -28,7 +28,6 @@ import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTr
 import { ActionBar, ActionIcon, BarRows, CHART, ChartCard, Columns, Delta, Heatmap, Segmented, StatTile, TimeChart, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyHome, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
-import PhoneSignup from "@/components/game/hq/PhoneSignup";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
 import s from "./showroom.module.css";
 import FlatRewards from "./FlatRewards";
@@ -108,12 +107,6 @@ function PhoneShow() {
     { id: "mail", label: "Mail", icon: "mail", keyLabel: "L", badge: 2, onOpen: () => {} },
   ];
   return <Phone open={t < 9} away={t >= 4 && t < 7} apps={apps} hint="X" onClose={() => {}} />;
-}
-/** The pitch (round 13, not shipped): Alice's phone in place of the ID, again from the start each time it's done. It sits
- *  straight in the overlay (Loop's wrapper has no size, and the phone sizes itself to its parent). */
-function PitchShow() {
-  const [n, setN] = useState(0);
-  return <PhoneSignup key={n} open name="Marlowe" signedIn={false} friendCode={null} onDone={() => window.setTimeout(() => setN(v => v + 1), 1200)} />;
 }
 /** Every peek (TourPeek in the kit's KeyPeek), one after another: each pops in, plays its loop, then fades as if the key
  *  were let go. The HUD and the minimap have none: the real pieces fly in from above the card (FlyHome, above). */
@@ -198,7 +191,6 @@ function CoinFlyShow() {
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek, SlotPop and FlyHome)", render: () => <KeyBoardShow /> },
   { id: "phone", title: "The phone (Phone): up, an app open (it tucks away), back", render: () => <PhoneShow /> },
-  { id: "phone-pitch", title: "A pitch, not shipped: the phone in place of the ID (PhoneSignup, round 13)", render: () => <PitchShow /> },
   { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
   { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
   { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },

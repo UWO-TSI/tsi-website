@@ -66,7 +66,7 @@ const still = (name, url, fn = async () => {}, opts = {}) => () => open(url, asy
 const SCENES = {
   // ── fo-sheets: the sheets that were cream ──
   settings: sheet("settings"), path: sheet("path", "&oracle=demo&combat=demo"), oracle: sheet("oracle", "&oracle=demo"), tourney: sheet("tourney"), posters: sheet("posters"),
-  cafe: sheet("cafe"), wallet: sheet("wallet"), trophies: sheet("trophies"), donate: sheet("donate"), id: sheet("id"), chest: sheet("chest"), bag: sheet("bag"),
+  cafe: sheet("cafe"), wallet: sheet("wallet"), donate: sheet("donate"), chest: sheet("chest"), bag: sheet("bag"),
   "settings-phone": sheet("settings", "", "phone"), "wallet-phone": sheet("wallet", "", "phone"),
   menu: dock("esc-menu", async () => {}), "menu-phone": dock("esc-menu", async () => {}, "phone"),
   friends: dock("friends", async page => { await page.getByRole("button", { name: /^Friends/ }).first().click().catch(() => console.log("no friends")); }),

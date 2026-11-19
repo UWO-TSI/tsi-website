@@ -43,7 +43,7 @@ describe("flat is the only look (rows 334, 335)", () => {
   });
 
   it("there is no cream theme", () => {
-    expect(UI_THEMES as readonly string[], "A cream or ACNH look comes back only as a UI pack, designed fresh (row 335), never as the base.").not.toContain("cream");
+    expect(UI_THEMES as readonly string[], "The old cream look comes back only as the vintage pack (styles/themes/vintage.css; rows 334 and 335), never as the base or a theme named cream.").not.toContain("cream");
     expect(existsSync(join(WEB, "styles/themes/cream.css")), "styles/themes/cream.css: the clean theme is the base (row 334).").toBe(false);
   });
 

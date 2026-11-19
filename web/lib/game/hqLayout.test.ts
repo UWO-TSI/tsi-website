@@ -107,9 +107,10 @@ describe("HQ's room (the gallery, two tall storeys)", () => {
     for (const s of o.stations) expect(walkable(o, s.level, s.pos[0], s.pos[1]), s.id).toBe(true);
   });
 
-  it("keeps every station HQ already has, and the new ones", () => {
+  it("keeps every station HQ already has, and the new ones (the trophy case's went, David 2026-11-19)", () => {
     const ids = o.stations.map(s => s.id);
-    for (const id of ["exit", "desk", "board", "founder", "display", "shelf", "clock"]) expect(ids).toContain(id);
+    for (const id of ["exit", "desk", "board", "founder", "shelf", "clock"]) expect(ids).toContain(id);
+    expect(ids).not.toContain("display");
     for (const id of ["coffee", "aquarium", "admin"]) expect(ids).toContain(id);
   });
 

@@ -86,3 +86,7 @@ David, 2026-11-13: "in the future well design ui packs, which will the entire ga
 - **Wearing one:** `<body data-ui-theme="<name>">` (`setUiTheme`). `dark.css` is the dev sample (`?uitheme=dark`): it changes colours and shapes (squarer panels, cards, buttons and fields, deeper shadows) from the one file.
 - **Paper stays paper** in every pack: `styles/paper.css` sits outside the theme tokens.
 - **Buying one** (the shop item, gems, owning and choosing a pack) is later work, not built.
+
+## The vintage pack (2026-11-19)
+
+David, on Flat UI Only 1 (fo-pieces-a): "the old design should old keep the font, and color and card format, so it can be a possible ui design back you load in for the game like the vintage vibe and the plain new one is the default". `vintage.css` is the old cream kit as a pack: its colours (warm paper, sage, wood ink), Nunito, the cut-paper radii on panels, cards, icon wells and tags, the offset bark shadows and the paper grain over sheets. It loads like the dark sample (`?uitheme=vintage`, dev only). Clean stays the default every player has. This narrows row 334: the cream look returns only as this pack, never as the base.
