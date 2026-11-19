@@ -63,4 +63,4 @@ A shard holds 30 players on one Fly machine. Nobody knows what happens at 300.
 - Analytics migration applied before the pre-registration page goes up.
 - `/terms` and `/privacy` live before step 1 and before the gem shop. **Done 2026-11-14** (text in `web/content/legal/`).
 - **Analytics migration: applied in prod 2026-11-14** (`20261113120000_game_events.sql`).
-- Gem shop: spending limit, under-18 permission step, tackle shop gem roll changed to coins.
+- Gem shop: under-18 permission step, tackle shop gem roll changed to coins. (No monthly spending limit: David, 2026-11-19, row 342.)
