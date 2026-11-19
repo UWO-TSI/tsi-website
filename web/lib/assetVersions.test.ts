@@ -21,6 +21,13 @@ describe("the game files' versions", () => {
     expect(Object.keys(after).filter(k => after[k] !== before[k])).toEqual(["/assets/game/b.png"]);
   });
 
+  it("skip a folder that isn't there", () => {
+    const pub = mkdtempSync(join(tmpdir(), "asset-versions-"));
+    mkdirSync(join(pub, "assets"), { recursive: true });
+    writeFileSync(join(pub, "assets/a.png"), "a");
+    expect(Object.keys(assetVersions(pub))).toEqual(["/assets/a.png"]);
+  });
+
   it("go on a URL the build saw, and nowhere else", async () => {
     vi.stubEnv("ASSET_VERSIONS", JSON.stringify({ "/assets/game/a.glb": "abcd1234" }));
     vi.resetModules();

@@ -39,6 +39,7 @@ realtime/dist/
 !art/characters/palette.json
 # The Vanguard weapons' solved grips (art/props-enemies/solve_vanguard_grips.py): the wraps are built from them.
 !art/props-enemies/vanguard_grips.json
+!art/pipeline/concepts/**/*.blueprint.json
 .vercel
 *.jpeg
 .playwright-mcp/

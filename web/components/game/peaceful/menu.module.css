@@ -1,6 +1,7 @@
 /* The sushi menu picked up (SushiSheets.tsx MenuPickup): the folded washi menu (the kit's FoldedMenu, paper.tsx) in your
-   hands, filling the view. It rises from the counter (tilted flat, below the view) into your hands (nearly upright) with
-   the kit's spring, then sways a little as held paper does; it goes back down the same way. Tokens only. */
+   hands, filling the view. Round 7 (David: "make click and view animation transition smoother"): one move. The view
+   looks down first, then the menu leaves the counter from exactly where it lies (`--from`, SushiSheets pickUp) and comes
+   up to you, slow out and slow in, then it opens; held, it sways a little as paper does; it goes back down. Tokens only. */
 .layer { position: fixed; inset: 0; z-index: 72; display: grid; place-items: end center; overflow: hidden; perspective: 1500px; perspective-origin: 50% 0%;
   font-family: var(--gui-font); --spring: cubic-bezier(0.34, 1.4, 0.64, 1); }
 @supports (transition-timing-function: linear(0, 1)) {
@@ -14,10 +15,11 @@
 @keyframes fade { from { opacity: 0; } }
 
 .hands { position: relative; display: grid; place-items: center; padding-bottom: 5dvh; outline: none; transform-origin: 50% 100%;
-  animation: pickUp 0.75s var(--spring) 0.12s both; }
+  --from: translateY(80dvh) scale(0.9); opacity: 0; }
+.hands[data-lift] { opacity: 1; animation: pickUp 0.65s cubic-bezier(0.45, 0, 0.2, 1) both; }
 .hands > [role="group"] { animation: held 5.5s ease-in-out 0.9s infinite; }
 .layer[data-state="closing"] .hands { animation: putDown 0.36s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
-@keyframes pickUp { from { transform: translateY(80dvh) rotateX(64deg) scale(0.9); } to { transform: translateY(0) rotateX(4deg) scale(1); } }
+@keyframes pickUp { from { transform: var(--from); } }
 @keyframes putDown { to { transform: translateY(82dvh) rotateX(60deg) scale(0.92); } }
 @keyframes held { 0%, 100% { transform: rotate(-0.3deg) translateY(0); } 50% { transform: rotate(0.25deg) translateY(-3px); } }
 
@@ -33,7 +35,6 @@
 .mistLow { position: absolute; left: -10%; right: -10%; bottom: 0; height: 18%; }
 .plumCorner { position: absolute; right: -4%; bottom: -2%; width: 66%; height: 48%; transform: scaleX(-1); }
 .pagodaLow { position: absolute; right: 6%; bottom: 0; width: 42%; height: 36%; }
-.backSeal { position: absolute; left: 8%; bottom: 6%; }
 
 .order { all: unset; display: inline-flex; align-items: center; gap: 10px; padding: 8px 15px; border-radius: 999px; background: var(--ui-paper-ink); color: var(--ui-paper);
   font: 700 13px/1 var(--gui-font); cursor: pointer; transition: transform 0.2s var(--spring); }
@@ -42,6 +43,29 @@
 .order:active:not(:disabled) { transform: scale(0.96); }
 .order:disabled { opacity: 0.5; cursor: default; }
 .order:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 2px; }
+/* A dish's ingredients from your bag. */
+.fishRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; width: 100%; }
+/* The collection's fish given (round 6): a grid of stamped slots with what each gave, the newest first; it scrolls in its page. */
+.given { display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(62px, 10vh, 86px), 1fr)); gap: clamp(8px, 1.6vh, 14px) 6px; align-content: start;
+  max-height: calc(var(--h) * 0.6); overflow-y: auto; scrollbar-width: thin; padding: 4px 2px; }
+/* The dishes' contents: a line a dish. */
+.rows { display: grid; }
+/* HQ's tank: your fish to drop in, and the one button. */
+.tankRow { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-height: 40dvh; overflow-y: auto; padding: 4px; }
+.tankAction { display: flex; justify-content: center; }
+/* A price inside a button: the amount and its coin on one line. */
+.price { display: inline-flex; align-items: center; gap: 6px; }
+/* A phone: smaller fish with room for their counts, and the put-down button over the menu's top right (not off the screen). */
+@media (max-aspect-ratio: 3/4) {
+  .fishRow { gap: 10px 9px; }
+  .fishRow > * { --thumb: 30px !important; }
+  .down { right: 4px; bottom: auto; top: -42px; }
+  .given { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); max-height: calc(var(--h) * 0.56); }
+  /* The dishes' contents on a phone: the rows alone (the part's name says it), each its name only. */
+  .wordy { display: none; }
+  .rows [class] span:not([class]) { display: none; }
+}
+.order[data-quiet] { background: transparent; color: var(--ui-paper-ink); box-shadow: inset 0 0 0 1.5px var(--ui-paper-ink); }
 .quiet { color: var(--ui-paper-quiet); font: 500 12px/1.3 var(--gui-font); }
 .error { position: absolute; top: 2dvh; left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 12px; border-radius: 8px; background: var(--ui-paper); color: var(--ui-error);
   font: 600 13px/1.3 var(--gui-font); z-index: 5; }
@@ -51,6 +75,6 @@
 .down:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .hands, .layer[data-state="closing"] .hands, .hands > [role="group"], .vignette { animation: none; }
+  .hands, .hands[data-lift], .layer[data-state="closing"] .hands, .hands > [role="group"], .vignette { animation: none; }
   .order { transition: none; }
 }

@@ -5,18 +5,21 @@
  * tiles and their rarity edges, a hover card, the conditions, the day strip, odds, the reveal, tasks and the paper menu.
  */
 import { useState, type CSSProperties } from "react";
-import { Clock, Droplets, Leaf, MapPin, Ruler, Sun, Sunset, Waves } from "lucide-react";
+import { Check, Clock, Clover, Droplets, Leaf, Lock, MapPin, Ruler, Sun, Sunset, Waves } from "lucide-react";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
-import { BiomeTag, PLACE_LOOK, Conditions, CoverTitle, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, OddsTable, SeasonDots, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, type OddsRow } from "@/components/gui/flat";
+import { BiomeTag, PLACE_LOOK, Conditions, FlatDialog, DarkButton, FoldedMenu, GachaReveal, InkArt, InkDefs, MenuDish, OddsTable, SeasonDots, PanelSection, TaskCard, Thumb, TimeStrip, TipBody, useInkId, BoostTrack, BuffChip, BookPage, BookSlot, GivenFish, PaperRow, type OddsRow } from "@/components/gui/flat";
 import { catchLanes } from "@/components/game/peaceful/CatchBoard";
-import { COVER_LINE, dishStats } from "@/components/game/peaceful/SushiSheets";
-import { SUSHI_MENU } from "@/lib/wallet/catalogue";
+import { dishStats, MenuCover } from "@/components/game/peaceful/SushiSheets";
+import { mealRows } from "@/components/economy/statIcons";
+import { SUSHI_MENU, TASTING } from "@/lib/wallet/catalogue";
+import { tastingPages } from "@/lib/wallet/rules";
 import { iconUrl } from "@/lib/icons/keys";
 import type { Place } from "@/lib/game/world/places";
 import { RARITY_LABEL, type Rarity } from "@/lib/rarity";
 import { odds, prizeByKey } from "@/lib/wallet/tackle";
 
+const RIVER = tastingPages()[0].species;
 const RARITIES: Rarity[] = ["common", "uncommon", "rare", "epic", "legendary", "divine"];
 const SAMPLE = ["fish_dace", "fish_salmon", "fish_pike", "fish_catfish", "fish_coelacanth", "fish_golden_koi"];
 const LANE = { sea: { icon: <Waves />, label: "The sea", short: "Sea" }, river: { icon: <Droplets />, label: "The river", short: "River" } } as const;
@@ -63,11 +66,32 @@ export default function FlatPieces() {
     <GachaReveal key={roll} items={won} />
     <div style={{ display: "grid", placeItems: "center", padding: "20px 0 40px", "--h": "560px" } as CSSProperties}>
       <InkDefs id={ink} />
-      <FoldedMenu label="A folded menu" cover={<CoverTitle filter={ink} title="Bancha" kind="Sushi bar" line={COVER_LINE} />}
+      <FoldedMenu label="A folded menu" cover={<MenuCover ink={ink} />}
+        chapters={[{ label: "Collection", panel: 0 }, { label: "Menu", panel: 2 }]}
         panels={[
+          <PanelSection key="c" title="Collection">
+            <BoostTrack filter={ink} icon={<Clover />} value="+6%" label="permanent luck boost" filled={6} total={20} note="+1% a new fish, up to +20%." />
+          </PanelSection>,
+          <PanelSection key="g" title="Given">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {RIVER.slice(0, 5).map((k, i) => <GivenFish key={k} name={k.replace("fish_", "")} fresh={i === 0} picture={<PixelImage src={iconUrl(k)} px={40} />} gave={<><Clover size={10} /> Luck +1%</>} extra={i === 0 ? "Dace karaage" : undefined} />)}
+            </div>
+            <PaperRow art={<BookSlot name="dace" state="given" picture={<PixelImage src={iconUrl("fish_dace")} px={30} />} />} title="Dace karaage" detail="From your dace" end={<Check size={15} />} onClick={() => {}} />
+            <PaperRow art={<BookSlot name="squid" state="empty" picture={<PixelImage src={iconUrl("fish_squid")} px={30} />} />} title="Squid tempura" detail="Give a squid" end={<Lock size={13} />} />
+          </PanelSection>,
           <PanelSection key="a" title="Nigiri and rolls">{dish("salmon_nigiri")}{dish("tuna_roll", true)}</PanelSection>,
           <div key="b" style={{ display: "grid", gap: 12 }}><InkArt kind="bamboo" filter={ink} /><InkArt kind="pagoda" filter={ink} /></div>,
         ]} />
+    </div>
+    <div style={{ maxWidth: 380, padding: "18px 22px", borderRadius: 4, background: "var(--ui-paper)", color: "var(--ui-paper-ink)" }}>
+      <BookPage title="River" filled={6} total={RIVER.length} note={<>A full page: {TASTING.full}<CurrencyIcon size={11} /></>}>
+        {RIVER.map((k, i) => <BookSlot key={k} name={k} state={i < 6 ? "given" : "empty"} fresh={i === 4} picture={<PixelImage src={iconUrl(k)} px={36} />} />)}
+      </BookPage>
+    </div>
+    {/* The HUD's meal buff (tasting-book r3): faint, on the right edge in the game; one stat and two here. */}
+    <div data-testid="buff-showroom" style={{ display: "flex", gap: 18, alignItems: "flex-start", padding: 18, borderRadius: 14, background: "var(--ui-water-deep)" }}>
+      <BuffChip stats={mealRows(TASTING.dishes[1].buff)} left="38m" title="Dace karaage: Reel speed +10%, 38 min left" />
+      <BuffChip stats={mealRows(TASTING.dishes[0].buff)} left="12m" title="Snapper chazuke: Luck +10%, Bite window +10%, 12 min left" />
     </div>
     <FlatDialog open={dialog} onClose={() => setDialog(false)} title="A small panel"><p style={{ margin: 0 }}>One thing, one action.</p><DarkButton onClick={() => setDialog(false)}>Done</DarkButton></FlatDialog>
   </div>;

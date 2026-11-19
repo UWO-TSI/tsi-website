@@ -8,7 +8,7 @@ import { FISH } from "@/lib/game/fishing";
 import { fnv1a, seededRandom } from "@/lib/game/weatherSystem";
 import { torontoParts } from "@/lib/time";
 import { DROPS } from "@/lib/game/drops";
-import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier, FISH_CHEF_PAY, FISH_TASK_PAY, FISH_TASK_VARIETY, STAFF_MEAL, type MealBuff } from "./catalogue";
+import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS, onSale, SELL_PRICES, SETTINGS, type ShopCategory, type Slot, type Tier, FISH_CHEF_PAY, FISH_TASK_PAY, FISH_TASK_VARIETY, STAFF_MEAL, TASTING, type MealBuff } from "./catalogue";
 import { fishOutToday } from "@/lib/game/peaceful";
 import { seasonBlend } from "@/lib/game/season";
 import type { WaterType } from "@/lib/game/fishingSpots";
@@ -207,3 +207,34 @@ export const TAB_OF: Record<string, "tools" | "outfits" | "furniture" | "merch">
   tool: "tools", outfit: "outfits", hair: "outfits", accessory: "outfits", face: "outfits", "avatar-outfit": "outfits", "avatar-effect": "outfits",
   furniture: "furniture", wallpaper: "furniture", flooring: "furniture", merch: "merch", "profile-customization": "outfits",
 };
+
+/**
+ * The tasting book's pages (catalogue TASTING): one per water, the waters you fish first, a slot for each species a rod
+ * brings in, in roster order. The server's check is collection_species (tool 'rod', its biome), seeded from ROSTER.
+ */
+export const TASTING_WATERS = ["river", "sea", "pond", "cliff_pool"] as const;
+export type TastingWater = (typeof TASTING_WATERS)[number];
+export const tastingPages = (): { water: TastingWater; species: string[] }[] =>
+  TASTING_WATERS.map((water) => ({ water, species: ROSTER.filter((s) => s.tool === "rod" && s.biome === water).map((s) => s.key) }));
+/** Whether a species has a slot in the book (a rod catch), and its page. */
+export const tastingWater = (key: string): TastingWater | null => {
+  const sp = ROSTER.find((s) => s.key === key && s.tool === "rod");
+  return sp ? (sp.biome as TastingWater) : null;
+};
+/**
+ * What giving `key` pays, given your book after it (`book`, `key` in it): a mark when the count of fish given reaches
+ * one (round 6: the tank does nothing now, so the marks count the gifts on the menu's first page), and the water's bonus
+ * when it completes that water's page (round 4 pick). tasting_serve does the same sums.
+ */
+export function tastingMarks(book: ReadonlySet<string>, key: string, at: readonly { at: number; coins: number }[] = TASTING.marks, full: number = TASTING.full): { earned: number; marks: string[] } {
+  const marks: string[] = [];
+  let earned = 0;
+  for (const m of at) if (book.size === m.at) { earned += m.coins; marks.push(`count:${m.at}`); }
+  const water = tastingWater(key), page = tastingPages().find((p) => p.water === water);
+  if (page && page.species.every((s) => book.has(s))) { earned += full; marks.push(`water:${water}`); }
+  return { earned, marks };
+}
+/** The fee for giving Bancha a species, with `given` species in your book before it (tasting_serve sums the same). */
+export const tastingFee = (given: number) => TASTING.fee.base + TASTING.fee.step * given;
+/** The book's permanent luck on every cast (rarer fish, as a meal's luck) with `given` species in it: `each` a species, to `cap`. */
+export const bookLuck = (given: number): number => Math.round(Math.min(TASTING.luck.cap, TASTING.luck.each * given) * 1000) / 1000;

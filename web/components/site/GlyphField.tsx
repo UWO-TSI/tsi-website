@@ -10,6 +10,8 @@ type Props = {
   phrase: string;
   /** The words the faint field around the figure is written in (defaults to the phrase). */
   backgroundPhrase?: string;
+  /** false: no faint field round the figure (where the page's own grain is already the texture behind it). */
+  field?: boolean;
   className?: string;
   color?: string;
   /** "right": a full-bleed field with the picture on the right, as the reference's features section. */
@@ -54,7 +56,7 @@ const hash1 = (x: number) => { const s = Math.sin(x * 12.9898) * 43758.5453; ret
  * sends slow grey pond rings, and the figure arrives along a ring from its centre the first time it's
  * seen. Draws only while on screen.
  */
-export default function GlyphField({ src, phrase, backgroundPhrase, className = "", color = "#f1ffff", layout = "contain", pixelCells = false, avoid }: Props) {
+export default function GlyphField({ src, phrase, backgroundPhrase, className = "", color = "#f1ffff", layout = "contain", pixelCells = false, avoid, field = true }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -253,8 +255,8 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
       };
 
       // The faint field.
-      ctx.globalAlpha = BACKGROUND_ALPHA;
-      for (let r = r0; r < r1; r++) {
+      ctx.globalAlpha = field ? BACKGROUND_ALPHA : 0;
+      for (let r = r0; r < r1 && field; r++) {
         const o = rowOffset[r] % bgPhrase.length;
         ctx.drawImage(strip, Math.round(o * cw * dpr), 0, Math.round(cols * cw * dpr), sh, 0, Math.round(r * ch * dpr), Math.round(cols * cw * dpr), sh);
       }
@@ -420,7 +422,7 @@ export default function GlyphField({ src, phrase, backgroundPhrase, className = 
       canvas.removeEventListener("pointerdown", onClick);
       window.removeEventListener("scroll", onScroll);
     };
-  }, [src, phrase, backgroundPhrase, color, layout, pixelCells, avoid]);
+  }, [src, phrase, backgroundPhrase, color, layout, pixelCells, avoid, field]);
 
   return <canvas ref={ref} className={className} style={{ width: "100%", height: "100%", display: "block" }} aria-hidden="true" />;
 }

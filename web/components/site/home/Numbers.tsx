@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { glitch } from "@/components/site/npo/FaqAscii";
+import AsciiGrain from "@/components/site/AsciiGrain";
 import { NUMBERS } from "@/lib/site/config";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
@@ -109,6 +110,8 @@ export default function Numbers() {
     <section ref={section} className="nm" data-tone="light" id="numbers" aria-labelledby="numbers-title" style={{ ["--n" as string]: n }}>
       <h2 className="ts-visually-hidden" id="numbers-title">Tethos in numbers</h2>
       <div className="nm__stage" aria-hidden="true">
+        {/* The stage is pinned, so it carries its own grain: the texture holds still while the numbers change. */}
+        <AsciiGrain className="nm__grain" />
         <div className="ts-wrap nm__grid">
           <p className="nm__count">
             <b>{String(active + 1).padStart(2, "0")}</b> / {String(n).padStart(2, "0")}

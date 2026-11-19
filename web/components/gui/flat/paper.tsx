@@ -6,9 +6,10 @@
  * our texture), ink-black type, the cover's name over a small emblem, a hairline and one quiet line (`CoverTitle`), one red hanko
  * seal (`Hanko`), soft ink-wash art that fades into the paper (`InkArt`: plum, bamboo, pagoda, mist; drawn here as SVG),
  * each dish as a photo with its name, price and what it does beside it (`MenuDish`), and the menu itself, a cover and
- * inner panels that turn like a folded menu (`FoldedMenu`). Shown at /lab/gui?only=flat-pieces. Tokens only.
+ * inner panels that turn like a folded menu (`FoldedMenu`), and its back pages, the tasting book (`BookPage`, a page per
+ * water of `BookSlot`s). Shown at /lab/gui?only=flat-pieces. Tokens only.
  */
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useId, useImperativeHandle, useState, type AnimationEvent, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import p from "./paper.module.css";
 
@@ -140,12 +141,13 @@ export interface DishStat { icon: ReactNode; label: string; value: ReactNode; le
  * A dish as the menu shows it (round 4, David: "simple photo of food and then price on the side with like stats"): its
  * photo (the model's icon on a plate, or a marked stand-in), and beside it the name, the price, and what it does, one
  * row a stat. `note`: one quiet line under them. It is the action: picked (`open`), `children` (the order) show under it.
+ * Without `onPick` it is no button, only the dish and its `children` (open); on a phone without its photo, as what it is
+ * about was picked above it.
  */
 export function MenuDish({ picture, name, price, stats, note, standIn, open, disabled, onPick, children }: {
   picture: ReactNode; name: ReactNode; price: ReactNode; stats: readonly DishStat[]; note?: ReactNode; standIn?: boolean; open?: boolean; disabled?: boolean; onPick?: () => void; children?: ReactNode;
 }) {
-  return <div className={p.dish} data-open={open || undefined} data-disabled={disabled || undefined}>
-    <button type="button" className={p.dishPick} disabled={disabled} aria-expanded={open} onClick={onPick}>
+  const face = <>
       <span className={p.photo}>
         <span className={p.plate}>{picture}</span>
         {standIn ? <small className={p.standIn}>stand-in</small> : null}
@@ -162,9 +164,112 @@ export function MenuDish({ picture, name, price, stats, note, standIn, open, dis
         </span>
         {note ? <span className={p.dishNote}>{note}</span> : null}
       </span>
-    </button>
-    {open ? <div className={p.dishAction}>{children}</div> : null}
+  </>;
+  return <div className={p.dish} data-open={open || undefined} data-disabled={disabled || undefined}>
+    {onPick ? <button type="button" className={p.dishPick} disabled={disabled} aria-expanded={open} onClick={onPick}>{face}</button> : <div className={p.dishPick}>{face}</div>}
+    {open || !onPick ? <div className={p.dishAction}>{children}</div> : null}
   </div>;
+}
+
+// ── The tasting book (the menu's back pages) ────────────────────────────────────────────────────────────────────────
+
+/** What a book slot holds: nothing yet, or a fish given to Bancha. */
+export type BookSlotState = "empty" | "given";
+/**
+ * One species' slot in the tasting book: an empty one shows the fish as a faint ink shadow, a given one the fish in
+ * colour on its plate (round 7, David: "make the fish page not have stamp": the stamps are the collection's track).
+ * `fresh`: it was just given (the ink comes in). Hover says what it is.
+ */
+export function BookSlot({ picture, name, state, fresh }: { picture: ReactNode; name: string; state: BookSlotState; fresh?: boolean }) {
+  const label = state === "empty" ? "Not given yet" : `${name}. Given`;
+  return <span className={p.slot} data-state={state} data-fresh={fresh || undefined} role="img" aria-label={label} title={label}>
+    <span className={p.slotArt}>{picture}</span>
+  </span>;
+}
+
+/**
+ * A stamp in the collection (round 7, David: "the stamp is squre while its circle, also make it look nicer"): a round
+ * ink stamp, as a stamp rally's, pressed into the washi: a double ring, the fish, a ripple under it. `turn` tilts it a
+ * little, as a hand presses it.
+ */
+export function Stamp({ filter, turn = 0, className }: { filter: string; turn?: number; className?: string }) {
+  return <svg viewBox="0 0 40 40" className={cx(p.stamp, className)} filter={`url(#${filter})`} style={{ rotate: `${turn}deg` }} aria-hidden>
+    <circle cx={20} cy={20} r={17.2} className={p.stampLine} strokeWidth={3.2} />
+    <circle cx={20} cy={20} r={13.4} className={p.stampLine} strokeWidth={1.1} />
+    <path className={p.stampInk} transform="translate(1.5 1.2) scale(0.86)" d="M10 21 C14 14 23 13 28 19 L33 15 L32 21 L33 27 L28 23 C23 29 14 28 10 21 Z" />
+    <circle cx={14} cy={18.4} r={1.1} className={p.stampEye} />
+    <path className={p.stampLine} strokeWidth={1.4} strokeLinecap="round" d="M13 27.6 q1.75 -1.4 3.5 0 t3.5 0 t3.5 0 t3.5 0" />
+  </svg>;
+}
+/** A hand's tilt for the stamp at `i`, never twice the same in a row. */
+const tilt = (i: number) => ((i * 37) % 17) - 8;
+
+/** The page and the book jolting under the stamp's hit. */
+const JOLT: [string, Keyframe[], number][] = [
+  [p.spread, [{ transform: "none" }, { transform: "translateY(7px) rotate(0.35deg)", offset: 0.12 }, { transform: "translateY(-3px) rotate(-0.15deg)", offset: 0.32 },
+    { transform: "translateY(1.5px)", offset: 0.55 }, { transform: "none" }], 460],
+  [p.panel, [{ transform: "none" }, { transform: "scale(0.985) translateY(2px)", offset: 0.15 }, { transform: "none" }], 320],
+];
+
+/**
+ * The stamp coming down on a fresh circle (round 8, David: "make the stamping more dramatic, like comes down like a hard
+ * stamp"): the block lifts, slams down fast, squashes on the paper and lifts away; at the hit the ink spreads out, the page
+ * and the book jolt and `onLand` runs (the thump). Its shadow on the paper darkens as it falls.
+ */
+function StampDown({ onLand }: { onLand?: () => void }) {
+  const hit = (e: AnimationEvent<HTMLElement>) => {
+    for (const [cls, frames, ms] of JOLT) e.currentTarget.closest(`.${cls}`)?.animate(frames, { duration: ms, easing: "ease-out" });
+    onLand?.();
+  };
+  return <>
+    <b className={p.stampShade} />
+    <b className={p.stampSplat} onAnimationStart={hit} />
+    <svg viewBox="0 0 40 72" className={p.stampTool} aria-hidden>
+      <rect x={1} y={62} width={38} height={7} rx={1.5} className={p.toolFace} />
+      <rect x={2} y={49} width={36} height={14} rx={2.5} className={p.toolWood} />
+      <ellipse cx={20} cy={49.5} rx={18} ry={3.5} className={p.toolTop} />
+      <rect x={15} y={22} width={10} height={28} className={p.toolWood} />
+      <ellipse cx={20} cy={16} rx={10} ry={9} className={p.toolWood} />
+      <ellipse cx={16} cy={12} rx={3.5} ry={2.4} className={p.toolShine} />
+    </svg>
+  </>;
+}
+
+/**
+ * A collection's permanent boost, as the menu's first page shows it (round 6, David: "make it obvious it s a collection
+ * that give [permanent] boosts"): the boost large with its icon, what it is, and a track of `total` circles with
+ * `filled` of them stamped, one a fish, to the cap; `fresh`, the last stamp just pressed; `note` under it.
+ */
+export function BoostTrack({ icon, value, label, filled, total, fresh, note, filter, onLand }: { icon: ReactNode; value: ReactNode; label: ReactNode; filled: number; total: number; fresh?: boolean; note?: ReactNode; filter: string; onLand?: () => void }) {
+  return <div className={p.boost} role="group" aria-label={`${value} ${label}, ${filled} of ${total}`}>
+    <p className={p.boostValue}><span className={p.boostIcon} aria-hidden>{icon}</span><b>{value}</b><span>{label}</span></p>
+    <span className={p.track} aria-hidden>{Array.from({ length: total }, (_, i) => <i key={i} data-on={i < filled || undefined} data-fresh={(fresh && i === filled - 1) || undefined}>
+      {i < filled ? <Stamp filter={filter} turn={tilt(i)} /> : null}
+      {fresh && i === filled - 1 ? <StampDown onLand={onLand} /> : null}</i>)}</span>
+    {note ? <span className={p.boostNote}>{note}</span> : null}
+  </div>;
+}
+
+/** A fish in the collection: its slot, its name, and what it gave (`gave`, one line; `extra`, a second). */
+export function GivenFish({ picture, name, gave, extra, fresh }: { picture: ReactNode; name: string; gave: ReactNode; extra?: ReactNode; fresh?: boolean }) {
+  return <figure className={p.given} data-fresh={fresh || undefined}>
+    <BookSlot picture={picture} name={name} state="given" fresh={fresh} />
+    <figcaption><b>{name}</b><span>{gave}</span>{extra ? <span>{extra}</span> : null}</figcaption>
+  </figure>;
+}
+
+/** A line on a page that turns to its page (the dishes' contents): a small picture, the name, a quiet second line, and its state at the end. */
+export function PaperRow({ art, title, detail, end, onClick }: { art: ReactNode; title: ReactNode; detail?: ReactNode; end?: ReactNode; onClick?: () => void }) {
+  const face = <><span className={p.rowArt} aria-hidden>{art}</span><span className={p.rowText}><b>{title}</b>{detail ? <span>{detail}</span> : null}</span>{end ? <span className={p.rowEnd}>{end}</span> : null}</>;
+  return onClick ? <button type="button" className={p.row} onClick={onClick}>{face}</button> : <div className={p.row}>{face}</div>;
+}
+
+/** A page of the book, one water: its name down the side, how many of its slots are filled, a quiet `note`, the slots. */
+export function BookPage({ title, filled, total, note, children }: { title: string; filled: number; total: number; note?: ReactNode; children: ReactNode }) {
+  return <PanelSection title={title}>
+    <p className={p.bookCount}><b>{filled}</b><span>of {total}</span>{note ? <span className={p.bookNote}>{note}</span> : null}</p>
+    <div className={p.slots}>{children}</div>
+  </PanelSection>;
 }
 
 // ── The folded menu ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -175,19 +280,27 @@ const TURN_MS = 720;
  * the leaf over the fold (the right panel turns over onto the left). The arrows, the arrow keys, and a click on the cover
  * turn it. `panels` go in pairs (left, right). Under reduced motion it turns at once.
  */
-export function FoldedMenu({ cover, panels, label, onTurn }: { cover: ReactNode; panels: readonly ReactNode[]; label: string; onTurn?: (spread: number) => void }) {
+/** Turns a FoldedMenu from outside: to a spread (0 the cover, then one a pair of panels). */
+export interface FoldedMenuHandle { turn(spread: number): void }
+/** The spread panel `i` is on (0 the cover, then one a pair). */
+export const spreadOf = (panel: number) => 1 + Math.floor(panel / 2);
+/**
+ * `chapters` (round 6, David: "the pages need to be reorganized in a userfriendly intuitive way"): under the opened menu,
+ * a word for each part (from its first panel) in place of the dots; the part you are in is inked, a click turns to it.
+ */
+export function FoldedMenu({ cover, panels, label, onTurn, handle, chapters }: { cover: ReactNode; panels: readonly ReactNode[]; label: string; onTurn?: (spread: number) => void; handle?: Ref<FoldedMenuHandle>; chapters?: readonly { label: string; panel: number }[] }) {
   const spreads: [ReactNode, ReactNode][] = [[null, cover]];
   for (let i = 0; i < panels.length; i += 2) spreads.push([panels[i], panels[i + 1] ?? null]);
   const [spread, setSpread] = useState(0), [turn, setTurn] = useState<{ from: number; to: number } | null>(null);
-  const timer = useRef(0);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
   const go = useCallback((to: number) => {
     if (turn || to < 0 || to >= spreads.length || to === spread) return;
     onTurn?.(to);
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { setSpread(to); return; }
     setTurn({ from: spread, to });
-    timer.current = window.setTimeout(() => { setSpread(to); setTurn(null); }, TURN_MS);
   }, [turn, spread, spreads.length, onTurn]);
+  // The turn ends when the leaf lands (its own animation, not a timer that can beat the last frame).
+  const landed = (e: AnimationEvent) => { if (turn && e.target === e.currentTarget) { setSpread(turn.to); setTurn(null); } };
+  useImperativeHandle(handle, () => ({ turn: go }), [go]);
   const key = (e: KeyboardEvent) => {
     if (e.key === "ArrowRight") { e.preventDefault(); go(spread + 1); }
     if (e.key === "ArrowLeft") { e.preventDefault(); go(spread - 1); }
@@ -200,10 +313,10 @@ export function FoldedMenu({ cover, panels, label, onTurn }: { cover: ReactNode;
     <div className={p.spread}>
       <div className={p.page} data-side="left">{left ? <Panel side="left">{left}</Panel> : null}</div>
       <div className={p.page} data-side="right">
-        {right ? <Panel side="right" cover={!turn && spread === 0} onOpen={() => go(1)}>{right}</Panel> : null}
+        {right ? <Panel side="right" cover={!turn && spread === 0} onOpen={!turn && spread === 0 ? () => go(1) : undefined}>{right}</Panel> : null}
       </div>
-      {turn ? <div className={p.leaf} data-dir={fwd ? "fwd" : "back"} style={{ animationDuration: `${TURN_MS}ms` }}>
-        <div className={p.leafFace}><Panel side="right">{spreads[fwd ? turn.from : turn.to][1]}</Panel></div>
+      {turn ? <div className={p.leaf} data-dir={fwd ? "fwd" : "back"} style={{ animationDuration: `${TURN_MS}ms` }} onAnimationEnd={landed}>
+        <div className={p.leafFace}><Panel side="right" cover={(fwd ? turn.from : turn.to) === 0}>{spreads[fwd ? turn.from : turn.to][1]}</Panel></div>
         <div className={p.leafBack}><Panel side="left">{spreads[fwd ? turn.to : turn.from][0]}</Panel></div>
       </div> : null}
     </div>
@@ -211,14 +324,18 @@ export function FoldedMenu({ cover, panels, label, onTurn }: { cover: ReactNode;
       <button type="button" className={p.turn} data-side="left" aria-label={spread === 1 ? "Close the menu to its cover" : "Turn back"} onClick={() => go(spread - 1)}><ChevronLeft size={18} aria-hidden /></button>
       {spread < spreads.length - 1 ? <button type="button" className={p.turn} data-side="right" aria-label="Turn the page" onClick={() => go(spread + 1)}><ChevronRight size={18} aria-hidden /></button> : null}
     </> : null}
-    {!turn ? <span className={p.folio} aria-hidden>{spreads.map((_, i) => <i key={i} data-on={i === spread || undefined} />)}</span> : null}
+    {chapters && !closed ? <nav className={p.chapters} aria-label="Parts of the menu">{chapters.map((c, i) => {
+      const at = spreadOf(c.panel), here = (turn ? turn.to : spread) >= at && (turn ? turn.to : spread) < (chapters[i + 1] ? spreadOf(chapters[i + 1].panel) : Infinity);
+      return <button key={c.label} type="button" data-on={here || undefined} aria-current={here ? "page" : undefined} onClick={() => go(at)}>{c.label}</button>;
+    })}</nav>
+      : !turn ? <span className={p.folio} aria-hidden>{spreads.map((_, i) => <i key={i} data-on={i === spread || undefined} />)}</span> : null}
   </div>;
 }
 
-/** One panel of washi: its fold shade on the inner edge; the cover opens on a click. */
+/** One panel of washi: its fold shade on the inner edge; the cover keeps its look as it turns (round 7) and opens on a click. */
 function Panel({ side, cover, onOpen, children }: { side: "left" | "right"; cover?: boolean; onOpen?: () => void; children: ReactNode }) {
-  if (cover) return <button type="button" className={cx(p.panel, p.cover)} data-side={side} onClick={onOpen} aria-label="Open the menu">{children}</button>;
-  return <div className={p.panel} data-side={side}>{children}</div>;
+  if (onOpen) return <button type="button" className={cx(p.panel, p.cover)} data-side={side} onClick={onOpen} aria-label="Open the menu">{children}</button>;
+  return <div className={cx(p.panel, cover && p.cover)} data-side={side}>{children}</div>;
 }
 
 /** An id for the menu's ink filters. */

@@ -1,7 +1,7 @@
 /** In-memory EconomyStore mirroring 20260926150600_economy.sql (tests, dev harness). */
 import { boxPool, dailyGiftAmount, SELL_PRICES, SETTINGS, STARTER_REFS, WELCOME_TRACK, welcomeDay } from "./catalogue";
-import { seedItems, speciesSellPrice, torontoDay, type ShopItem, speciesClass } from "./rules";
-import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff } from "./store";
+import { seedItems, speciesSellPrice, torontoDay, type ShopItem, speciesClass, tastingMarks, tastingWater } from "./rules";
+import { EconomyError, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff, type TastingServe, type TastingSlot } from "./store";
 import { prizeItems } from "./tackle";
 
 export function memoryEconomyStore(clock: () => Date = () => new Date(), random: () => number = Math.random) {
@@ -17,6 +17,9 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
   const rolls = new Map<string, { balance: number; prizes: string[] }>(); // tackle_rolls, by member:key
   const buffs = new Map<string, ActiveBuff>(); // member_buffs
   const orders = new Map<string, { paid: number; buff: ActiveBuff }>(); // sushi_orders, by member:key
+  const book: { member: string; slot: TastingSlot }[] = []; // tasting_book, oldest first
+  const tank: string[] = []; // the drops in HQ's tank, oldest first
+  const serves = new Map<string, TastingServe>(); // tasting_serves, by member:key
   const locks = new Set<string>(); // the bag's locked favourites (member_collections.locked)
   const claims = new Set<string>();
   const granted = new Set<string>(); // starter_grants
@@ -154,6 +157,54 @@ export function memoryEconomyStore(clock: () => Date = () => new Date(), random:
       if (prior) return { balance: coins.get(m) ?? 0, ...prior, replayed: true };
       if (fishKey) take(m, fishKey);
       const balance = price > 0 ? apply(m, "coins", -price, "shop", `sushi:${dish}`, `sushi:${key}`).balance : (coins.get(m) ?? 0);
+      buffs.set(m, buff);
+      orders.set(`${m}:${key}`, { paid: price, buff });
+      return { balance, paid: price, buff, replayed: false };
+    },
+    async tasting(m) {
+      return book.filter((b) => b.member === m).map((b) => b.slot);
+    },
+    async aquarium(limit) {
+      return [...new Set([...tank].reverse())].slice(0, limit);
+    },
+    async serve(m, key, way, fee, marks, full, idem) {
+      const prior = serves.get(`${m}:${idem}`);
+      if (prior) return { ...prior, balance: coins.get(m) ?? 0, replayed: true };
+      if (!tastingWater(key)) throw new EconomyError("not_found");
+      // A drop in HQ's tank takes the fish and does nothing else.
+      if (way === "tank") {
+        const r = { balance: coins.get(m) ?? 0, remaining: take(m, key), paid: 0, stamped: false, earned: 0, marks: [], replayed: false };
+        tank.push(key);
+        serves.set(`${m}:${idem}`, r);
+        return r;
+      }
+      const mine = new Set(book.filter((b) => b.member === m).map((b) => b.slot.species_key));
+      if (mine.has(key)) throw new EconomyError("already_in_book");
+      const paid = fee.base + fee.step * mine.size;
+      if ((coins.get(m) ?? 0) < paid) throw new EconomyError("insufficient");
+      const remaining = take(m, key);
+      let balance = apply(m, "coins", -paid, "shop", `tasting:${key}`, `tasting:${idem}`).balance;
+      book.push({ member: m, slot: { species_key: key } });
+      const { earned, marks: got } = tastingMarks(mine.add(key), key, marks, full);
+      if (earned > 0) balance = apply(m, "coins", earned, "quest", `tasting:${got.join(",")}`, `tasting_mark:${idem}`).balance;
+      const r = { balance, remaining, paid, stamped: true, earned, marks: got, replayed: false };
+      serves.set(`${m}:${idem}`, r);
+      return r;
+    },
+    async bookDish(m, dish, price, unlock, ingredients, buff, key) {
+      const prior = orders.get(`${m}:${key}`);
+      if (prior) return { balance: coins.get(m) ?? 0, ...prior, replayed: true };
+      if (!book.some((b) => b.member === m && b.slot.species_key === unlock)) throw new EconomyError("not_learned");
+      if ((coins.get(m) ?? 0) < price) throw new EconomyError("insufficient");
+      // All or nothing, as the transaction: check the bag before taking.
+      const need = new Map<string, number>();
+      for (const k of ingredients) need.set(k, (need.get(k) ?? 0) + 1);
+      for (const [k, n] of need) {
+        if (locks.has(`${m}:${k}`)) throw new EconomyError("locked");
+        if ((collections.get(`${m}:${k}`) ?? 0) < n) throw new EconomyError("insufficient_items");
+      }
+      for (const k of ingredients) take(m, k);
+      const { balance } = apply(m, "coins", -price, "shop", `dish:${dish}`, `dish:${key}`);
       buffs.set(m, buff);
       orders.set(`${m}:${key}`, { paid: price, buff });
       return { balance, paid: price, buff, replayed: false };

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 /**
@@ -9,6 +9,8 @@ import { join, relative, sep } from "node:path";
 export function assetVersions(publicDir: string, dirs = ["assets", "models", "audio"]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const dir of dirs) {
+    // A folder with nothing in it yet (or none any more) has no versions.
+    if (!existsSync(join(publicDir, dir))) continue;
     for (const e of readdirSync(join(publicDir, dir), { recursive: true, withFileTypes: true })) {
       if (!e.isFile()) continue;
       const file = join(e.parentPath, e.name);
