@@ -86,8 +86,14 @@ wait for David's go:
   code) or Google to the same user, at setup or any time later.
 - **Existing accounts.** The existing sign-up trigger already makes non-members `public`, tier 5: no event check-ins, no
   member features. A guest who signs in to an account they already have gets their guest stamps and photos moved into it.
-- **Settings (David, Supabase dashboard):** turn on anonymous sign-ins, with a CAPTCHA (Cloudflare Turnstile) so nobody
-  can farm accounts.
+- **Prod sign-in settings (checked 2026-11-19 through the management API):**
+  - Anonymous sign-ins are off: turn them on.
+  - `genesis.tethos.ca` is not on the allowed return addresses: add it.
+  - The anonymous sign-up limit is 30 an hour per IP. Everyone on the venue Wi-Fi shares one IP, so raise it for GENESIS
+    week, or the 31st guest in an hour can't set up.
+  - No CAPTCHA: Supabase's captcha switch covers every sign-in on tethos.ca and play.tethos.ca and would break the existing
+    forms. Abuse is limited by the rate limit and by stamps needing a real sticker link.
+  - Google and email sign-in are already on.
 - **Character:** optional. If the account already has a play.tethos.ca character, the pass shows it. Otherwise the guest can
   skip it (open: whether to offer a small set of presets).
 
@@ -100,6 +106,15 @@ wait for David's go:
 - **Storage:** a `genesis-photos` bucket.
 - **Content in code:** the five projects, the schedule, the map, the sponsors and the pass sections live in `web/lib/genesis/*.ts` (they change
   rarely). Move them to tables only if the teams end up editing them in the admin.
+
+### Registration stays on Luma (David, 2026-11-19)
+- Guests keep signing up on Luma, which already handles RSVPs, capacity, waitlists, reminder emails and calendar invites.
+  The pass doesn't rebuild any of it.
+- **Before GENESIS:** the Luma guest list is exported as a CSV and loaded into the pass database.
+- **Front desk:** the guest's email at setup is matched to their registration. The name fills in and the arrival is marked,
+  which gives registered versus walk-in counts.
+- **Luma Plus (about $59 to $69 a month):** adds webhooks for live registrations, and maybe check-in sync back to Luma. Nice
+  to have, not needed.
 
 ### Talk to a team (if picked)
 - The message is saved and emailed to the team's contact through the club's existing mailer (Resend, as the sponsor form
@@ -168,6 +183,8 @@ wait for David's go:
 - Each team's contact email for messages, and the team's consent to show names on the project page.
 - The receipt printer model.
 - Sticker design and quantity.
-- Supabase: anonymous sign-ins and Turnstile turned on.
+- An OK for the prod sign-in changes above (Claude makes them through the Supabase API).
+- DNS: tethos.ca is at Namecheap: a `genesis` CNAME to `cname.vercel-dns.com` (Claude adds the domain in Vercel).
+- The Luma guest list CSV, the week of GENESIS.
 - The play.tethos.ca session's OK on the host rewrite.
 - Which of the extra content to build (vote, talk to a team, feedback, sponsor offer).
