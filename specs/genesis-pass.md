@@ -77,30 +77,40 @@ wait for David's go:
 - **Stickers:** `https://genesis.tethos.ca/p/ark-aid` (under 40 characters) fits on the smallest NFC tags.
 - **Photos:** `https://genesis.tethos.ca/ph/<10-character id>` keeps the printed QR code small and easy to scan.
 
-### Accounts: low friction, then their own
-- **First visit (the front desk tap).** It creates a Supabase anonymous user: a real account with no email. A first-party cookie carries the
-  session, and stamps and photos are saved against that user on the server.
-  - Saving only on the phone isn't enough: iPhone Safari wipes a site's stored data after 7 days without a visit, so a
-    phone-only pass would be gone before most people look back.
-- **Setup and saving.** The name (and optional character) is set at the front desk. Saving adds an email (a one-time
-  code) or Google to the same user, at setup or any time later.
-- **Existing accounts.** The existing sign-up trigger already makes non-members `public`, tier 5: no event check-ins, no
-  member features. A guest who signs in to an account they already have gets their guest stamps and photos moved into it.
-- **Prod sign-in settings (checked 2026-11-19 through the management API):**
-  - Anonymous sign-ins are off: turn them on.
-  - `genesis.tethos.ca` is not on the allowed return addresses: add it.
-  - The anonymous sign-up limit is 30 an hour per IP. Everyone on the venue Wi-Fi shares one IP, so raise it for GENESIS
-    week, or the 31st guest in an hour can't set up.
-  - No CAPTCHA: Supabase's captcha switch covers every sign-in on tethos.ca and play.tethos.ca and would break the existing
-    forms. Abuse is limited by the rate limit and by stamps needing a real sticker link.
-  - Google and email sign-in are already on.
-- **Character:** optional. If the account already has a play.tethos.ca character, the pass shows it. Otherwise the guest can
-  skip it (open: whether to offer a small set of presets).
+### Accounts: low friction, then their own (safety review 2026-11-19)
+- **A guest pass is not an account.** The front desk tap creates a pass row on the server and gives the phone a long
+  random secret in an HttpOnly cookie that belongs to genesis.tethos.ca only. Every read and write goes through
+  genesis.tethos.ca's own server routes, which check that secret.
+  - A guest can never sign in to anything, reach play.tethos.ca, tethos.ca or the recruitment portal, or read any club data.
+  - Nothing about a guest is known until they choose to save.
+- **Why not Supabase anonymous sign-ins (the first plan).**
+  - Turned on, they let anyone on the internet get a signed-in account with no email.
+  - The audit on 2026-11-19 found that any signed-in account can read about 60 tables. Most is harmless game data, but it
+    includes all marketplace orders, the internal kanban boards and comments, mentorship profiles and matches, bounty
+    submissions, event attendance, job listings and portfolios. (Member emails are safe: column grants block them.)
+  - With anonymous sign-ins on, reading all of that would take no email at all.
+  - The pass design also avoids the venue Wi-Fi problem: there is no Supabase sign-up limit (30 an hour per IP) to hit at
+    the front desk.
+- **Saving the pass.**
+  - "Save your pass" signs in with an email code or Google on genesis.tethos.ca. That creates (or finds) a normal Tethos
+    account, a tier 5 `public` one, exactly what anyone signing up today gets.
+  - The pass row is then linked to the account, so the guest can open it on any device.
+  - The only prod sign-in change needed: add `https://genesis.tethos.ca/**` to the allowed return addresses. Google and
+    email sign-in are already on.
+- **Name and character.** The name is set at the front desk and stored on the pass. The character is optional: if the saved
+  account already has a play.tethos.ca character, the pass shows it.
+- **Before GENESIS (a separate fix, game and portal side):** tighten the tables above to members (tier 4 or better) or to
+  their own rows. The 291 public accounts that exist today can already read them, and the public game launch (2026-12-20)
+  and GENESIS will add many more.
+- **Pass secret hygiene.** The secret is never in a URL. The cookie is HttpOnly, Secure, SameSite=Lax, host-only. Losing the
+  phone loses an unsaved pass, as with a paper booklet.
 
 ### Data (one new migration, applied to prod per `specs/launch-runbook.md`)
-- **`genesis_arrivals`:** user, when. The front desk tap: the attendance count.
-- **`genesis_stamps`:** user, booth, when. Unique per user and booth.
-- **`genesis_photos`:** short id, storage path, taken at, who saved it.
+All GENESIS tables have RLS on with no policies: only genesis.tethos.ca's server routes (service role) touch them.
+- **`genesis_passes`:** id, secret hash, name, character, linked user (null until saved), created at.
+- **`genesis_arrivals`:** pass, when. The front desk tap: the attendance count.
+- **`genesis_stamps`:** pass, booth, when. Unique per pass and booth.
+- **`genesis_photos`:** short id, storage path, taken at, the passes that saved it.
 - **`genesis_votes`** (if the vote is picked): user, booth. One per user.
 - **`genesis_messages`** (if talk to a team is picked): the messages: user (or the email they gave), booth, message, when.
 - **Storage:** a `genesis-photos` bucket.
@@ -164,7 +174,7 @@ wait for David's go:
 
 ## Build order
 1. **Foundations:**
-   - Host, layout, anonymous accounts, the front desk setup, stamps.
+   - Host, layout, guest passes, the front desk setup, stamps.
    - The five project pages (drafted content).
    - A sticker test: encode a tag and tap it on an iPhone and an Android.
 2. **The pass:** pass home with the stamps, claiming (name, email or Google, the merge), photo pages and saving.
@@ -183,8 +193,9 @@ wait for David's go:
 - Each team's contact email for messages, and the team's consent to show names on the project page.
 - The receipt printer model.
 - Sticker design and quantity.
-- An OK for the prod sign-in changes above (Claude makes them through the Supabase API).
-- DNS: tethos.ca is at Namecheap: a `genesis` CNAME to `cname.vercel-dns.com` (Claude adds the domain in Vercel).
+- Adding `https://genesis.tethos.ca/**` to the prod sign-in return addresses (Claude, through the Supabase API).
+- DNS: tethos.ca is at Namecheap: a `genesis` CNAME to `f46899e83441e7c5.vercel-dns-017.com` (the domain was added in Vercel
+  on 2026-11-19).
 - The Luma guest list CSV, the week of GENESIS.
-- The play.tethos.ca session's OK on the host rewrite.
+- The host rewrite: David OK'd it on 2026-11-19.
 - Which of the extra content to build (vote, talk to a team, feedback, sponsor offer).
