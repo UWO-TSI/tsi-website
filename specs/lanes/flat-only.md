@@ -2,6 +2,57 @@
 
 Worktree `.claude/worktrees/flat-only`, branch `game/flat-only`, cut from `feat/game-default-island` (= main) at the commit that adds this file. Agent type `uwotsi-lane`. Dev port 3482.
 
+## Round 2: David's marks on Flat UI Only 1 (2026-11-19, verbatim; https://claude.ai/artifact/QoFX7c6WjEG2d6KToBNUMC)
+
+Approved with no note: fo-creator, fo-portal, fo-guard.
+- fo-settings (approve): "make the design of the settings page more intuitive and clear by haveing good layout, spacing and use of icons"
+- fo-wallet (redo): "wallet ui needs to be redesigned and formatted, it should use icons for simplicity, and the main things to show is just the tc and gems and option to purchase gems small, and should be better designed, maybe an actual wallet that shows how many coins and gems or smth"
+- fo-esc (redo): "remove tethos uisland text, remove click to lokok around, make the quest tab nicer looking, the time location wallen looks cramed and poorly designed, give feedback and suggestions on the overall hui layout"
+- fo-friends (redo): "give sugegstions and redo the friends tab, should show their character, stats and when added and nickname and last online"
+- fo-tourney (redo): "this needs to be redone this looks horrible should have character icon, take inspo from volley ball"
+- fo-posters (redo): "what"
+- fo-cafe (redo): "redo the ui, we need a better universal contribution open cafe ui, where its just icons and less text and make it easy to contribute and understand and clean innovative fun interface"
+- fo-trophies (redo): "remove"
+- fo-donate (redo): "all the colors look fine but the overally ui design needs to be redesigned, like for this one its hould have less text, and it should simply be like more intuitive and you open your bag on the right side and you drag and drop what you wanna donate to the left side, mroe interactive design elements, make a lot of donations, giving action opening bag on the right and you can drag the thing over to the left to feel like you are giving physically"
+- fo-oracle (redo): "ok but like this looks so ugly we gotta redo this, it should be a scene where the oracle sits infront of you, crystial ball betweel, its likea sushi first person kinda vibem, and asks you question and hands you 4 cards on the floor which you choose"
+- fo-hqid (redo): "were not doing ids anymore remove"
+- fo-paper (no mark): "yes but all ui needs to be redesigned"
+- fo-pieces-a (approve): "the old design should old keep the font, and color and card format, so it can be a possible ui design back you load in for the game like the vintage vibe and the plain new one is the default"
+- fo-pieces-b (approve): "new is good"
+- fo-packs (approve): "looks goood"
+- fo-unchanged (redo): "the recruitment is archived for now, we will redo later"
+- fo-questions (no mark, no note)
+- Not marked: fo-questions.
+
+Keep (approved): the flat kit pieces (both pages), the creator and closet, the portal pages, the guard, the UI packs with the dark sample. Settings is approved but gets a redesign (2b).
+
+**2a, this round, then merge:**
+1. **The old look as a pack (fo-pieces-a).** The old cream kit's font, colours and card format come back as a UI pack, one theme file in `web/styles/themes/` (name it "Vintage"), loadable the same way as the dark sample. The plain flat kit stays the default every player has. Restore the tokens, the font and the card styles from this branch's history; the deleted showroom crops stay deleted. This narrows ledger row 334: the cream kit returns only as a pack.
+2. **Remove the HQ ID card (fo-hqid)** and its entry points. The tutorial lane removes the ID steps from the arrival (its round 17); whichever merges second resolves the overlap.
+3. **Remove the trophy case (fo-trophies)** and its entry point.
+4. **Recruitment (fo-unchanged)** is archived for now: leave it as it is, no further checks there.
+5. Merge origin/main, gates, then the coordinator merges this lane so the moderation card and every later lane build on the flat kit.
+
+**2b, the redesign round after the merge** (one screen per card, David's notes are the brief; less text, icons, clean, playful):
+- **Settings:** clearer layout, spacing and icons.
+- **Wallet:** an actual wallet showing coins and gems with their icons, and a small "Buy gems" that opens the gem shop. Nothing else on the main view.
+- **HUD (fo-esc):**
+  - remove the "Tethos Island" text and "Click to look around";
+  - a nicer quest tab;
+  - un-cramp the time, location and wallet group;
+  - plus a written card of feedback and suggestions on the overall HUD layout.
+- **Friends:** each friend's character, stats, date added, nickname and last online, plus suggestions on the card.
+- **Fishing tourney:** rows with character icons, taking its cue from the volleyball UI.
+- **Cafe goals:** one universal contribution UI: icons, little text, easy to contribute, fun.
+- **Museum curator:**
+  - the bag opens on the right, and you drag an item to the left to donate it;
+  - a physical giving action, less text;
+  - several donations in one go.
+- **Oracle quiz:** a scene. The oracle sits in front of you with a crystal ball between you, first-person like the sushi bar. She asks the question and lays four cards on the floor to choose from.
+- **Paper things (fo-paper):** "yes but all ui needs to be redesigned": letters, notices and the journal get the same pass.
+
+Open: fo-posters was marked "what" (the GENESIS posters sheet card wasn't understood); fo-questions (museum plaques, wheels following the theme, photo prints) has no answer.
+
 ## David's decisions (newest first)
 
 - 2026-11-13, relayed by the coordinator (ledger row 335): "in the future well design ui packs, which will the entire game ui that ppl can buy with gems" (step 13).
