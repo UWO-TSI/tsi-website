@@ -5,7 +5,7 @@
  * fish it hooks (`hookCap`, David 2026-10-28). Shop rods are lib/wallet/catalogue.ts, crafted ones lib/crafting/recipes.ts;
  * the Training rod is traded for at the tackle shop, never on the shelf (`TRAINING`). No levels: some rods awaken as they land
  * fish (`awakened`, David 2026-11-04), and rare and up carry a passive (`inPlay`). Every landed cast counts toward its
- * rod (rod_catches, 20261102170000_rod_catches.sql).
+ * rod (rod_catches, 20261119120000_rod_catches.sql).
  * The server rolls a cast with the held rod plus the equipped add-ons the member owns (lib/collections/service.ts).
  */
 import { OBTAINABLE, RARITY_RANK, type Rarity } from "@/lib/rarity";
@@ -165,7 +165,7 @@ export const ROD_SELLER = "Gary";
 /**
  * The Training rod (David 2026-11-04): never on the shelf. At the `quest.catches`th fish landed with the `quest.rod` a
  * quest starts: Gary trades it for your Flimsy rod (the Flimsy leaves your bag). The server repeats these numbers in
- * rod_training_trade (20261102170000_rod_catches.sql; rods.test.ts keeps them equal).
+ * rod_training_trade (20261119120000_rod_catches.sql; rods.test.ts keeps them equal).
  */
 export const TRAINING = { key: "rod_training", quest: { rod: "rod_flimsy", catches: 35 } } as const;
 /**

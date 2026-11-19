@@ -228,7 +228,7 @@ describe("the Training rod's trade (David 2026-11-04)", () => {
     expect(checkHeld(TRAINING.key, "rod", [TRAINING.key]).ok).toBe(true);
   });
   it("trades in the migration with the same numbers, and landing grants nothing", () => {
-    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261102170000_rod_catches.sql"), "utf8");
+    const sql = readFileSync(join(__dirname, "../../supabase/migrations/20261119120000_rod_catches.sql"), "utf8");
     expect(sql).toContain(`k.rod_key = '${TRAINING.quest.rod}'), 0) < ${TRAINING.quest.catches}`);
     expect(sql).toContain(`s.catalogue_ref = '${TRAINING.key}'`);
     const land = sql.slice(sql.indexOf("FUNCTION public.collections_land"), sql.indexOf("FUNCTION public.rod_training_trade"));
