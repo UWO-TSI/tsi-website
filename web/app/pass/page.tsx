@@ -18,6 +18,7 @@ export default async function PassHome({ searchParams }: { searchParams: Promise
         <section className="gp-card">
           <h1>{pass.name ?? "Your pass"}</h1>
           {!pass.name && <p><Link href={href("/setup")}>Add your name</Link></p>}
+          <p><Link href={href("/me")}>{pass.user_id ? "Saved to your account" : "Save your pass to open it on any device"}</Link></p>
           <p>{stamps.length} of {BOOTHS.length} booths collected</p>
           <div className="gp-stamps">
             {BOOTHS.map((b) => (
@@ -32,6 +33,7 @@ export default async function PassHome({ searchParams }: { searchParams: Promise
           <h1>Your GENESIS pass</h1>
           <p>Tap the sticker at the front desk to start your pass, then tap each booth&apos;s sticker to collect its project.</p>
           <Link href={href("/start")} className="gp-btn">Start my pass</Link>
+          <p style={{ marginTop: 14 }}><Link href={href("/me")}>Saved your pass before? Sign in</Link></p>
         </section>
       )}
       <h2>The projects</h2>

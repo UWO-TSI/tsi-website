@@ -49,3 +49,29 @@ export async function stampsOf(db: SupabaseClient, passId: string): Promise<stri
   const { data } = await db.from("genesis_stamps").select("booth").eq("pass_id", passId);
   return (data ?? []).map((r) => (r as { booth: string }).booth);
 }
+
+export async function passOfUser(db: SupabaseClient, userId: string): Promise<Pass | null> {
+  const { data } = await db.from("genesis_passes").select("id, name, user_id").eq("user_id", userId).maybeSingle();
+  return (data as Pass | null) ?? null;
+}
+
+/**
+ * Saving a pass to an account. The phone's pass is linked to it, or, when the account already has a pass from another
+ * phone, its stamps, arrival and name move into that one and the phone's copy is deleted ("merged": the phone then
+ * reaches the pass through the sign-in). A phone pass that belongs to another account is left alone.
+ */
+export async function savePass(db: SupabaseClient, device: Pass | null, userId: string): Promise<{ pass: Pass | null; merged: boolean }> {
+  const owned = await passOfUser(db, userId);
+  const mine = device && (!device.user_id || device.user_id === userId) ? device : null;
+  if (!mine) return { pass: owned, merged: false };
+  if (!owned || owned.id === mine.id) {
+    await db.from("genesis_passes").update({ user_id: userId }).eq("id", mine.id);
+    return { pass: { ...mine, user_id: userId }, merged: false };
+  }
+  for (const booth of await stampsOf(db, mine.id)) await db.from("genesis_stamps").insert({ pass_id: owned.id, booth });
+  const { data: arrived } = await db.from("genesis_arrivals").select("pass_id").eq("pass_id", mine.id);
+  if (arrived?.length) await arrive(db, owned.id);
+  if (!owned.name && mine.name) await setName(db, owned.id, mine.name);
+  await db.from("genesis_passes").delete().eq("id", mine.id);
+  return { pass: { ...owned, name: owned.name ?? mine.name }, merged: true };
+}

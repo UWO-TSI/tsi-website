@@ -95,8 +95,11 @@ wait for David's go:
   - "Save your pass" signs in with an email code or Google on genesis.tethos.ca. That creates (or finds) a normal Tethos
     account, a tier 5 `public` one, exactly what anyone signing up today gets.
   - The pass row is then linked to the account, so the guest can open it on any device.
-  - The only prod sign-in change needed: add `https://genesis.tethos.ca/**` to the allowed return addresses. Google and
-    email sign-in are already on.
+  - The email sign-in is a code typed on the pass (`/me`), not a link: a link opens in the mail app's own browser,
+    which doesn't hold the phone's pass. The sign-in emails carry the code under the link since 2026-11-19.
+  - One pass per account (unique `user_id`). Saving on a second phone moves its stamps, arrival and name into the
+    account's pass and deletes the phone's copy; that phone then reaches the pass through the sign-in.
+  - Done 2026-11-19: `https://genesis.tethos.ca/**` added to the allowed return addresses (Google returns to `/auth`).
 - **Name and character.** The name is set at the front desk and stored on the pass. The character is optional: if the saved
   account already has a play.tethos.ca character, the pass shows it.
 - **Before GENESIS (a separate fix, game and portal side):** tighten the tables above to members (tier 4 or better) or to
@@ -193,7 +196,6 @@ All GENESIS tables have RLS on with no policies: only genesis.tethos.ca's server
 - Each team's contact email for messages, and the team's consent to show names on the project page.
 - The receipt printer model.
 - Sticker design and quantity.
-- Adding `https://genesis.tethos.ca/**` to the prod sign-in return addresses (Claude, through the Supabase API).
 - DNS: tethos.ca is at Namecheap: a `genesis` CNAME to `f46899e83441e7c5.vercel-dns-017.com` (the domain was added in Vercel
   on 2026-11-19).
 - The Luma guest list CSV, the week of GENESIS.

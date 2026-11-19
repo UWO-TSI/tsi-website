@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fakeDb } from "@/lib/portal/testDb";
-import { arrive, cleanName, createPass, hashSecret, passFromSecret, stamp, stampsOf } from "./pass";
+import { arrive, cleanName, createPass, hashSecret, passFromSecret, savePass, stamp, stampsOf } from "./pass";
 
 const db = () => fakeDb({ genesis_passes: [], genesis_arrivals: [], genesis_stamps: [] }, { unique: { genesis_stamps: ["pass_id", "booth"], genesis_arrivals: ["pass_id"] } });
 
@@ -32,5 +32,18 @@ describe("the GENESIS pass", () => {
     expect(cleanName("  Ada   Lovelace ")).toBe("Ada Lovelace");
     expect(cleanName("   ")).toBeNull();
     expect(cleanName("x".repeat(60))).toHaveLength(40);
+  });
+  it("saves a pass to an account, merging into the account's pass from another phone", async () => {
+    const f = db();
+    const a = (await createPass(f.db, "Ada"))!.pass;
+    expect((await savePass(f.db, a, "u1")).pass?.user_id).toBe("u1");
+    const b = (await createPass(f.db))!.pass;
+    await stamp(f.db, a.id, "bgc"); await stamp(f.db, b.id, "bgc"); await stamp(f.db, b.id, "ark-aid"); await arrive(f.db, b.id);
+    const r = await savePass(f.db, b, "u1");
+    expect(r).toMatchObject({ merged: true, pass: { id: a.id, name: "Ada" } });
+    expect((await stampsOf(f.db, a.id)).sort()).toEqual(["ark-aid", "bgc"]);
+    expect(f.tables.genesis_passes).toHaveLength(1);
+    expect(f.tables.genesis_arrivals.map((r) => r.pass_id)).toContain(a.id);
+    expect((await savePass(f.db, { ...a, user_id: "u1" }, "u2")).pass).toBeNull();
   });
 });
