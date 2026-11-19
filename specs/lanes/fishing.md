@@ -37,6 +37,12 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
 1. Rods: "yes once its complete". All 11 ship on December 20, but each only once it is finished.
 2. Legendaries: "3 is good, no divine yet". One legendary each for the river, the sea and the cliff pool. The divine fight stays off.
 
+3. The three (David, 2026-11-19: "have diversity like one of them keep summer, so theres atleast 1 per season"):
+   - **Namazu**, river, winter and spring;
+   - **Umibozu**, sea, autumn and winter;
+   - **Raiju**, cliff pools, summer, in rain.
+   Every season has at least one, and two bite at the December 20 launch. Descriptions come from `specs/fish-list.md` section 4 on `game/fish-list`.
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
