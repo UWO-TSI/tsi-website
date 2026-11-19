@@ -8,19 +8,23 @@ from David's design (not yet sent), so pages are built plain until then.
 At GENESIS 2026 guests carried a paper passport and booths stamped it. People wanted to read up on the projects
 afterwards and had nothing to go back to. The pass replaces the booklet with something they keep.
 
-## What a guest does
+## What a guest does (David, 2026-11-18)
 
-1. **Taps a booth's sticker.** Each of the five booths hands out a sticker with an NFC tag inside. Tapping it with a phone
-   opens that project's page on genesis.tethos.ca and stamps the project into the guest's pass, with the stamp shown landing.
-   The sticker keeps working afterwards, so tapping it at home opens the project again.
-2. **Gets a photobooth print.** The booth prints the photo on a receipt printer with a QR code. Scanning it with the phone's
-   camera opens the photo in colour and saves it to the pass, ready to download or share.
-3. **Opens their pass.** It holds the five stamps, their photos, the schedule and map, the vote, the sponsors, and a way to
-   reach any team.
-4. **Makes it theirs (optional, any time).** They pick a name (it goes on their pass card), optionally a character, and add
-   an email or Google sign-in. From then on they can open the pass on any device, any time.
+1. **Front desk.** The guest taps the welcome sticker at the front desk with their phone. genesis.tethos.ca opens on a
+   short setup:
+   - their name, which goes on their pass card
+   - an optional character
+   - "save your pass" with an email or Google, now or later
+   That's their pass. Each arrival tap also counts the guest in, which gives GENESIS a real attendance number.
+2. **Booths.** Each of the five booths gives out its own sticker with an NFC tag. Tapping it opens that project's page and
+   stamps it into the pass. The sticker keeps working afterwards, so tapping it at home opens the project again.
+3. **Photobooth.** The booth prints the photo on a receipt printer with a QR code. Scanning it with the phone's camera opens
+   the photo in colour and saves it to the pass, ready to download or share.
+4. **The pass.** Holds the map, schedule, sponsors, the stamps and the photos. More content can be added (see below).
+5. **Revisit.** The pass, the project pages and the photos stay up after GENESIS. A guest who saved their pass with an email
+   or Google opens it on any device, any time.
 
-No sign-in is ever needed to tap, collect or vote at the event.
+No sign-in is needed to tap, collect or browse at the event. A guest who skips saving keeps the pass on that phone.
 
 ## The five projects (2026-27, from `web/lib/site/projects.ts`)
 
@@ -39,15 +43,23 @@ shown. Claude drafts all five from what's known; David edits.
 
 | Address | What it is |
 |---|---|
+| `genesis.tethos.ca/start` | The front desk sticker's link: setup (name, optional character, save), counts the arrival |
 | `genesis.tethos.ca/` | The pass: card with the guest's name, 5 stamp slots, photos, links to the rest |
-| `/p/<booth>` | A project page; opening it stamps the project (the sticker's link) |
+| `/p/<booth>` | A project page; opening it stamps the project (the booth sticker's link) |
 | `/ph/<id>` | A photobooth photo; opening it saves the photo to the pass |
-| `/schedule` | The run of show and the venue map |
-| `/vote` | The people's choice vote: one per pass, open only during GENESIS |
+| `/map` | The venue map, with the five booths, the photobooth and the front desk |
+| `/schedule` | The run of show |
 | `/sponsors` | Who made GENESIS possible, with links |
-| `/p/<booth>/contact` | Talk to a team: a message to the team, kept and emailed to them |
-| `/me` | Name, optional character, sign-in (email or Google), sign out |
+| `/me` | Name, optional character, save (email or Google), sign out |
 | `/booth` | The photobooth app (staff only) |
+
+**More content.** The pass home is a list of sections drawn from one config (`web/lib/genesis/sections.ts`), so a new page
+(a vote, talk to a team, a feedback form, a sponsor offer) is one entry and one page. These four came up in planning and
+wait for David's go:
+- a people's choice vote, one per pass, open only during GENESIS
+- talk to a team: a message kept and emailed to the team
+- a feedback form
+- a sponsor offer
 
 ## How it's built
 
@@ -66,11 +78,12 @@ shown. Claude drafts all five from what's known; David edits.
 - **Photos:** `https://genesis.tethos.ca/ph/<10-character id>` keeps the printed QR code small and easy to scan.
 
 ### Accounts: low friction, then their own
-- **First visit.** It creates a Supabase anonymous user: a real account with no email. A first-party cookie carries the
+- **First visit (the front desk tap).** It creates a Supabase anonymous user: a real account with no email. A first-party cookie carries the
   session, and stamps and photos are saved against that user on the server.
   - Saving only on the phone isn't enough: iPhone Safari wipes a site's stored data after 7 days without a visit, so a
     phone-only pass would be gone before most people look back.
-- **Claiming.** Adds an email (a one-time code) or Google to the same user, plus a name and optional character.
+- **Setup and saving.** The name (and optional character) is set at the front desk. Saving adds an email (a one-time
+  code) or Google to the same user, at setup or any time later.
 - **Existing accounts.** The existing sign-up trigger already makes non-members `public`, tier 5: no event check-ins, no
   member features. A guest who signs in to an account they already have gets their guest stamps and photos moved into it.
 - **Settings (David, Supabase dashboard):** turn on anonymous sign-ins, with a CAPTCHA (Cloudflare Turnstile) so nobody
@@ -79,27 +92,29 @@ shown. Claude drafts all five from what's known; David edits.
   skip it (open: whether to offer a small set of presets).
 
 ### Data (one new migration, applied to prod per `specs/launch-runbook.md`)
+- **`genesis_arrivals`:** user, when. The front desk tap: the attendance count.
 - **`genesis_stamps`:** user, booth, when. Unique per user and booth.
 - **`genesis_photos`:** short id, storage path, taken at, who saved it.
-- **`genesis_votes`:** user, booth. One per user.
-- **`genesis_messages`:** the talk-to-a-team messages: user (or the email they gave), booth, message, when.
+- **`genesis_votes`** (if the vote is picked): user, booth. One per user.
+- **`genesis_messages`** (if talk to a team is picked): the messages: user (or the email they gave), booth, message, when.
 - **Storage:** a `genesis-photos` bucket.
-- **Content in code:** the five projects, the schedule, the map and the sponsors live in `web/lib/genesis/*.ts` (they change
+- **Content in code:** the five projects, the schedule, the map, the sponsors and the pass sections live in `web/lib/genesis/*.ts` (they change
   rarely). Move them to tables only if the teams end up editing them in the admin.
 
-### Talk to a team
+### Talk to a team (if picked)
 - The message is saved and emailed to the team's contact through the club's existing mailer (Resend, as the sponsor form
   does).
 - A guest without an account gives an email with the message.
 - The team's email never shows on the page.
 
-### Vote
+### Vote (if picked)
 - One vote per pass, counted on the server.
 - Open during a window set in code; closed before and after.
 - The tally is in the club admin, with an optional stage screen showing the live count.
 
 ### Admin (tethos.ca/admin)
-- **GENESIS section in the club admin:** stamps per booth, photos taken and saved, the vote tally, team messages.
+- **GENESIS section in the club admin:** arrivals, stamps per booth, photos taken and saved, and the vote tally and team
+  messages if those are picked.
 - **Order:** builds on the club admin portal branch (`site/admin-portal`), which merges first.
 
 ## The photobooth (our own)
@@ -128,17 +143,19 @@ shown. Claude drafts all five from what's known; David edits.
   - The phone has to be unlocked.
   - Older iPhones need the NFC reader from Control Center.
 - **Fallback:** a small printed QR code and the short address on every sticker, for phones without NFC.
-- **Quantity:** about attendance × 5. GENESIS 2026 drew 350+, so about 1,750 to 2,000 stickers.
+- **Quantity:** about attendance × 5 for the booths, plus the front desk stickers. GENESIS 2026 drew 350+, so about
+  1,750 to 2,000 booth stickers.
 - **Order by mid-February** (2 to 4 weeks lead time) and test a sample on iPhone and Android first.
 
 ## Build order
 1. **Foundations:**
-   - Host, layout, anonymous accounts, stamps.
+   - Host, layout, anonymous accounts, the front desk setup, stamps.
    - The five project pages (drafted content).
    - A sticker test: encode a tag and tap it on an iPhone and an Android.
 2. **The pass:** pass home with the stamps, claiming (name, email or Google, the merge), photo pages and saving.
 3. **The booth:** the booth app, the receipt layout and dithering, a print test on the real printer, the offline queue.
-4. **The rest:** schedule and map, vote, sponsors, talk to a team, the admin section.
+4. **The rest:** map, schedule, sponsors, the admin section (arrivals, stamps per booth, photos), then any extra content
+   David picks.
 5. **David's design** applied across all of it.
 6. **Rehearsal:**
    - Real stickers, the real booth and printer.
@@ -153,4 +170,4 @@ shown. Claude drafts all five from what's known; David edits.
 - Sticker design and quantity.
 - Supabase: anonymous sign-ins and Turnstile turned on.
 - The play.tethos.ca session's OK on the host rewrite.
-- The vote's window and whether results go on a stage screen.
+- Which of the extra content to build (vote, talk to a team, feedback, sponsor offer).
