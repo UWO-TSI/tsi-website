@@ -74,6 +74,13 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
 
 9. **North Star round 3 rejected** (David, 2026-11-19): "its ugly and horrible, i will just start giving you pinterest references". Generation pauses until his references arrive. Each one is saved to the vault, and the design is built from them, not from my own prompts.
 
+10. **North Star references, round 2** (David, 2026-11-19), in the vault at `References/Rod references/north-star-r2/ref-110` to `117`:
+   - **Animation:** the Pinterest pin (`north-star-vfx-ref.jpg`): "this animation needs to be replicated and it will be casting animation and rod animations".
+   - **Effects:** 110 to 113: a blue burst, a violet burst, a white star with a pink trail, a gold crystal star with a trail.
+   - **Art:** 114 to 116: a violet streak, a golden spear with rotating rings, a hand holding a star glint.
+   - **Style:** 117, a gold star with violet crystal hands: "should be anime genshin impact style".
+   - **First:** a 2D anime concept illustration, not a 3D model ("make the rod in the art style not in a 3d model style, so that we have a first iteration of what the art look of the rod will be").
+
 ## Status
 
 - 2026-11-19: `game/rod-titanium` merged into `game/fishing` (5d6813d4a). The coordinator resolved 17 conflicts:
