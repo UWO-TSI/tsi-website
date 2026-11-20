@@ -101,3 +101,9 @@ The December 20 plan (2026-11-19): UI packs (done, row 341), then **fishing**, t
 2. The SQL smoke chain.
 3. Shots of the merged rods in the new world, against what David approved on the rods pages.
 4. Then scope items 1 to 5, each through `/delegate`.
+
+## Christmas rods concept art, approved 2026-11-20
+- North Star: `art/pipeline/concepts/b/north-star/approved.webp`, round 7 take A. The crystal hand is coaxial with the rod, the star is white with a blue hue, and the line art is on the subject only. Takes C and D were also approved; A was called "looks good".
+- Candy Cane: `art/pipeline/concepts/b/candy-cane/approved.webp`, the reel-fix take B. The reel hangs under the rod, side-on.
+- Both made with gpt-image-2.6-sunburst edits, on flow C7WgY7cJR04g0sitR3VW.
+- Next: a blueprint for each (asset-pipeline §1.5), then the model.
