@@ -706,6 +706,215 @@ def tempest_a1():
     return rod, fx, {"rodFx": "tempest-a1"}, particles("#D6F8FF", "sparkle", every=0.05, size=0.075, rise=0.5)
 
 
+# ================================================================ the Christmas event (December 20 to January 6)
+def star_flat(pc, c, ro, ri, n, thick):
+    """A flat star of `n` points in the front plane at `c`, a point up, `ro` to its points and `ri` to its notches,
+    extruded by `thick` (0: one face). 8 vertices for four points, 10 for five."""
+    c = V(c)
+    rim = []
+    for i in range(2 * n):
+        a = math.pi / 2 + TAU * i / (2 * n)
+        r = ro if i % 2 == 0 else ri
+        rim.append(c + V((math.cos(a) * r, 0.0, math.sin(a) * r)))
+    front = [pc.v(p + V((0, -thick / 2, 0))) for p in rim]
+    back = [pc.v(p + V((0, thick / 2, 0))) for p in rim]
+    inner = [2 * j + 1 for j in range(n)]
+    for face in [front] if not thick else [front, back]:
+        for j in range(n - 2):                   # the notches' polygon, fanned from the first
+            pc.f([face[inner[0]], face[inner[j + 1]], face[inner[j + 2]]], c)
+        for j in range(n):                       # its points, a triangle each
+            pc.f([face[inner[j - 1]], face[2 * j], face[inner[j]]], c)
+    if thick:
+        for i in range(2 * n):
+            j = (i + 1) % (2 * n)
+            pc.f([front[i], front[j], back[j], back[i]], c)
+
+
+def fx_empty(name, at, **extras):
+    """An empty of an effect: a `Halo` reads `size` and `color`, the FX_ sockets mark where a later effect attaches. An
+    empty of a rod built before this one takes a suffix, so this one keeps the exact name in its own GLB."""
+    old = bpy.data.objects.get(name)
+    if old is not None:
+        old.name = f"{name}_prev"
+    e = bpy.data.objects.new(name, None)
+    e.empty_display_type = "PLAIN_AXES"
+    e.empty_display_size = 0.03
+    e.location = at
+    for k, v in extras.items():
+        e[k] = v
+    bpy.context.scene.collection.objects.link(e)
+    return e
+
+
+def north_star():
+    """Legendary, the Christmas event's limited rod (its approved sheet and blueprint; round 3: the crystal fingers cup
+    the star like a lotus, the star sits in the cup's mouth, and the rings are the rod's own gold). A staff of the north
+    star: a gold diamond for the pommel, a violet grip in two gold collars, a straight gold blank whose middle is a
+    violet crystal core, a gold head collar, six crystal blades opening into a cup widest at 60% of their height, and
+    the white star in the cup. The effect: the three gold rings orbiting the core (glow, spin) and the star's own glow
+    (glow, spin) in rodfx-north-star so they turn, a halo at the star, and the sockets for the star and the aura."""
+    HEAD_Z, HS = 0.851, 1.6                      # the head's collar foot: the collar scales about it
+    core_z = 0.38                                # the core's centre: the rings turn here
+    star_z = 0.984                               # the cup's widest height: the star sits in its mouth
+    tip = 1.042                                  # the fingertips, just above the star
+
+    def b(pc):
+        pc.mat = "Gold"                          # the pommel: a diamond point, both cones below the grip
+        lathe(pc, (0, 0, -0.189), [(0.0, -0.061), (0.034, 0.0), (0.0, 0.061)], n=6)
+        pc.mat = "Core"                          # the violet gem inset in the diamond's front face
+        pc.f([pc.v((math.cos(TAU * i / 6) * 0.011, -0.0335, -0.189 + math.sin(TAU * i / 6) * 0.011)) for i in range(6)], (0, 0, -0.189))
+        pc.mat = "Violet"                        # the grip, a six-sided tapered tube
+        loft(pc, [(0, 0, -0.128), (0, 0, -0.055), (0, 0, 0.055)], [0.0128, 0.0139, 0.0121], sides=6, tip=False, cap=True)
+        pc.mat = "Gold"                          # two collars above the grip
+        for z in (0.058, 0.093):
+            loft(pc, [(0, 0, z), (0, 0, z + 0.029)], [0.0172, 0.0172], sides=6, tip=False, cap=True)
+        pc.mat = "Gold"                          # the lower shaft, straight like a staff, thicker
+        loft(pc, [(0, 0, 0.118), (0, 0, 0.2), (0, 0, 0.29)], [0.0123, 0.0118, 0.0112], sides=6, tip=False, cap=True)
+        pc.mat = "Core"                          # the crystal section: twice as long and wider than the shaft
+        loft(pc, [(0, 0, 0.29), (0, 0, core_z), (0, 0, 0.47)], [0.0112, 0.0146, 0.0112], sides=6, tip=False, cap=True, phase=math.pi / 6)
+        pc.mat = "Gold"                          # the upper shaft
+        loft(pc, [(0, 0, 0.47), (0, 0, 0.66), (0, 0, HEAD_Z)], [0.0112, 0.0099, 0.008], sides=6, tip=False, cap=True)
+        pc.mat = "Gold"                          # the head collar
+        loft(pc, [(0, 0, HEAD_Z), (0, 0, HEAD_Z + HS * 0.028)], [0.0135 * HS, 0.0135 * HS], sides=6, tip=False, cap=True)
+        pc.mat = "Crystal"                       # six blades: out at 35 degrees, widest at 60% up, tips back in over the star
+        for k in range(6):
+            a = TAU * (k + 0.5) / 6
+            d = V((math.cos(a), math.sin(a), 0))
+            pc.tube([V((0, 0, z)) + d * r for z, r in ((0.902, 0.010), (0.940, 0.036), (0.965, 0.055), (star_z, 0.070),
+                                                       (1.005, 0.066), (1.025, 0.052), (tip, 0.035))],
+                    [0.005, 0.0085, 0.0105, 0.012, 0.011, 0.007, 0.0015], sides=3, tip=True, cap=False)
+        pc.mat = "Star"                          # the star in the cup's mouth
+        star_flat(pc, (0, 0, star_z), 0.030, 0.011, 4, 0.006)
+        line(pc, (0, -0.03, HEAD_Z + 0.01), lambda z: V((0, 0, z)), tip, "Star", ahead=-0.03, zs=(), tip=(0, -0.03, tip))
+    rod = model("rod-north-star", {"Gold": "#D9A24A", "Violet": "#4B2C6E", "Core": "#8E6BD8", "Crystal": "#B9D2F2", "Star": "#FFFFFF"}, b)
+
+    def fx_star(pc):                             # the star's glow: a star a little larger than the rod's
+        pc.mat = "Glow"
+        star_flat(pc, (0, 0, star_z), 0.042, 0.015, 4, 0.006)
+
+    def fx_rings(pc):                            # three open rings round the core, each tilted from the last
+        pc.mat = "Glow"
+        for r, tilt, a0 in ((0.05, 20, 0.3), (0.06, 50, 1.5), (0.07, 80, 2.9)):
+            t = math.radians(tilt)
+            pts = [V((math.cos(a) * r, math.sin(a) * r * math.cos(t), core_z + math.sin(a) * r * math.sin(t)))
+                   for a in (a0 + TAU * 0.92 * i / 10 for i in range(11))]
+            pc.tube(pts, [0.0063] * 11, sides=3, tip=True, cap=True)
+    fx = [glow("Star", "#CFE3FF", fx_star, pivot=(0, 0, star_z), spin=1.5),
+          glow("Rings", "#D9A24A", fx_rings, pivot=(0, 0, core_z), spin=0.8),
+          fx_empty("Halo", (0, 0, star_z), size=0.18 * HS, color="#CFE3FF"),
+          fx_empty("FX_Star", (0, 0, star_z)),
+          fx_empty("FX_Grip", (0, 0, 0))]
+    return rod, fx, {"rodFx": "north-star"}, {}
+
+
+def candy_cane():
+    """Rare (its approved sheet and blueprint; round 3: the stripes are a packed texture instead of face colours, so the
+    cane is 6-sided and light and the freed triangles go to a proper ribbon bow). A candy cane for a blank, red and
+    white in a spiral up a gently bowed cane that curls over at the tip, a green velvet grip between a gold end cap and
+    two gold collars, a ribbon bow on the grip's far side, three gold guides under the blank, a red reel with a gold
+    spool, a gold crank and jingle bell, and a gold star charm on a loop below the hook. The effect: two glints
+    twinkling beside the star (glow, pulse) and the sockets for the star, the bell and the aura."""
+    import numpy as np
+    L, top_z = 0.86, 0.78
+    bend = bender(L, bow=0.02)
+    R0, R1 = 0.0177, 0.0150                      # the cane's radius at its foot and at its tip
+    hook_c = bend(top_z) + V((0, -0.075, 0))      # the hook: a half circle of 0.075 over toward the front
+    hook_end = hook_c + V((0, -0.075, 0))
+    star_c = hook_end + V((0, 0, -0.05))          # the star charm, hanging just under the hook's end
+    bell = V((0.0465, -0.097, 0.006))
+    os.makedirs(os.path.join(TOOLS, "tex"), exist_ok=True)                 # the cane's stripes, 45 degrees, 8 px each
+    xs, ys = np.meshgrid(np.arange(64), np.arange(16))
+    rgba = np.zeros((16, 64, 4), np.float32)
+    rgba[..., :3] = np.where((((xs + ys) // 8) % 2)[..., None] > 0, (0xD0, 0x24, 0x1C), (0xF4, 0xEE, 0xE4))
+    rgba[..., :3] /= 255.0
+    rgba[..., 3] = 1.0
+    tex = kit.image("candy-stripe", rgba.astype(np.float32), path=os.path.join(TOOLS, "tex", "candy-stripe.png"))
+
+    def cane(pc, path, radii, sides, v0, ref=(0, 1, 0), tip=False):
+        """A tube with the cane's uv: u once round, v along it at 4 texture repeats per rig unit, from v0 on."""
+        path = [V(p) for p in path]
+        n = len(path)
+        v = [v0]
+        for i in range(n - 1):
+            v.append(v[-1] + (path[i + 1] - path[i]).length * 4.0)
+        rings = []
+        for i, (p, r) in enumerate(zip(path, radii)):
+            a = (path[min(i + 1, n - 1)] - path[max(i - 1, 0)]).normalized()
+            up = V(ref)
+            u = (up - a * up.dot(a)).normalized()
+            w = a.cross(u)
+            rings.append([pc.v(p + (u * math.cos(TAU * k / sides) + w * math.sin(TAU * k / sides)) * r) for k in range(sides)])
+        for i in range(n - 1):
+            for k in range(sides):
+                j = (k + 1) % sides
+                pc.f([rings[i][k], rings[i][j], rings[i + 1][j], rings[i + 1][k]], (path[i] + path[i + 1]) / 2,
+                     uv=[(k / sides, v[i]), ((k + 1) / sides, v[i]), ((k + 1) / sides, v[i + 1]), (k / sides, v[i + 1])])
+        if tip:
+            end = pc.v(path[-1] + (path[-1] - path[-2]).normalized() * radii[-1] * 1.6)
+            for k in range(sides):
+                pc.f([rings[-1][k], rings[-1][(k + 1) % sides], end], path[-1],
+                     uv=[(k / sides, v[-1]), ((k + 1) / sides, v[-1]), ((k + 0.5) / sides, v[-1] + radii[-1] * 4)])
+        return v[-1]
+
+    def b(pc):
+        pc.mat = "Gold"                          # the end cap and the grip in one tube, gold below the green
+        loft(pc, [(0, 0, -0.166), (0, 0, -0.12), (0, 0, 0.05)], [0.0235, 0.0235, 0.0212], sides=5,
+             mat=lambda i, k: "Green" if i else "Gold", tip=False, cap=True)
+        pc.mat = "Gold"                          # two gold collars with a thin green stripe between
+        loft(pc, [(0, 0, 0.05), (0, 0, 0.062), (0, 0, 0.07), (0, 0, 0.088)], [0.026, 0.026, 0.0254, 0.0254], sides=4,
+             mat=lambda i, k: "Green" if i == 1 else "Gold", tip=False, cap=False)
+        pc.mat = "Cane"                          # the cane, bowed a touch toward the front, and its hook
+        zs = [0.065 + (top_z - 0.065) * i / 9 for i in range(10)]
+        rad = lambda z: R0 + (R1 - R0) * (z - 0.065) / (top_z - 0.065)
+        vend = cane(pc, [bend(z) for z in zs], [rad(z) for z in zs], 6, 0.0)
+        hs = [hook_c + V((0, math.cos(math.pi * i / 7) * 0.075, math.sin(math.pi * i / 7) * 0.075)) for i in range(8)]
+        cane(pc, hs, [R1] * 8, 6, vend, ref=(1, 0, 0), tip=True)
+        pc.mat = "Gold"                          # three guide rings on the blank's underside
+        for z in (0.2, 0.36, 0.52):
+            c = bend(z) + V((0, -(rad(z) + 0.0072), 0))
+            pc.tube([c + V((math.cos(math.pi / 2 + TAU * i / 3) * 0.008, math.sin(math.pi / 2 + TAU * i / 3) * 0.008, 0)) for i in range(3)],
+                    [0.0022] * 3, sides=4, closed_loop=True)
+        pc.mat = "Red"                           # the bow: two flattened ring loops tilted out
+        for s in (-1, 1):
+            rot = Matrix.Rotation(math.radians(30) * s, 3, "Z")
+            c = V((s * 0.024, 0.042, 0.03))
+            pc.tube([c + rot @ V((math.cos(TAU * i / 6) * 0.022, 0, math.sin(TAU * i / 6) * 0.022)) for i in range(6)],
+                    [(0.006, 0.004)] * 6, sides=4, closed_loop=True, up=(0, 1, 0))
+        for s in (-1, 1):                        # its two flat tapered ribbons, about 0.05 long
+            base, tip_ = V((s * 0.006, 0.036, 0.018)), V((s * 0.018, 0.03, -0.032))
+            pc.f([pc.v(base + V((-0.007, 0, 0))), pc.v(base + V((0.007, 0, 0))),
+                  pc.v(tip_ + V((0.003, 0, 0))), pc.v(tip_ + V((-0.003, 0, 0)))], (0, 0, 0))
+        pc.mat = "Gold"                          # the star on the knot
+        star_flat(pc, (0, 0.05, 0.03), 0.013, 0.005, 4, 0.003)
+        pc.mat = "Gold"                          # the reel's foot
+        pc.tube([(0, -0.01, 0.03), (0, -0.064, 0.03)], [0.0075, 0.0075], sides=3, tip=False, cap=False)
+        pc.mat = "Red"                           # the reel's body: a six-sided cylinder
+        pc.tube([(0, -0.062, 0.03), (0, -0.086, 0.03)], [0.039, 0.039], sides=6, tip=False, cap=True)
+        pc.mat = "Gold"                          # the spool on its face, the crank and the jingle bell
+        lathe(pc, (0, -0.09, 0.03), [(0.0, 0.0), (0.024, 0.0)], n=6, axis=(0, -1, 0))
+        pc.tube([(0.027, -0.097, 0.039), (0.045, -0.097, 0.012)], [0.006, 0.006], sides=3, tip=False, cap=False)
+        pc.blob(bell, 0.0135, segs=3, rings=2)
+        pc.mat = "Gold"                          # the star charm on its loop, hanging from the hook's end
+        pc.tube([hook_end + V((math.cos(math.pi / 2 + TAU * i / 3) * 0.012, 0, math.sin(math.pi / 2 + TAU * i / 3) * 0.012 - 0.012))
+                 for i in range(3)], [0.0022] * 3, sides=3, closed_loop=True)
+        star_flat(pc, star_c, 0.026, 0.011, 5, 0.006)
+    rod = model("rod-candy-cane", {"Cane": "#D0241C", "Red": "#D0241C", "Green": "#1F5A34", "Gold": "#E2A93A", "Line": "#F1EAD8"}, b)
+    mat = bpy.data.materials["rod-candy-cane_Cane"]                # the packed stripes on the cane's uv
+    node = mat.node_tree.nodes.new("ShaderNodeTexImage")
+    node.image = tex
+    mat.node_tree.links.new(node.outputs["Color"], next(n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED").inputs["Base Color"])
+
+    def twinkle(pc):                             # two tiny glints beside the star
+        pc.mat = "Glow"
+        star_flat(pc, star_c + V((-0.036, -0.004, 0.016)), 0.013, 0.004, 4, 0.0)
+        star_flat(pc, star_c + V((0.034, -0.004, -0.012)), 0.01, 0.003, 4, 0.0)
+    fx = [glow("Twinkle", "#FFE7A3", twinkle, pivot=tuple(star_c), pulse=0.22),
+          fx_empty("FX_Star", tuple(star_c)),
+          fx_empty("FX_Bell", tuple(bell)),
+          fx_empty("FX_Grip", (0, 0, 0))]
+    return rod, fx, {"rodFx": "candy-cane"}, {}
+
+
 # ================================================================ the Titanium (rod-titanium round 3)
 # David 2026-11-13 (Rods Titanium 2 review): "the texture for the material is not right, it should be titanium look and
 # the rainbow glow should work like a texture and should still show that its the metal steel color, just when its hit
@@ -947,10 +1156,12 @@ def titanium_a1():
 # ================================================================ build
 ROD_FILES = {"carrot": "rod-carrot", "precision": "rod-precision", "training": "rod-training", "cedar": "rod-2", "glass": "rod-3",
              "riptide": "rod-riptide", "tidewarden": "rod-5", "tempest": "rod-tempest", "titanium": "rod-titanium",
-             "titanium-a1": "rod-titanium-a1", "tidewarden-a1": "rod-tidewarden-a1", "tempest-a1": "rod-tempest-a1"}
+             "titanium-a1": "rod-titanium-a1", "tidewarden-a1": "rod-tidewarden-a1", "tempest-a1": "rod-tempest-a1",
+             "north-star": "rod-north-star", "candy-cane": "rod-candy-cane"}
 BUILD = {"carrot": carrot, "precision": precision, "training": training, "cedar": cedar, "glass": glass,
          "riptide": riptide, "tidewarden": tidewarden, "tempest": tempest, "titanium": titanium,
-         "titanium-a1": titanium_a1, "tidewarden-a1": lambda: tidewarden(True), "tempest-a1": tempest_a1}
+         "titanium-a1": titanium_a1, "tidewarden-a1": lambda: tidewarden(True), "tempest-a1": tempest_a1,
+         "north-star": north_star, "candy-cane": candy_cane}
 only = ARGS[ARGS.index("only") + 1].split(",") if "only" in ARGS else list(BUILD)
 for name in only:
     out = BUILD[name]()
