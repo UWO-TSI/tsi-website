@@ -1,0 +1,67 @@
+{
+  "name": "Candy Cane",
+  "rarity": "rare",
+  "asset_text": "A candy cane fishing rod: a red and white striped shaft that curls into a hook at the tip, with a gold star hanging from the hook. A dark green velvet grip with a gold end cap and a big red ribbon bow. A red and gold spinning reel hangs under the rod above the grip, with a small gold jingle bell on its crank. Matches the reference image's design.",
+  "views": [
+    {
+      "file": "hero",
+      "view_line": "Canvas 1:1. Three-quarter: the item lies on a diagonal from lower left to upper right at 30 degrees, the camera 25 degrees above. Gentle perspective.",
+      "canvas": "1:1",
+      "ortho": false
+    },
+    {
+      "file": "profile",
+      "view_line": "Canvas 16:9. Orthographic side view of the side with the most detail (a rod's reel side, a fish's left side).",
+      "canvas": "16:9",
+      "ortho": true
+    },
+    {
+      "file": "top",
+      "view_line": "Canvas 16:9. Orthographic, straight down.",
+      "canvas": "16:9",
+      "ortho": true
+    },
+    {
+      "file": "bottom",
+      "view_line": "Canvas 16:9. Orthographic, straight up.",
+      "canvas": "16:9",
+      "ortho": true
+    },
+    {
+      "file": "end-grip",
+      "view_line": "Canvas 1:1. Orthographic, looking along the long axis at the grip (head) end.",
+      "canvas": "1:1",
+      "ortho": true
+    },
+    {
+      "file": "end-tip",
+      "view_line": "Canvas 1:1. Orthographic, looking at the tip (tail) end.",
+      "canvas": "1:1",
+      "ortho": true
+    },
+    {
+      "file": "detail-1",
+      "view_line": "Canvas 1:1. Close-up of the reel with its bell crank, straight on, filling 80%.",
+      "canvas": "1:1",
+      "ortho": false
+    },
+    {
+      "file": "detail-2",
+      "view_line": "Canvas 1:1. Close-up of the red bow on the grip, straight on, filling 80%.",
+      "canvas": "1:1",
+      "ortho": false
+    },
+    {
+      "file": "detail-3",
+      "view_line": "Canvas 1:1. Close-up of the hook tip with the hanging star, straight on, filling 80%.",
+      "canvas": "1:1",
+      "ortho": false
+    },
+    {
+      "file": "exploded",
+      "view_line": "Canvas 16:9. The profile view, orthographic. The parts slid apart along the long axis with even gaps; parts that sit on the side (a reel, fins) pulled straight out above or below their seat.",
+      "canvas": "16:9",
+      "ortho": true
+    }
+  ]
+}

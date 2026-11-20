@@ -1,0 +1,67 @@
+{
+  "name": "North Star",
+  "rarity": "legendary",
+  "asset_text": "A slim gold rod. Gold rings orbit a dark violet section in the middle of the shaft. The grip is wrapped in dark violet with a gold diamond pommel. At the tip, a gold collar holds five slender ice-blue crystal fingers that curve forward like an opening lotus, cupping a bright white star with a pale blue glow on the rod's axis. Matches the reference image's design.",
+  "views": [
+    {
+      "file": "hero",
+      "view_line": "Canvas 1:1. Three-quarter: the item lies on a diagonal from lower left to upper right at 30 degrees, the camera 25 degrees above. Gentle perspective.",
+      "canvas": "1:1",
+      "ortho": false
+    },
+    {
+      "file": "profile",
+      "view_line": "Canvas 16:9. Orthographic side view of the side with the most detail (a rod's reel side, a fish's left side).",
+      "canvas": "16:9",
+      "ortho": true
+    },
+    {
+      "file": "top",
+      "view_line": "Canvas 16:9. Orthographic, straight down.",
+      "canvas": "16:9",
+      "ortho": true
+    },
+    {
+      "file": "bottom",
+      "view_line": "Canvas 16:9. Orthographic, straight up.",
+      "canvas": "16:9",
+      "ortho": true
+    },
+    {
+      "file": "end-grip",
+      "view_line": "Canvas 1:1. Orthographic, looking along the long axis at the grip (head) end.",
+      "canvas": "1:1",
+      "ortho": true
+    },
+    {
+      "file": "end-tip",
+      "view_line": "Canvas 1:1. Orthographic, looking at the tip (tail) end.",
+      "canvas": "1:1",
+      "ortho": true
+    },
+    {
+      "file": "detail-1",
+      "view_line": "Canvas 1:1. Close-up of the crystal hand and star head, straight on, filling 80%.",
+      "canvas": "1:1",
+      "ortho": false
+    },
+    {
+      "file": "detail-2",
+      "view_line": "Canvas 1:1. Close-up of the gold ring cluster mid-shaft, straight on, filling 80%.",
+      "canvas": "1:1",
+      "ortho": false
+    },
+    {
+      "file": "detail-3",
+      "view_line": "Canvas 1:1. Close-up of the grip and pommel, straight on, filling 80%.",
+      "canvas": "1:1",
+      "ortho": false
+    },
+    {
+      "file": "exploded",
+      "view_line": "Canvas 16:9. The profile view, orthographic. The parts slid apart along the long axis with even gaps; parts that sit on the side (a reel, fins) pulled straight out above or below their seat.",
+      "canvas": "16:9",
+      "ortho": true
+    }
+  ]
+}
