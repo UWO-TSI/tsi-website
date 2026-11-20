@@ -2,7 +2,8 @@ import { cookies, headers } from "next/headers";
 import type { User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { PASS_COOKIE, passFromSecret, passOfUser, savePass, type Pass } from "./pass";
+import { NextResponse } from "next/server";
+import { createPass, PASS_COOKIE, PASS_COOKIE_OPTIONS, passFromSecret, passOfUser, savePass, type Pass } from "./pass";
 import { passHref } from "./paths";
 
 /**
@@ -23,4 +24,22 @@ export async function saveAfterSignIn(db: ReturnType<typeof createAdminClient>, 
   const device = await passFromSecret(db, jar.get(PASS_COOKIE)?.value);
   const { merged } = await savePass(db, device, user.id);
   if (merged) jar.delete(PASS_COOKIE);
+}
+
+/**
+ * For the tap routes (front desk, booth sticker, photo QR): the request's pass, made on the spot when the phone has none
+ * and nobody is signed in. `secret` is set only for a new pass, for the caller to put in the cookie on its redirect.
+ */
+export async function passForTap(): Promise<{ db: ReturnType<typeof createAdminClient>; pass: Pass | null; secret: string | null; href: (p?: string) => string }> {
+  const ctx = await passContext();
+  if (ctx.pass) return { ...ctx, secret: null };
+  const made = await createPass(ctx.db);
+  return { ...ctx, pass: made?.pass ?? null, secret: made?.secret ?? null };
+}
+
+/** A redirect from a tap route, carrying a new pass's cookie. */
+export function tapRedirect(request: Request, path: string, secret: string | null) {
+  const res = NextResponse.redirect(new URL(path, request.url));
+  if (secret) res.cookies.set(PASS_COOKIE, secret, PASS_COOKIE_OPTIONS);
+  return res;
 }

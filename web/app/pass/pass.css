@@ -20,3 +20,4 @@
 .gp-list span { color: rgba(241,255,255,0.5); font-size: 14px; }
 .gp-banner { border-radius: 14px; padding: 14px 16px; background: rgba(29,155,240,0.16); border: 1px solid rgba(29,155,240,0.5); margin-bottom: 18px; animation: gp-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
 @keyframes gp-pop { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+.gp-photo { display: block; width: 100%; border-radius: 18px; background: #16171a; }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BOOTHS } from "@/lib/genesis/booths";
-import { stampsOf } from "@/lib/genesis/pass";
+import { photosOf, stampsOf } from "@/lib/genesis/pass";
 import { passContext } from "@/lib/genesis/server";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function PassHome({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
   const { db, pass, href } = await passContext();
   const stamps = pass ? await stampsOf(db, pass.id) : [];
+  const photos = pass ? await photosOf(db, pass.id) : [];
   const { welcome } = await searchParams;
   return (
     <>
@@ -35,6 +36,14 @@ export default async function PassHome({ searchParams }: { searchParams: Promise
           <Link href={href("/start")} className="gp-btn">Start my pass</Link>
           <p style={{ marginTop: 14 }}><Link href={href("/me")}>Saved your pass before? Sign in</Link></p>
         </section>
+      )}
+      {photos.length > 0 && (
+        <>
+          <h2>Your photos</h2>
+          <ul className="gp-list">
+            {photos.map((id, i) => <li key={id}><Link href={href(`/photo/${id}`)}>Photobooth {i + 1}<span>→</span></Link></li>)}
+          </ul>
+        </>
       )}
       <h2>The projects</h2>
       <ul className="gp-list">

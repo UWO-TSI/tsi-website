@@ -69,9 +69,29 @@ export async function savePass(db: SupabaseClient, device: Pass | null, userId: 
     return { pass: { ...mine, user_id: userId }, merged: false };
   }
   for (const booth of await stampsOf(db, mine.id)) await db.from("genesis_stamps").insert({ pass_id: owned.id, booth });
+  const { data: saves } = await db.from("genesis_photo_saves").select("photo_id").eq("pass_id", mine.id);
+  for (const r of saves ?? []) await db.from("genesis_photo_saves").insert({ pass_id: owned.id, photo_id: (r as { photo_id: string }).photo_id });
   const { data: arrived } = await db.from("genesis_arrivals").select("pass_id").eq("pass_id", mine.id);
   if (arrived?.length) await arrive(db, owned.id);
   if (!owned.name && mine.name) await setName(db, owned.id, mine.name);
   await db.from("genesis_passes").delete().eq("id", mine.id);
   return { pass: { ...owned, name: owned.name ?? mine.name }, merged: true };
+}
+
+/** A photobooth photo id: 10 lowercase letters and digits, made on the booth laptop. */
+export const PHOTO_ID = /^[a-z0-9]{10}$/;
+
+/** A photo QR opened: "saved" the first time, "already" after, "unknown" for an id the booth never uploaded. */
+export async function savePhoto(db: SupabaseClient, passId: string, photoId: string): Promise<"saved" | "already" | "unknown" | "error"> {
+  if (!PHOTO_ID.test(photoId)) return "unknown";
+  const { data } = await db.from("genesis_photos").select("id").eq("id", photoId).maybeSingle();
+  if (!data) return "unknown";
+  const { error } = await db.from("genesis_photo_saves").insert({ pass_id: passId, photo_id: photoId });
+  if (!error) return "saved";
+  return error.code === "23505" ? "already" : "error";
+}
+
+export async function photosOf(db: SupabaseClient, passId: string): Promise<string[]> {
+  const { data } = await db.from("genesis_photo_saves").select("photo_id").eq("pass_id", passId);
+  return (data ?? []).map((r) => (r as { photo_id: string }).photo_id);
 }
