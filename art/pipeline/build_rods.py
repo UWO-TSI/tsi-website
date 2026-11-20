@@ -707,17 +707,19 @@ def tempest_a1():
 
 
 # ================================================================ the Christmas event (December 20 to January 6)
-def star_flat(pc, c, ro, ri, n, thick):
+def star_flat(pc, c, ro, ri, n, thick, rot=None):
     """A flat star of `n` points in the front plane at `c`, a point up, `ro` to its points and `ri` to its notches,
-    extruded by `thick` (0: one face). 8 vertices for four points, 10 for five."""
+    extruded by `thick` (0: one face), turned about `c` by the 3x3 matrix `rot`. 8 vertices for four points."""
     c = V(c)
+    R = rot if rot is not None else Matrix.Identity(3)
     rim = []
     for i in range(2 * n):
         a = math.pi / 2 + TAU * i / (2 * n)
         r = ro if i % 2 == 0 else ri
-        rim.append(c + V((math.cos(a) * r, 0.0, math.sin(a) * r)))
-    front = [pc.v(p + V((0, -thick / 2, 0))) for p in rim]
-    back = [pc.v(p + V((0, thick / 2, 0))) for p in rim]
+        rim.append(c + R @ V((math.cos(a) * r, 0.0, math.sin(a) * r)))
+    off = R @ V((0, thick / 2, 0))
+    front = [pc.v(p - off) for p in rim]
+    back = [pc.v(p + off) for p in rim]
     inner = [2 * j + 1 for j in range(n)]
     for face in [front] if not thick else [front, back]:
         for j in range(n - 2):                   # the notches' polygon, fanned from the first
@@ -747,96 +749,153 @@ def fx_empty(name, at, **extras):
 
 
 def north_star():
-    """Legendary, the Christmas event's limited rod (its approved sheet and blueprint; round 3: the crystal fingers cup
-    the star like a lotus, the star sits in the cup's mouth, and the rings are the rod's own gold). A staff of the north
-    star: a gold diamond for the pommel, a violet grip in two gold collars, a straight gold blank whose middle is a
-    violet crystal core, a gold head collar, six crystal blades opening into a cup widest at 60% of their height, and
-    the white star in the cup. The effect: the three gold rings orbiting the core (glow, spin) and the star's own glow
-    (glow, spin) in rodfx-north-star so they turn, a halo at the star, and the sockets for the star and the aura."""
-    HEAD_Z, HS = 0.851, 1.6                      # the head's collar foot: the collar scales about it
-    core_z = 0.38                                # the core's centre: the rings turn here
-    star_z = 0.984                               # the cup's widest height: the star sits in its mouth
-    tip = 1.042                                  # the fingertips, just above the star
+    """Legendary, the Christmas event's limited rod (its approved sheet; round 5, rebuilt to the sheet's measured profile
+    column by column): a gold spear point for the pommel with a violet gem, a wrapped grip between collars, a thin gold
+    staff, a violet faceted core ringed by four gold bands and two gold crescent flares, and a round crystal tulip bulb of
+    six gold-rimmed shell petals with the star glowing in its open mouth. The effect holds the star (glow, white) with a
+    halo, and the rings as a lit part that turns (spin 0.6), so the rod mesh is the rod alone."""
+    F = lambda f: (f - 0.16) * 1.115             # the sheet's stations: 0 at the pommel tip, 1 at the head top
+    W = lambda w: w * 0.5575                     # the sheet's width (diameter over length) to a rig radius
+    star_z = F(0.912)
+    # each row: station, radius (rig), half width (degrees): a pointed petal, narrow at the collar, widest at the bulb's
+    # belly, curling in to a point at the mouth, with gaps between the six so it reads as petals, not a cup
+    PETALS = [(0.845, 0.010, 7), (0.858, 0.050, 13), (0.876, 0.078, 15), (0.898, 0.084, 13), (0.922, 0.076, 9), (0.948, 0.056, 1.5)]
+
+    def band(pc, cz, r, a0, a1, n, tilt, axis="X", closed=False):
+        """A gold band of a flat rectangular section (0.014 wide, 0.004 thick) round the axis at cz, its plane tilted
+        `tilt` about `axis`, from a0 to a1."""
+        t, w = 0.006, 0.009
+        R = Matrix.Rotation(math.radians(tilt), 3, axis)
+        nr = R @ V((0, 0, 1))
+        rings, mids = [], []
+        for i in range(n + (0 if closed else 1)):
+            a = a0 + (a1 - a0) * i / n
+            d = R @ V((math.cos(a), math.sin(a), 0))
+            c = V((0, 0, cz)) + d * r
+            mids.append(c)
+            rings.append([pc.v(c + d * (-w / 2) + nr * (-t / 2)), pc.v(c + d * (w / 2) + nr * (-t / 2)),
+                          pc.v(c + d * (w / 2) + nr * (t / 2)), pc.v(c + d * (-w / 2) + nr * (t / 2))])
+        for ia in range(len(rings) - (0 if closed else 1)):
+            a_, b_ = rings[ia], rings[(ia + 1) % len(rings)]
+            ref = (mids[ia] + mids[(ia + 1) % len(mids)]) / 2
+            for k in range(4):
+                pc.f([a_[k], a_[(k + 1) % 4], b_[(k + 1) % 4], b_[k]], ref)
+        if not closed:
+            pc.f(rings[0], mids[1])
+            pc.f(rings[-1], mids[-2])
+
+    def petal(pc, a0, k=1.0, rim=True):
+        """One pointed petal of the head: 6 rows of 3 points (edge, spine, edge), the spine bulging out a little so each
+        petal has a ridge down its middle; its two long edges rimmed in gold."""
+        grid = []
+        for f, r, hw in PETALS:
+            r, f = r * k, 0.845 + (f - 0.845) * k
+            h = math.radians(hw)
+            row = [pc.v((r * math.cos(a0 + d), r * math.sin(a0 + d), F(f))) for d in (-h, h)]
+            row.insert(1, pc.v((r * 1.08 * math.cos(a0), r * 1.08 * math.sin(a0), F(f))))
+            grid.append(row)
+        pc.mat = "Crystal"
+        for i in range(len(PETALS) - 1):
+            ref = (0, 0, (F(PETALS[i][0]) + F(PETALS[i + 1][0])) / 2)
+            for k in range(2):
+                pc.f([grid[i][k], grid[i][k + 1], grid[i + 1][k + 1], grid[i + 1][k]], ref)
+        pc.mat = "Gold"
+        for k in ((0, 2) if rim else ()):
+            pc.tube([grid[i][k].co for i in range(len(PETALS))], [0.0016] * len(PETALS), sides=3, tip=False, cap=False)
 
     def b(pc):
-        pc.mat = "Gold"                          # the pommel: a diamond point, both cones below the grip
-        lathe(pc, (0, 0, -0.189), [(0.0, -0.061), (0.034, 0.0), (0.0, 0.061)], n=6)
-        pc.mat = "Core"                          # the violet gem inset in the diamond's front face
-        pc.f([pc.v((math.cos(TAU * i / 6) * 0.011, -0.0335, -0.189 + math.sin(TAU * i / 6) * 0.011)) for i in range(6)], (0, 0, -0.189))
-        pc.mat = "Violet"                        # the grip, a six-sided tapered tube
-        loft(pc, [(0, 0, -0.128), (0, 0, -0.055), (0, 0, 0.055)], [0.0128, 0.0139, 0.0121], sides=6, tip=False, cap=True)
-        pc.mat = "Gold"                          # two collars above the grip
-        for z in (0.058, 0.093):
-            loft(pc, [(0, 0, z), (0, 0, z + 0.029)], [0.0172, 0.0172], sides=6, tip=False, cap=True)
-        pc.mat = "Gold"                          # the lower shaft, straight like a staff, thicker
-        loft(pc, [(0, 0, 0.118), (0, 0, 0.2), (0, 0, 0.29)], [0.0123, 0.0118, 0.0112], sides=6, tip=False, cap=True)
-        pc.mat = "Core"                          # the crystal section: twice as long and wider than the shaft
-        loft(pc, [(0, 0, 0.29), (0, 0, core_z), (0, 0, 0.47)], [0.0112, 0.0146, 0.0112], sides=6, tip=False, cap=True, phase=math.pi / 6)
-        pc.mat = "Gold"                          # the upper shaft
-        loft(pc, [(0, 0, 0.47), (0, 0, 0.66), (0, 0, HEAD_Z)], [0.0112, 0.0099, 0.008], sides=6, tip=False, cap=True)
-        pc.mat = "Gold"                          # the head collar
-        loft(pc, [(0, 0, HEAD_Z), (0, 0, HEAD_Z + HS * 0.028)], [0.0135 * HS, 0.0135 * HS], sides=6, tip=False, cap=True)
-        pc.mat = "Crystal"                       # six blades: out at 35 degrees, widest at 60% up, tips back in over the star
-        for k in range(6):
-            a = TAU * (k + 0.5) / 6
-            d = V((math.cos(a), math.sin(a), 0))
-            pc.tube([V((0, 0, z)) + d * r for z, r in ((0.902, 0.010), (0.940, 0.036), (0.965, 0.055), (star_z, 0.070),
-                                                       (1.005, 0.066), (1.025, 0.052), (tip, 0.035))],
-                    [0.005, 0.0085, 0.0105, 0.012, 0.011, 0.007, 0.0015], sides=3, tip=True, cap=False)
-        pc.mat = "Star"                          # the star in the cup's mouth
-        star_flat(pc, (0, 0, star_z), 0.030, 0.011, 4, 0.006)
-        line(pc, (0, -0.03, HEAD_Z + 0.01), lambda z: V((0, 0, z)), tip, "Star", ahead=-0.03, zs=(), tip=(0, -0.03, tip))
-    rod = model("rod-north-star", {"Gold": "#D9A24A", "Violet": "#4B2C6E", "Core": "#8E6BD8", "Crystal": "#B9D2F2", "Star": "#FFFFFF"}, b)
+        pc.mat = "GoldDeep"                      # the pommel: a 4-sided spear point, widest at f 0.075
+        loft(pc, [(0, 0, F(0.0)), (0, 0, F(0.035)), (0, 0, F(0.065)), (0, 0, F(0.102))], [0.0004, W(0.008), W(0.034), W(0.012)], sides=4, tip=False, cap=False)
+        pc.mat = "Core"                          # the violet gem at its widest point on the -Y face
+        pc.f([pc.v((-W(0.034) * 0.72, math.cos(TAU * i / 6) * 0.0075, F(0.065) + math.sin(TAU * i / 6) * 0.011)) for i in range(6)],
+             (-1, 0, F(0.065)))
+        pc.mat = "GoldDeep"                      # the collar
+        loft(pc, [(0, 0, F(0.10)), (0, 0, F(0.125))], [W(0.021), W(0.021)], sides=8, tip=False, cap=False)
+        pc.mat = "Grip"                           # the grip, wrapped
+        loft(pc, [(0, 0, F(0.125)), (0, 0, F(0.19))], [W(0.017), W(0.017)], sides=6, tip=False, cap=False)
+        pc.mat = "GoldDeep"                      # the collar knob: two stacked rings
+        for f in (0.19, 0.222):                  # two slim gold rings with a violet band between
+            loft(pc, [(0, 0, F(f)), (0, 0, F(f + 0.012))], [W(0.026), W(0.026)], sides=8, tip=False, cap=False)
+        pc.mat = "Grip"
+        loft(pc, [(0, 0, F(0.202)), (0, 0, F(0.222))], [W(0.018), W(0.018)], sides=8, tip=False, cap=False)
+        pc.mat = "GoldDeep"
+        loft(pc, [(0, 0, F(0.234)), (0, 0, F(0.242))], [W(0.014), W(0.012)], sides=8, tip=False, cap=False)
+        pc.mat = "Gold"                          # the shaft, through the core cluster
+        loft(pc, [(0, 0, F(0.24)), (0, 0, F(0.325))], [W(0.009), W(0.009)], sides=6, tip=False, cap=False)
+        loft(pc, [(0, 0, F(0.325)), (0, 0, F(0.55))], [W(0.009), W(0.009)], sides=6, tip=False, cap=False)
+        pc.mat = "Core"                          # the faceted violet core
+        loft(pc, [(0, 0, F(0.40)), (0, 0, F(0.435)), (0, 0, F(0.47))], [W(0.020), W(0.025), W(0.020)], sides=6, tip=False,
+             cap=False, phase=math.pi / 6)
+        pc.mat = "Gold"                          # its gold caps
+        for f in (0.40, 0.47):
+            lathe(pc, (0, 0, F(f)), [(0.013, -0.004), (0.013, 0.004)], n=4)
+        loft(pc, [(0, 0, F(0.55)), (0, 0, F(0.818))], [W(0.008), W(0.008)], sides=6, tip=False, cap=False)
+        pc.mat = "GoldDeep"                      # gold knobs either side of the ring cluster, as on the sheet
+        for f in (0.33, 0.56):
+            lathe(pc, (0, 0, F(f)), [(0.006, -0.008), (0.011, -0.004), (0.011, 0.004), (0.006, 0.008)], n=6)
+        pc.mat = "GoldDeep"                      # the head collar, a flared cup
+        loft(pc, [(0, 0, F(0.815)), (0, 0, F(0.83)), (0, 0, F(0.845))], [0.006, 0.0105, 0.0085], sides=8, tip=False, cap=False)
+        for k in range(6):                       # the tulip bulb: six outer petals, and six shorter inner ones between them
+            petal(pc, TAU * k / 6)
+            petal(pc, TAU * (k + 0.5) / 6, k=0.72, rim=False)
+    rod = model("rod-north-star", {"Gold": "#D3912F", "GoldDeep": "#A8611F", "Grip": "#3E2560", "Core": "#9C6FE0",
+                                   "Crystal": "#8F9CF0"}, b)
 
-    def fx_star(pc):                             # the star's glow: a star a little larger than the rod's
-        pc.mat = "Glow"
-        star_flat(pc, (0, 0, star_z), 0.042, 0.015, 4, 0.006)
+    def rings_build(pc):                         # the four bands and two crescents, gold, as a lit part of the effect
+        pc.mat = "Gold"
+        for f, w, tilt, axis in ((0.36, 0.052, 12, "Y"), (0.395, 0.032, 0, "X"), (0.44, 0.068, -22, "Y"), (0.478, 0.032, 0, "X"), (0.50, 0.082, 26, "Y"), (0.535, 0.046, -10, "Y")):
+            band(pc, F(f), W(w * 1.25), 0.0, TAU, 14, tilt, axis=axis, closed=True)
+        for f, a0, tilt, axis in ((0.38, 0.6, 30, "Y"), (0.465, 3.6, -30, "Y")):
+            band(pc, F(f), W(0.09), a0, a0 + TAU * 7 / 12, 9, tilt, axis=axis)
 
-    def fx_rings(pc):                            # three open rings round the core, each tilted from the last
+    def fx_star(pc):                             # the star in the bulb's mouth
         pc.mat = "Glow"
-        for r, tilt, a0 in ((0.05, 20, 0.3), (0.06, 50, 1.5), (0.07, 80, 2.9)):
-            t = math.radians(tilt)
-            pts = [V((math.cos(a) * r, math.sin(a) * r * math.cos(t), core_z + math.sin(a) * r * math.sin(t)))
-                   for a in (a0 + TAU * 0.92 * i / 10 for i in range(11))]
-            pc.tube(pts, [0.0063] * 11, sides=3, tip=True, cap=True)
-    fx = [glow("Star", "#CFE3FF", fx_star, pivot=(0, 0, star_z), spin=1.5),
-          glow("Rings", "#D9A24A", fx_rings, pivot=(0, 0, core_z), spin=0.8),
-          fx_empty("Halo", (0, 0, star_z), size=0.18 * HS, color="#CFE3FF"),
+        star_flat(pc, (0, 0, star_z), 0.042, 0.011, 4, 0.008)
+    fx = [glow("Star", "#FFFFFF", fx_star, pivot=(0, 0, star_z), spin=1.5),
+          fx_part("Rings", {"Gold": "#D3912F"}, rings_build, spin=0.6),
+          fx_empty("Halo", (0, 0, star_z), size=0.18, color="#CFE3FF"),
           fx_empty("FX_Star", (0, 0, star_z)),
           fx_empty("FX_Grip", (0, 0, 0))]
     return rod, fx, {"rodFx": "north-star"}, {}
 
 
 def candy_cane():
-    """Rare (its approved sheet and blueprint; round 3: the stripes are a packed texture instead of face colours, so the
-    cane is 6-sided and light and the freed triangles go to a proper ribbon bow). A candy cane for a blank, red and
-    white in a spiral up a gently bowed cane that curls over at the tip, a green velvet grip between a gold end cap and
-    two gold collars, a ribbon bow on the grip's far side, three gold guides under the blank, a red reel with a gold
-    spool, a gold crank and jingle bell, and a gold star charm on a loop below the hook. The effect: two glints
-    twinkling beside the star (glow, pulse) and the sockets for the star, the bell and the aura."""
+    """Rare, the Christmas event's reward (its approved sheet; round 6 rebuilt to the sheet's measured profile): a gold
+    finial spike, a red band between gold rings, a dark green grip wound in a raised spiral, a gold and green fore
+    collar, a bowed cane in bold red and white spiral stripes (the packed Cane texture, wound so the stripes run at 45
+    degrees), a tight curl at the tip, a red and gold reel with a Line spool of wound line, a red ribbon bow with a gold
+    star knot on the grip's camera side, three gold guides under the cane, and a gold star charm on a chain below the
+    hook, the cream line threading the reel, the guides and the hook."""
     import numpy as np
-    L, top_z = 0.86, 0.78
-    bend = bender(L, bow=0.02)
-    R0, R1 = 0.0177, 0.0150                      # the cane's radius at its foot and at its tip
-    hook_c = bend(top_z) + V((0, -0.075, 0))      # the hook: a half circle of 0.075 over toward the front
-    hook_end = hook_c + V((0, -0.075, 0))
-    star_c = hook_end + V((0, 0, -0.05))          # the star charm, hanging just under the hook's end
-    bell = V((0.0465, -0.097, 0.006))
+    F = lambda f: (f - 0.18) * 0.985             # the sheet's stations: 0 at the finial tip, 1 at the hook's top
+    D = lambda d: d * 0.4925 * 1.22                    # a diameter as a fraction of the rod's length to a rig radius
+    R_SHAFT, R_TOP = D(0.026), D(0.020)          # the cane's radius at its foot and at its tip
+    R_CURL = 0.040 * 0.985                       # the hook's half circle (the sheet's tight curl, 8% of the length across)
+    TOP = F(1.0) - R_CURL                        # the shaft's top: the curl rises R_CURL to F(1)
+    BOW = 0.025 * 0.985                           # the cane's bow toward +Y at its middle
     os.makedirs(os.path.join(TOOLS, "tex"), exist_ok=True)                 # the cane's stripes, 45 degrees, 8 px each
-    xs, ys = np.meshgrid(np.arange(64), np.arange(16))
-    rgba = np.zeros((16, 64, 4), np.float32)
+    xs, ys = np.meshgrid(np.arange(64), np.arange(32))
+    rgba = np.zeros((32, 64, 4), np.float32)
     rgba[..., :3] = np.where((((xs + ys) // 8) % 2)[..., None] > 0, (0xD0, 0x24, 0x1C), (0xF4, 0xEE, 0xE4))
     rgba[..., :3] /= 255.0
     rgba[..., 3] = 1.0
     tex = kit.image("candy-stripe", rgba.astype(np.float32), path=os.path.join(TOOLS, "tex", "candy-stripe.png"))
+    shaft_f = [0.34 + 0.61 * i / 14 for i in range(15)]                    # the shaft's stations, f 0.34 to 0.95
+    shaft_r = [R_SHAFT + (R_TOP - R_SHAFT) * i / 14 for i in range(15)]
+    shaft_p = [V((0, BOW * math.sin(math.pi * i / 14), F(shaft_f[i]))) for i in range(15)]
+    grip_r = lambda f: D(0.036) + (D(0.030) - D(0.036)) * (f - 0.08) / 0.22
 
-    def cane(pc, path, radii, sides, v0, ref=(0, 1, 0), tip=False):
-        """A tube with the cane's uv: u once round, v along it at 4 texture repeats per rig unit, from v0 on."""
+    def cane(pc, path, radii, sides, s0=0.0, ref=(0, 1, 0), tip=False):
+        """A cane tube with the sheet's uv: u once round, v = (arc length / circumference) * 0.5 + u."""
         path = [V(p) for p in path]
         n = len(path)
-        v = [v0]
+        s = [s0]
         for i in range(n - 1):
-            v.append(v[-1] + (path[i + 1] - path[i]).length * 4.0)
+            s.append(s[-1] + (path[i + 1] - path[i]).length)
+
+        def uv(i, k):
+            uu = k / sides
+            return (uu, 0.5 * (s[i] / (TAU * radii[i])) + uu)
         rings = []
         for i, (p, r) in enumerate(zip(path, radii)):
             a = (path[min(i + 1, n - 1)] - path[max(i - 1, 0)]).normalized()
@@ -848,69 +907,113 @@ def candy_cane():
             for k in range(sides):
                 j = (k + 1) % sides
                 pc.f([rings[i][k], rings[i][j], rings[i + 1][j], rings[i + 1][k]], (path[i] + path[i + 1]) / 2,
-                     uv=[(k / sides, v[i]), ((k + 1) / sides, v[i]), ((k + 1) / sides, v[i + 1]), (k / sides, v[i + 1])])
+                     uv=[uv(i, k), uv(i, j), uv(i + 1, j), uv(i + 1, k)])
         if tip:
             end = pc.v(path[-1] + (path[-1] - path[-2]).normalized() * radii[-1] * 1.6)
             for k in range(sides):
                 pc.f([rings[-1][k], rings[-1][(k + 1) % sides], end], path[-1],
-                     uv=[(k / sides, v[-1]), ((k + 1) / sides, v[-1]), ((k + 0.5) / sides, v[-1] + radii[-1] * 4)])
-        return v[-1]
+                     uv=[uv(n - 1, k), uv(n - 1, (k + 1) % sides), (0.5, 0.5)])
+        return s[-1]
 
     def b(pc):
-        pc.mat = "Gold"                          # the end cap and the grip in one tube, gold below the green
-        loft(pc, [(0, 0, -0.166), (0, 0, -0.12), (0, 0, 0.05)], [0.0235, 0.0235, 0.0212], sides=5,
-             mat=lambda i, k: "Green" if i else "Gold", tip=False, cap=True)
-        pc.mat = "Gold"                          # two gold collars with a thin green stripe between
-        loft(pc, [(0, 0, 0.05), (0, 0, 0.062), (0, 0, 0.07), (0, 0, 0.088)], [0.026, 0.026, 0.0254, 0.0254], sides=4,
-             mat=lambda i, k: "Green" if i == 1 else "Gold", tip=False, cap=False)
-        pc.mat = "Cane"                          # the cane, bowed a touch toward the front, and its hook
-        zs = [0.065 + (top_z - 0.065) * i / 9 for i in range(10)]
-        rad = lambda z: R0 + (R1 - R0) * (z - 0.065) / (top_z - 0.065)
-        vend = cane(pc, [bend(z) for z in zs], [rad(z) for z in zs], 6, 0.0)
-        hs = [hook_c + V((0, math.cos(math.pi * i / 7) * 0.075, math.sin(math.pi * i / 7) * 0.075)) for i in range(8)]
-        cane(pc, hs, [R1] * 8, 6, vend, ref=(1, 0, 0), tip=True)
-        pc.mat = "Gold"                          # three guide rings on the blank's underside
-        for z in (0.2, 0.36, 0.52):
-            c = bend(z) + V((0, -(rad(z) + 0.0072), 0))
-            pc.tube([c + V((math.cos(math.pi / 2 + TAU * i / 3) * 0.008, math.sin(math.pi / 2 + TAU * i / 3) * 0.008, 0)) for i in range(3)],
-                    [0.0022] * 3, sides=4, closed_loop=True)
-        pc.mat = "Red"                           # the bow: two flattened ring loops tilted out
-        for s in (-1, 1):
-            rot = Matrix.Rotation(math.radians(30) * s, 3, "Z")
-            c = V((s * 0.024, 0.042, 0.03))
-            pc.tube([c + rot @ V((math.cos(TAU * i / 6) * 0.022, 0, math.sin(TAU * i / 6) * 0.022)) for i in range(6)],
-                    [(0.006, 0.004)] * 6, sides=4, closed_loop=True, up=(0, 1, 0))
-        for s in (-1, 1):                        # its two flat tapered ribbons, about 0.05 long
-            base, tip_ = V((s * 0.006, 0.036, 0.018)), V((s * 0.018, 0.03, -0.032))
-            pc.f([pc.v(base + V((-0.007, 0, 0))), pc.v(base + V((0.007, 0, 0))),
-                  pc.v(tip_ + V((0.003, 0, 0))), pc.v(tip_ + V((-0.003, 0, 0)))], (0, 0, 0))
-        pc.mat = "Gold"                          # the star on the knot
-        star_flat(pc, (0, 0.05, 0.03), 0.013, 0.005, 4, 0.003)
-        pc.mat = "Gold"                          # the reel's foot
-        pc.tube([(0, -0.01, 0.03), (0, -0.064, 0.03)], [0.0075, 0.0075], sides=3, tip=False, cap=False)
-        pc.mat = "Red"                           # the reel's body: a six-sided cylinder
-        pc.tube([(0, -0.062, 0.03), (0, -0.086, 0.03)], [0.039, 0.039], sides=6, tip=False, cap=True)
-        pc.mat = "Gold"                          # the spool on its face, the crank and the jingle bell
-        lathe(pc, (0, -0.09, 0.03), [(0.0, 0.0), (0.024, 0.0)], n=6, axis=(0, -1, 0))
-        pc.tube([(0.027, -0.097, 0.039), (0.045, -0.097, 0.012)], [0.006, 0.006], sides=3, tip=False, cap=False)
-        pc.blob(bell, 0.0135, segs=3, rings=2)
-        pc.mat = "Gold"                          # the star charm on its loop, hanging from the hook's end
-        pc.tube([hook_end + V((math.cos(math.pi / 2 + TAU * i / 3) * 0.012, 0, math.sin(math.pi / 2 + TAU * i / 3) * 0.012 - 0.012))
-                 for i in range(3)], [0.0022] * 3, sides=3, closed_loop=True)
-        star_flat(pc, star_c, 0.026, 0.011, 5, 0.006)
+        pc.mat = "Gold"                          # the finial: a pointed spike with two small knobs on it
+        lathe(pc, (0, 0, F(0.0)), [(0.0, 0.0), (D(0.010), 0.0148), (D(0.034), 0.0296), (D(0.014), 0.0443), (D(0.024), 0.0591)], n=4)
+        pc.mat = "Gold"                          # the end collar: gold ring, red band, gold ring
+        for fa, fb, d, m in ((0.06, 0.065, 0.036, "Gold"), (0.065, 0.075, 0.034, "Red"), (0.075, 0.08, 0.036, "Gold")):
+            pc.mat = m
+            loft(pc, [(0, 0, F(fa)), (0, 0, F(fb))], [D(d), D(d)], sides=4, tip=False, cap=False)
+        pc.mat = "Green"                         # the grip
+        loft(pc, [(0, 0, F(0.08)), (0, 0, F(0.30))], [grip_r(0.08), grip_r(0.30)], sides=6, tip=False, cap=False)
+        pc.mat = "Green"                         # its raised spiral wrap, 6 turns
+        wf = [0.085 + 0.21 * i / 11 for i in range(12)]
+        pc.tube([V((math.cos(TAU * 6 * i / 11) * (grip_r(wf[i]) + 0.0016), math.sin(TAU * 6 * i / 11) * (grip_r(wf[i]) + 0.0016), F(wf[i])))
+                 for i in range(12)], [0.0022] * 12, sides=3, tip=False, cap=False)
+        pc.mat = "Gold"                          # the fore collar: gold ring, green band, gold ring
+        for fa, fb, m in ((0.30, 0.3133, "Gold"), (0.3133, 0.3267, "Green"), (0.3267, 0.34, "Gold")):
+            pc.mat = m
+            loft(pc, [(0, 0, F(fa)), (0, 0, F(fb))], [D(0.038), D(0.038)], sides=4, tip=False, cap=False)
+        pc.mat = "Cane"                          # the cane and its hook, wound in the stripe texture
+        send = cane(pc, shaft_p, shaft_r, 6)
+        hook_c = shaft_p[-1] + V((0, -R_CURL, 0))
+        cane(pc, [hook_c + V((0, R_CURL * math.cos(math.pi * i / 6), R_CURL * math.sin(math.pi * i / 6))) for i in range(7)],
+             [R_TOP] * 7, 6, s0=send, ref=(1, 0, 0), tip=True)
+        pc.mat = "Gold"                          # three guide rings on short feet under the cane
+        for f in (0.55, 0.72, 0.86):
+            i = min(range(15), key=lambda j: abs(shaft_f[j] - f))
+            c = shaft_p[i] + V((0, -(shaft_r[i] + D(0.034) + 0.002), 0))
+            pts = [c + V((math.cos(math.pi / 2 + TAU * k / 5) * D(0.034), math.sin(math.pi / 2 + TAU * k / 5) * D(0.034), 0)) for k in range(5)]
+            pc.tube(pts, [D(0.006)] * 5, sides=3, closed_loop=True)
+            pc.tube([shaft_p[i] + V((0, -shaft_r[i], 0)), c + V((0, D(0.034), 0))], [D(0.004)] * 2, sides=4, tip=False, cap=False)
+        pc.mat = "Red"                           # the bow on the grip's camera side (-X): two loops out to the sides, tilted up
+        gx, gz = -(grip_r(0.24) + 0.004), F(0.24)
+        for s in (-1, 1):                        # each loop a solid teardrop on the camera side, fanning out along the rod and up
+            knot = V((gx, 0.004, gz))
+            tipp = knot + V((0, 0.034, s * 0.040))
+            mid = knot.lerp(tipp, 0.55)
+            side = V((0, 0.017, -s * 0.012)).normalized() * 0.019
+            ring = [knot, mid + side, tipp + V((0, 0.006, s * 0.006)), tipp + V((0, -0.010, s * 0.008)), mid - side * 0.6]
+            vs = [pc.v(p_) for p_ in ring]
+            hub = pc.v(mid + V((-0.006, 0, 0)))
+            for i in range(5):
+                pc.f([vs[i], vs[(i + 1) % 5], hub], mid + V((-0.05, 0, 0)))
+        for s, ang in ((-1, 14), (1, 26)):       # its two tails hanging below the grip, V-notched
+            base = V((gx - 0.002, -0.004, gz + s * 0.004))
+            tip = base + V((0, -math.cos(math.radians(ang)) * 0.065, s * math.sin(math.radians(ang)) * 0.065))
+            sd = V((0, 0, 0.0085))
+            m2 = base.lerp(tip, 0.7)
+            pc.f([pc.v(base - sd), pc.v(base + sd), pc.v(m2 + sd), pc.v(m2 - sd)], (0.05, 0, gz))
+            pc.f([pc.v(m2 - sd), pc.v(m2 + sd), pc.v(tip + sd * 0.8), pc.v(tip - sd * 0.8)], (0.05, 0, gz))
+            pc.f([pc.v(tip - sd * 0.8), pc.v(tip + sd * 0.8), pc.v(tip + V((0, 0.011, 0)))], (0.05, 0, gz))
+        pc.mat = "Gold"                          # the gold star knot, facing the camera
+        star_flat(pc, (gx - 0.004, 0, gz + 0.006), D(0.03), D(0.012), 5, 0.0, rot=Matrix.Rotation(math.radians(90), 3, "Y"))
+        RZ, RY = F(0.31), -0.068                  # the reel: hangs under the fore collar, its axis along the rod
+        pc.mat = "Gold"                          # its foot
+        pc.tube([(0, -grip_r(0.30), F(0.33)), (0, RY + D(0.03), RZ + 0.01)], [0.0055, 0.0055], sides=4, tip=False, cap=False)
+        pc.mat = "Red"                           # its body
+        loft(pc, [(0, RY, RZ - 0.03), (0, RY, RZ - 0.012), (0, RY, RZ + 0.006)], [D(0.04), D(0.065), D(0.065)], sides=8, tip=False, cap=True)
+        for z0, z1, d, m in ((0.006, 0.012, 0.075, "Gold"), (0.012, 0.030, 0.065, "Line"), (0.030, 0.036, 0.075, "Gold")):
+            pc.mat = m                           # the spool: gold rims round the wound cream line
+            loft(pc, [(0, RY, RZ + z0), (0, RY, RZ + z1)], [D(d), D(d)], sides=8, tip=False, cap=False)
+        pc.mat = "Red"                           # the face toward the tip, with a gold star on it
+        lathe(pc, (0, RY, RZ + 0.036), [(0.0, 0.0), (D(0.07), 0.0)], n=8, axis=(0, 0, 1))
+        pc.mat = "Gold"
+        star_flat(pc, (0, RY, RZ + 0.0375), D(0.034), D(0.011), 5, 0.0, rot=Matrix.Rotation(math.radians(-90), 3, "X"))
+        pc.mat = "Gold"                          # the crank on the camera side (-X), its arm down to a knob, the bell under it
+        pc.tube([(-D(0.05), RY, RZ - 0.012), (-D(0.05) - 0.014, RY, RZ - 0.012), (-D(0.05) - 0.014, RY - 0.026, RZ - 0.02)], [0.0042] * 3, sides=4, tip=False, cap=False)
+        pc.blob((-D(0.05) - 0.014, RY - 0.045, RZ - 0.022), D(0.026), segs=6, rings=4)
+        pc.mat = "Line"
+        pc.f([pc.v((-D(0.05) - 0.014 - D(0.026) - 0.0005, RY - 0.05 + y, RZ - 0.022 + z)) for y, z in ((-0.0015, -0.006), (0.0015, -0.006), (0.0015, 0.006), (-0.0015, 0.006))], (0, RY - 0.05, RZ))
+        pc.mat = "Gold"                          # the star charm's chain and the charm, hanging from the hook's end
+        hook_end = shaft_p[-1] + V((0, -2 * R_CURL, 0))
+        down = V((0, -0.866, -0.5))
+        for i in range(3):
+            c = hook_end + down * (0.012 + 0.016 * i)
+            pc.tube([c + V((math.cos(TAU * k / 3) * 0.006, 0, math.sin(TAU * k / 3) * 0.006)) for k in range(3)],
+                    [0.0018] * 3, sides=2, closed_loop=True)
+        CHARM = hook_end + down * 0.075
+        star_flat(pc, CHARM, D(0.06), D(0.024), 5, 0.006, rot=Matrix.Rotation(math.radians(90), 3, "Z"))
+        pc.mat = "Line"                          # the cream line: the spool, the three guides, the hook's end
+        pts = [V((0, -0.06 + 0.012, F(0.31) + 0.026))]
+        for f in (0.55, 0.72, 0.86):
+            i = min(range(15), key=lambda j: abs(shaft_f[j] - f))
+            pts.append(shaft_p[i] + V((0, -(shaft_r[i] + D(0.034) + 0.002), 0)))
+        pts.append(shaft_p[-1] + V((0, -2 * R_CURL, 0)))
+        pc.tube(pts, [0.0015] * len(pts), sides=3, tip=False, cap=False)
     rod = model("rod-candy-cane", {"Cane": "#D0241C", "Red": "#D0241C", "Green": "#1F5A34", "Gold": "#E2A93A", "Line": "#F1EAD8"}, b)
     mat = bpy.data.materials["rod-candy-cane_Cane"]                # the packed stripes on the cane's uv
     node = mat.node_tree.nodes.new("ShaderNodeTexImage")
     node.image = tex
     mat.node_tree.links.new(node.outputs["Color"], next(n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED").inputs["Base Color"])
 
-    def twinkle(pc):                             # two tiny glints beside the star
+    def twinkle(pc):                             # two tiny glints beside the charm
         pc.mat = "Glow"
-        star_flat(pc, star_c + V((-0.036, -0.004, 0.016)), 0.013, 0.004, 4, 0.0)
-        star_flat(pc, star_c + V((0.034, -0.004, -0.012)), 0.01, 0.003, 4, 0.0)
-    fx = [glow("Twinkle", "#FFE7A3", twinkle, pivot=tuple(star_c), pulse=0.22),
-          fx_empty("FX_Star", tuple(star_c)),
-          fx_empty("FX_Bell", tuple(bell)),
+        c = shaft_p[-1] + V((0, -2 * R_CURL, 0)) + V((0, -0.866, -0.5)) * 0.075
+        star_flat(pc, c + V((-0.036, -0.004, 0.016)), 0.013, 0.004, 4, 0.0)
+        star_flat(pc, c + V((0.034, -0.004, -0.012)), 0.01, 0.003, 4, 0.0)
+    charm = shaft_p[-1] + V((0, -2 * R_CURL, 0)) + V((0, -0.866, -0.5)) * 0.075
+    fx = [glow("Twinkle", "#FFE7A3", twinkle, pivot=tuple(charm), pulse=0.22),
+          fx_empty("FX_Star", tuple(charm)),
+          fx_empty("FX_Bell", (-0.05, -0.105, 0.1)),
           fx_empty("FX_Grip", (0, 0, 0))]
     return rod, fx, {"rodFx": "candy-cane"}, {}
 
@@ -1162,6 +1265,7 @@ BUILD = {"carrot": carrot, "precision": precision, "training": training, "cedar"
          "riptide": riptide, "tidewarden": tidewarden, "tempest": tempest, "titanium": titanium,
          "titanium-a1": titanium_a1, "tidewarden-a1": lambda: tidewarden(True), "tempest-a1": tempest_a1,
          "north-star": north_star, "candy-cane": candy_cane}
+BUDGET = {"north-star": 900, "candy-cane": 900}  # the two Christmas event rods' raised triangle budgets
 only = ARGS[ARGS.index("only") + 1].split(",") if "only" in ARGS else list(BUILD)
 for name in only:
     out = BUILD[name]()
@@ -1169,7 +1273,7 @@ for name in only:
     export([rod], os.path.join(TOOLS, f"{ROD_FILES[name]}.glb"), rod_extras)
     mats = len(rod.data.materials)
     print(f"MODEL tools/{ROD_FILES[name]} tris={tris(rod)} materials={mats}")
-    assert tris(rod) <= 600 and mats <= 5, f"{name} over the Tool budget"
+    assert tris(rod) <= BUDGET.get(name, 600) and mats <= 5, f"{name} over the Tool budget"
     if fx:
         export(fx, os.path.join(PROPS, f"rodfx-{name}.glb"), fx_extras)
         print(f"MODEL props/rodfx-{name} tris={sum(tris(o) for o in fx)} meshes={sum(o.type == 'MESH' for o in fx)}")
