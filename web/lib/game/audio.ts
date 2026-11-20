@@ -241,6 +241,10 @@ export function footstepRate(speedRatio: number): number {
  * Which take of a sound plays (SFX audit, David 2026-11-20): an explicit `variant` indexes the takes by modulo (a foot's
  * number picks its side), else a random take that never repeats `last` (so consecutive sounds vary). Returns the index.
  */
+/** PITCH_JITTER: each one-shot's pitch is scaled by a random factor in this range (David, 2026-11-20). */
+export const PITCH_JITTER = [0.92, 1.08] as const;
+export const pitchJitter = (rand: () => number = Math.random) => PITCH_JITTER[0] + (PITCH_JITTER[1] - PITCH_JITTER[0]) * rand();
+
 export function pickVariant(paths: readonly string[], variant?: number, last?: number): number {
   const n = paths.length;
   if (n <= 1) return 0;
@@ -681,7 +685,9 @@ export class AudioManagerImpl {
     const el = this.newAudio(false);
     if (!el) return;
     el.volume = Math.min(1, this.sfxTargetVolume(name) * gain);
-    if (rate !== 1) { el.defaultPlaybackRate = el.playbackRate = rate; el.preservesPitch = false; } // loading resets playbackRate to the default
+    // Every one-shot plays at a slightly random pitch so repeats never sound identical (David, 2026-11-20).
+    const r = rate * pitchJitter();
+    el.defaultPlaybackRate = el.playbackRate = r; el.preservesPitch = false; // loading resets playbackRate to the default
     this.oneShots.set(el, { name, gain });
     el.onended = () => this.oneShots.delete(el);
     el.addEventListener("error", () => { if (el.error?.code === 4) this.markMissing(src); this.oneShots.delete(el); }, { once: true });

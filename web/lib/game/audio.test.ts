@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AudioManagerImpl, footstepRate, pickVariant } from "./audio";
+import { AudioManagerImpl, footstepRate, pickVariant, pitchJitter } from "./audio";
 
 class FakeAudio extends EventTarget {
   static all: FakeAudio[] = [];
@@ -122,7 +122,9 @@ describe("world audio lifecycle", () => {
     const manager = new AudioManagerImpl(); manager.enable();
     manager.playSFX("blip3", { rate: 0.6, gain: 0.5 });
     const sound = FakeAudio.all[0] as FakeAudio & { playbackRate?: number; defaultPlaybackRate?: number; preservesPitch?: boolean };
-    expect([sound.playbackRate, sound.defaultPlaybackRate, sound.preservesPitch]).toEqual([0.6, 0.6, false]);
+    expect(sound.playbackRate).toBe(sound.defaultPlaybackRate);
+    expect(sound.preservesPitch).toBe(false);
+    expect(sound.playbackRate).toBeGreaterThanOrEqual(0.6 * 0.92); expect(sound.playbackRate).toBeLessThanOrEqual(0.6 * 1.08); // the rate times the pitch jitter
     expect(sound.volume).toBeCloseTo(0.7 * 0.8 * 0.5);
     manager.setMuted(true); expect(sound.volume).toBe(0);
     manager.setMuted(false); expect(sound.volume).toBeCloseTo(0.7 * 0.8 * 0.5);
@@ -183,5 +185,13 @@ describe("sound takes (SFX audit, David 2026-11-20)", () => {
       expect(a.src).not.toBe(b.src);
     }
     manager.stop();
+  });
+});
+
+describe("pitchJitter", () => {
+  it("stays within 0.92 to 1.08", () => {
+    expect(pitchJitter(() => 0)).toBeCloseTo(0.92);
+    expect(pitchJitter(() => 1)).toBeCloseTo(1.08);
+    for (let i = 0; i < 200; i++) { const v = pitchJitter(); expect(v).toBeGreaterThanOrEqual(0.92); expect(v).toBeLessThanOrEqual(1.08); }
   });
 });
