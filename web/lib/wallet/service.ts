@@ -9,7 +9,7 @@ import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
 import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, sellRows, TAB_OF, type SellEntry, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, tastingWater, type FishingTask, type FishRequest } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type DailyGift, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff, type TastingSlot } from "./store";
-import { CATALOGUE, boxPool, welcomeDay, SUSHI_MENU, TASTING, type Dish, type MealBuff } from "./catalogue";
+import { CATALOGUE, boxPool, welcomeDay, SUSHI_MENU, TASTING, type Dish, type MealBuff, type Slot } from "./catalogue";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { seasonBlend, type Season } from "@/lib/game/season";
@@ -75,6 +75,8 @@ export interface ShopEntry {
   category: string;
   description: string;
   tier: string | null;
+  /** The gear slot it goes in (rod, bait, bobber, net…): the tackle shop shelves by it. */
+  slot: Slot | null;
   currency: "coins" | "gems";
   price: number;
   base_price: number;
@@ -102,7 +104,7 @@ function entry(it: ShopItem, specials: Special[], owned: Map<string, number>, w:
   const have = owned.get(it.id) ?? 0;
   const soldOut = it.stock !== null && it.stock < 1;
   return {
-    id: it.id, slug: it.slug, name: it.display_name, category: String(it.category), description: it.description ?? "", tier: it.tier,
+    id: it.id, slug: it.slug, name: it.display_name, category: String(it.category), description: it.description ?? "", tier: it.tier, slot: it.slot,
     currency: p.currency, price: p.price, base_price: (it.price_coins ?? it.price_gems)!, special: p.special, stock: it.stock, owned: have,
     can_buy: !soldOut && (it.stackable || have === 0) && (p.currency === "coins" ? w.coins : w.gems) >= p.price, sprite_url: it.sprite_url, catalogue_ref: it.catalogue_ref,
   };
@@ -139,7 +141,7 @@ function rodShelf(tools: ShopEntry[], inv: InventoryRow[]): ShopEntry[] {
   const rods = RODS.filter((r) => onShopShelf(r) && (r.source !== "starter" || ownsRod(r, have))).map((r, i): ShopEntry => {
     const teaser = r.source === "found" && !have.includes(r.key);
     return tools.find((e) => e.catalogue_ref === r.key) ?? {
-      id: teaser ? `rod:teaser:${i}` : `rod:${r.key}`, slug: teaser ? `rod:teaser:${i}` : listed.get(r.key)?.slug ?? r.key, name: teaser ? TEASER.name : r.name, category: "tool", tier: listed.get(r.key)?.tier ?? "basic",
+      id: teaser ? `rod:teaser:${i}` : `rod:${r.key}`, slug: teaser ? `rod:teaser:${i}` : listed.get(r.key)?.slug ?? r.key, name: teaser ? TEASER.name : r.name, category: "tool", tier: listed.get(r.key)?.tier ?? "basic", slot: "rod",
       description: teaser ? TEASER.description : listed.get(r.key)?.description ?? "Everyone's first rod. Light, forgiving and a little wobbly.",
       currency: "coins", price: 0, base_price: 0, special: false, stock: null, owned: ownsRod(r, have) ? 1 : 0, can_buy: false,
       sprite_url: iconUrl(r.key), catalogue_ref: teaser ? null : r.key, made: MADE[r.source as keyof typeof MADE] ?? "workbench",

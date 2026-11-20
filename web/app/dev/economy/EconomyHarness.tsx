@@ -91,7 +91,7 @@ export default function EconomyHarness() {
       {/* The shop as the portal's pages show it (the overlay's body on the page): ?view=shop[&tab=specials] */}
       {view === "shop" ? <div style={{ padding: 20 }}><ShopBody transport={t} initialTab={(q.get("tab") as "tools" | null) ?? undefined} /></div> : null}
       {/* The in-game shop overlay (ShopOverlay), as the counter opens it: ?view=overlay[&section=items|merch] */}
-      {view === "overlay" ? <ShopOverlay open onClose={close} transport={t} title={q.get("section") === "merch" ? "Club merch" : q.get("section") === "rods" ? "Rod shop" : "The shop"}
+      {view === "overlay" ? <ShopOverlay open onClose={close} transport={t} title={q.get("section") === "merch" ? "Club merch" : q.get("section") === "rods" ? "Tackle shop" : "The shop"}
         section={(q.get("section") as "items" | "merch" | "rods" | null) ?? undefined} sell={q.get("section") !== "merch"} viewerFor={merchViewer} /> : null}
       {/* The bag's tools, your own rods with their slots: ?view=bag */}
       {view === "bag" ? <BagSheet open onClose={close} transport={t} initialShelf="tools" /> : null}

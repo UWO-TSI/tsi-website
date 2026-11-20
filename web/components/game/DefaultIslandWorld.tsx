@@ -1703,7 +1703,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} waters={catchWaters} />
       <TankSheet open={sheet === "tank"} onClose={() => setSheet(null)} />
       <CatchBoardSheet open={sheet === "outnow"} onClose={() => setSheet(null)} keys={STATION_KEY} waters={catchWaters} hour={peaceful.moment.hour} weather={conditions.weather} season={season.season} soon={peaceful.moment.soon} phase={phase} />
-      <ShopOverlay open={sheet === "rods"} title="Rod shop" section="rods" onClose={() => setSheet(null)} keys={STATION_KEY} />
+      <ShopOverlay open={sheet === "rods"} title="Tackle shop" section="rods" onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />
       <PlayerCharacterUI creator={step === "creator"} />

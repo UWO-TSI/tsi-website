@@ -130,12 +130,14 @@ export function railStep<T extends string>(items: readonly RailItem<T>[], value:
  * to the next choice, a press that dips and springs back, a count badge where `badge` is set. Down the left of a `FlatPanel` (across the top on a phone); `horizontal` puts it across
  * the top anywhere. `tabs`: it is a tab list (a flat `Sheet`'s `Tabs`): role tab, aria-selected, and the caller's
  * `onKeyDown` and `listRef` for the arrow keys. `itemAttrs`: more attributes for an icon's button (the creator's tab
- * ids and the panel it controls).
+ * ids and the panel it controls). `labelled`: each button shows its name under the icon (the tackle shop's rail): a
+ * wider rail, the chosen one on a white card, and no dot (the card says which is chosen).
  */
-export function IconRail<T extends string>({ items, value, onChange, label, orientation = "vertical", tabs, listRef, onKeyDown, className, itemAttrs }: {
+export function IconRail<T extends string>({ items, value, onChange, label, orientation = "vertical", tabs, listRef, onKeyDown, className, itemAttrs, labelled }: {
   items: readonly RailItem<T>[]; value: T | null; onChange: (id: T) => void; label: string;
   orientation?: "vertical" | "horizontal"; tabs?: boolean; listRef?: Ref<HTMLElement>; onKeyDown?: (e: KeyboardEvent) => void; className?: string;
   itemAttrs?: (item: RailItem<T>) => Record<string, string | undefined>;
+  labelled?: boolean;
 }) {
   // A tab list is a div (role tablist); a rail of shelves is the panel's nav.
   const Tag = (tabs ? "div" : "nav") as "nav";
@@ -143,15 +145,16 @@ export function IconRail<T extends string>({ items, value, onChange, label, orie
   const ref = useMemo(() => bothRefs<HTMLElement>(own, listRef), [listRef]);
   const m = useMarker(own, tabs ? '[aria-selected="true"]' : "[aria-current]", value);
   return <Tag ref={ref} className={cx(f.side, className)} aria-label={label} role={tabs ? "tablist" : undefined}
-    data-orientation={orientation === "horizontal" ? "horizontal" : undefined} data-marker={m ? "" : undefined} onKeyDown={onKeyDown}>
-    {/* The chosen icon's dot, sliding from one to the next (its own ::after until measured). */}
-    {m ? <span className={f.marker} aria-hidden style={{ transform: `translate(${m.x + m.w / 2 - 2}px, ${m.y + m.h - 7}px)` }} /> : null}
+    data-orientation={orientation === "horizontal" ? "horizontal" : undefined} data-marker={m ? "" : undefined} data-labelled={labelled ? "" : undefined} onKeyDown={onKeyDown}>
+    {/* The chosen icon's dot, sliding from one to the next (its own ::after until measured); a labelled rail has none. */}
+    {m && !labelled ? <span className={f.marker} aria-hidden style={{ transform: `translate(${m.x + m.w / 2 - 2}px, ${m.y + m.h - 7}px)` }} /> : null}
     {items.map(it => {
       const on = it.id === value, badge = badgeText(it.badge);
       return <button key={it.id} type="button" className={f.shelf} aria-label={it.label} title={it.label} disabled={it.disabled}
         {...(tabs ? { role: "tab", "aria-selected": on, tabIndex: on ? 0 : -1, "data-tab": it.id } : { "aria-current": on || undefined })}
         {...itemAttrs?.(it)} onClick={() => onChange(it.id)}>
         {it.icon}
+        {labelled ? <span className={f.shelfLabel}>{it.label}</span> : null}
         {badge ? <span className={f.badge}>{badge}</span> : null}
       </button>;
     })}
@@ -165,12 +168,12 @@ export function IconRail<T extends string>({ items, value, onChange, label, orie
  * (one card a row by default, as the shop has it). Its cells move (round 3): a hovered card grows a little out of the
  * grid and its neighbours step aside, quickly; the picked one (`selected`) further, slower, and stays out.
  */
-export function CardGrid({ title, min, phoneMin, label, children }: { title?: ReactNode; min?: number; phoneMin?: number; label?: string; children: ReactNode }) {
+export function CardGrid({ title, min, phoneMin, label, className, children }: { title?: ReactNode; min?: number; phoneMin?: number; label?: string; className?: string; children: ReactNode }) {
   const style = { ...(min ? { "--card-min": `${min}px` } : {}), ...(phoneMin ? { "--card-min-phone": `${phoneMin}px` } : {}) } as CSSProperties;
   const nudge = useNudge();
   return <>
     {title ? <h3 className={f.shelfTitle}>{title}</h3> : null}
-    <div ref={nudge} className={cx(f.grid, f.nudge)} role={label ? "list" : undefined} aria-label={label} style={min || phoneMin ? style : undefined}>{children}</div>
+    <div ref={nudge} className={cx(f.grid, f.nudge, className)} role={label ? "list" : undefined} aria-label={label} style={min || phoneMin ? style : undefined}>{children}</div>
   </>;
 }
 

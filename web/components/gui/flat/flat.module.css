@@ -50,6 +50,16 @@
 .side[data-marker] .shelf::after { display: none; }
 .marker { position: absolute; top: 0; left: 0; width: 4px; height: 4px; border-radius: 50%; background: var(--ui-ink); pointer-events: none; transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .badge { position: absolute; top: 6px; right: 5px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: var(--gui-tethos-blue); color: white; font: 700 10px/15px var(--gui-font); text-align: center; box-sizing: border-box; }
+/* A labelled rail (the tackle shop, David's approved mock 2026-11-19): the icon with its name under it, in a column
+   96 px wide, the chosen one on a white card with a soft shadow. It has no dot: the card says which is chosen. */
+.panel:has(> .side[data-labelled]) { grid-template-columns: 96px minmax(0, 1fr); }
+.side[data-labelled] { width: 96px; align-items: stretch; gap: 4px; padding: 10px 12px; }
+.side[data-labelled] .shelf { width: 72px; height: auto; padding: 10px 4px; gap: 4px; border-radius: 16px; background: none; }
+.side[data-labelled] .shelf:hover { background: color-mix(in srgb, var(--ui-card) 60%, transparent); }
+.side[data-labelled] .shelf[aria-current], .side[data-labelled] .shelf[aria-selected="true"] { background: var(--ui-card); box-shadow: 0 2px 8px rgb(var(--ui-shade) / 0.08); }
+.side[data-labelled] .shelf::after { display: none; }
+.shelfLabel { font: 700 12px/1.15 var(--gui-font); color: var(--ui-muted); pointer-events: none; }
+.side[data-labelled] .shelf[aria-current] .shelfLabel, .side[data-labelled] .shelf[aria-selected="true"] .shelfLabel { color: var(--ui-ink); }
 /* Across the top (a phone, or a rail inside a sheet). */
 .side[data-orientation="horizontal"] { flex-direction: row; justify-content: flex-start; padding: 0 0 6px; overflow-x: auto; scrollbar-width: none; }
 
@@ -244,6 +254,60 @@ div.card:hover { box-shadow: none; }
 .note { color: var(--ui-ink); }
 .error { color: var(--ui-error); }
 
+/* ── The tackle shop (David's approved mock, 2026-11-19) ─────────────────────────────────────────────────────────── */
+/* The shelf and its close-up side by side: the grid narrows to three a row, it doesn't go away. Square cards, the
+   picture taking the room the two lines and the price leave. Off the general shop, which keeps its wide cards. */
+.tackleSplit { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.tackleSplit[data-open] { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); }
+.tackleShelf { min-width: 0; }
+.grid.tackleGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.tackleSplit[data-open] .grid.tackleGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tackleGrid > .tackleCell { position: relative; min-width: 0; }
+.tackleGrid .card { width: 100%; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto auto; gap: 2px 8px;
+  aspect-ratio: 1; min-height: 0; padding: 10px 12px 12px; border-radius: 18px; overflow: hidden;
+  transition: box-shadow 0.15s ease-out, transform 0.15s ease-out; }
+.tackleGrid .card:hover { transform: translateY(-2px); }
+.tackleGrid .cardArt { grid-column: 1 / -1; width: 88%; height: 88%; margin: 0; align-self: center; justify-self: center; object-fit: contain; }
+/* The name on its own line, the short line and the price sharing the last. */
+.tackleGrid .cardFoot, .tackleGrid .cardText { display: contents; }
+.tackleGrid .cardName { grid-column: 1 / -1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tackleGrid .cardLine { grid-row: 3; grid-column: 1; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
+.tackleGrid .pill { grid-row: 3; grid-column: 2; }
+/* The picked card: a 3 px ring in the item's rung (ink where it has none) and a soft shadow, a small dip as it lands. */
+.tackleGrid .card[data-selected] { box-shadow: inset 0 0 0 3px var(--edge, var(--ui-ink)), 0 8px 18px rgb(var(--ui-shade) / 0.1); animation: tacklePick 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* Bought: the card pops and a small +1 rises out of it (the purse counts up on its own). */
+.tackleCell[data-bought] .card { animation: tacklePop 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.plusOne { position: absolute; top: 8px; right: 10px; color: var(--ui-good); font: 800 13px/1 var(--gui-font); pointer-events: none; animation: plusOne 0.8s ease-out forwards; }
+@keyframes tacklePick { from { transform: scale(0.98); } }
+@keyframes tacklePop { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.05); } }
+@keyframes plusOne { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-12px); } }
+/* The close-up: a white card beside the grid, sliding in from the shelf, its picture floating gently. */
+.closeUp { position: relative; display: grid; align-content: start; justify-items: center; gap: 8px; padding: 18px 22px 20px;
+  border-radius: 20px; background: var(--ui-card); box-sizing: border-box; animation: closeUpIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes closeUpIn { from { opacity: 0; transform: translateX(24px); } }
+.closeUpClose { all: unset; position: absolute; top: 10px; right: 10px; z-index: 1; display: grid; place-items: center; width: 26px; height: 26px;
+  border-radius: 50%; background: var(--ui-panel); color: var(--ui-ink-2); cursor: pointer;
+  transition: background 0.15s ease-out, color 0.15s ease-out, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.closeUpClose:hover { background: var(--ui-card-hover); color: var(--ui-ink); }
+.closeUpClose:active { transform: scale(0.92); }
+.closeUpClose:focus-visible { outline: 2px solid var(--ui-ink); outline-offset: 2px; }
+/* Another card picked: its close-up cross-fades in over the last (its key remounts it). */
+.closeUpBody { display: grid; justify-items: center; gap: 8px; width: 100%; animation: closeUpSwap 0.16s ease-out; }
+@keyframes closeUpSwap { from { opacity: 0; } }
+.closeUpStage { position: relative; display: grid; place-items: center; width: min(260px, 100%); aspect-ratio: 1; animation: tackleFloat 3s ease-in-out infinite; }
+/* No model to draw (no WebGL): the item's icon stands in for it. */
+.closeUpPicture { width: 86%; height: 86%; object-fit: contain; }
+@keyframes tackleFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.closeUpKind { margin: 0; color: var(--ui-quiet); font: 500 12px/1.2 var(--gui-font); }
+.closeUpName { margin: 0; font: 700 26px/1.15 var(--gui-font); letter-spacing: -0.01em; text-align: center; }
+.closeUpLine { margin: 0; color: var(--ui-ink-2); font: 400 14px/1.45 var(--gui-font); text-align: center; }
+/* The stats block the detail shows, at the close-up's size, so the whole of it stays in view. */
+.closeUpStats { width: min(240px, 100%); }
+.closeUpFacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; margin: 4px 0 0; padding-top: 10px; border-top: 1px solid var(--ui-line); }
+.closeUpFacts > div { min-width: 0; }
+.closeUpFacts dt { color: var(--ui-ink); font: 700 10px/1.4 var(--gui-font); letter-spacing: 0.08em; text-transform: uppercase; }
+.closeUpFacts dd { margin: 2px 0 0; color: var(--ui-ink-2); font: 400 12px/1.3 var(--gui-font); }
+
 @media (max-width: 760px) {
   .layer { padding: 0; }
   .panel { width: 100vw; height: 100dvh; border-radius: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: 56px auto minmax(0, 1fr); }
@@ -256,6 +320,13 @@ div.card:hover { box-shadow: none; }
   .shelf { width: 48px; height: 48px; flex: none; }
   .shelf > svg { width: 23px; height: 23px; }
   .shelf > img { width: 30px; height: 30px; }
+  /* A labelled rail stays a row on a phone, under the title. */
+  .panel:has(> .side[data-labelled]) { grid-template-columns: minmax(0, 1fr); }
+  .side[data-labelled] { width: auto; align-items: center; padding: 0 12px 6px; }
+  .side[data-labelled] .shelf { width: 64px; height: auto; padding: 6px 4px; flex: none; }
+  /* The tackle shop: the close-up goes under the shelf, two cards a row. */
+  .tackleSplit[data-open] { grid-template-columns: minmax(0, 1fr); }
+  .grid.tackleGrid, .tackleSplit[data-open] .grid.tackleGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .main, .panel:not([data-rail]) .main { padding: 4px 14px 16px; }
   .detail { grid-template-columns: minmax(0, 1fr); grid-template-rows: 320px auto auto; margin-left: 0; }
   .info { padding: 16px 4px; }
@@ -285,6 +356,9 @@ div.card:hover { box-shadow: none; }
   .nudge > * { translate: none; scale: none; transform: none; transition: none; }
   .card, .shelf, .marker, .close, .round, .sideClose, .sideActions > *, .toggle > i, .toggle > i::after { transition: none; }
   .card:hover, .shelf:active, .close:active, .round:active, .sideClose:active, .sideActions > :active { transform: none; }
+  .tackleGrid .card, .closeUpClose { transition: none; }
+  .tackleGrid .card:hover, .closeUpClose:active { transform: none; }
+  .tackleGrid .card[data-selected], .tackleCell[data-bought] .card, .plusOne, .closeUp, .closeUpBody, .closeUpStage { animation: none; }
 }
 
 /* Small shared bits of the flat menus: an icon beside its words, a retry link, a rarity dot. */

@@ -225,11 +225,18 @@ export const onShopShelf = (r: Pick<RodTier, "rarity">) => RARITY_RANK[r.rarity]
 export const SLOTS = ["bait", "bobber"] as const;
 export type TackleSlot = (typeof SLOTS)[number];
 /** `model` is the close-up (high-def) file; the rod wears its low-poly copy (`worldModel`, lib/game/world/active.ts). */
-export interface Tackle { key: string; name: string; slot: TackleSlot; gains: Partial<Stats>; model: string }
+export interface Tackle { key: string; name: string; slot: TackleSlot; rarity: Rarity; gains: Partial<Stats>; model: string }
 /** The add-ons: owned items (catalogue_ref = key), equipped one per slot (member_inventory.equipped). */
 export const TACKLE: readonly Tackle[] = [
-  { key: "bait_sweet", name: "Sweet bait", slot: "bait", gains: { bite: 20, lure: 10 }, model: "/assets/game/items/bait-sweet.glb" },
-  { key: "bobber_lucky", name: "Lucky bobber", slot: "bobber", gains: { luck: 20 }, model: "/assets/game/items/bobber-lucky.glb" },
+  { key: "bait_sweet", name: "Sweet bait", slot: "bait", rarity: "uncommon", gains: { bite: 20, lure: 10 }, model: "/assets/game/items/bait-sweet.glb" },
+  { key: "bobber_lucky", name: "Lucky bobber", slot: "bobber", rarity: "rare", gains: { luck: 20 }, model: "/assets/game/items/bobber-lucky.glb" },
+  // The tackle shop's shelves (David, 2026-11-19). Until their models are made, they wear the bobber's and the bait's.
+  { key: "bobber_cork", name: "Cork bobber", slot: "bobber", rarity: "common", gains: { control: 5 }, model: "/assets/game/items/bobber-lucky.glb" },
+  { key: "bobber_float", name: "Striped float", slot: "bobber", rarity: "uncommon", gains: { bite: 5, control: 5 }, model: "/assets/game/items/bobber-lucky.glb" },
+  { key: "bobber_brass", name: "Brass bobber", slot: "bobber", rarity: "rare", gains: { strength: 10 }, model: "/assets/game/items/bobber-lucky.glb" },
+  { key: "bobber_pearl", name: "Pearl bobber", slot: "bobber", rarity: "epic", gains: { luck: 10, control: 5 }, model: "/assets/game/items/bobber-lucky.glb" },
+  { key: "bait_worms", name: "Worms", slot: "bait", rarity: "common", gains: { bite: 10 }, model: "/assets/game/items/bait-sweet.glb" },
+  { key: "bait_glow", name: "Glow bait", slot: "bait", rarity: "rare", gains: { luck: 10 }, model: "/assets/game/items/bait-sweet.glb" },
 ];
 export const tackleByKey = (key: unknown): Tackle | null => TACKLE.find(t => t.key === key) ?? null;
 
