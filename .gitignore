@@ -60,4 +60,9 @@ art/meshy/raw/
 art/audio/staging/
 specs/evidence/sfx-library/r1/*.ogg
 specs/evidence/sfx-library/r2/*.ogg
+specs/evidence/sfx-library/r3/*.ogg
 !web/data/sfx-library.json
+!web/data/talk-voices.json
+specs/evidence/sfx-library/r4/
+specs/evidence/sfx-library/r5/
+art/audio/final/

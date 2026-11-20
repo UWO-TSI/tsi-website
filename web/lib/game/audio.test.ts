@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AudioManagerImpl, footstepRate } from "./audio";
+import { AudioManagerImpl, footstepRate, pickVariant } from "./audio";
 
 class FakeAudio extends EventTarget {
   static all: FakeAudio[] = [];
@@ -154,5 +154,34 @@ describe("footsteps follow walking speed (SFX library r2)", () => {
     expect(footstepRate(0.9)).toBeCloseTo(0.97);
     expect(footstepRate(5)).toBe(1.2);
     expect(footstepRate(0)).toBe(0.9);
+  });
+});
+
+describe("sound takes (SFX audit, David 2026-11-20)", () => {
+  it("plays the left foot's -l take and the right foot's -r take by variant", () => {
+    const grass = ["/audio/sfx/footstep-grass-l.ogg", "/audio/sfx/footstep-grass-r.ogg"];
+    expect(grass[pickVariant(grass, 0)]).toBe(grass[0]);
+    expect(grass[pickVariant(grass, 1)]).toBe(grass[1]);
+    const manager = new AudioManagerImpl(); manager.enable();
+    manager.playSFX("footstep-grass", { variant: 0 });
+    manager.playSFX("footstep-grass", { variant: 1 });
+    expect(FakeAudio.all.map(a => a.src)).toEqual(grass);
+    manager.stop();
+  });
+  it("never plays the same random take twice in a row", () => {
+    const forage = ["/audio/sfx/forage-1.ogg", "/audio/sfx/forage-2.ogg", "/audio/sfx/forage-3.ogg", "/audio/sfx/forage-4.ogg"];
+    for (let i = 0; i < 50; i++) {
+      const first = pickVariant(forage, undefined, undefined);
+      const second = pickVariant(forage, undefined, first);
+      expect(second).not.toBe(first);
+    }
+    const manager = new AudioManagerImpl(); manager.enable();
+    for (let i = 0; i < 50; i++) {
+      manager.playSFX("forage");
+      manager.playSFX("forage");
+      const [a, b] = FakeAudio.all.slice(-2);
+      expect(a.src).not.toBe(b.src);
+    }
+    manager.stop();
   });
 });
