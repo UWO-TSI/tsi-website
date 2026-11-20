@@ -1,4 +1,5 @@
-/* The dark theme: a sample that proves the swap (specs/polish/ui-themes.md). Dev only: ?uitheme=dark. */
+/* The dark theme: a sample UI pack that proves the swap, colours and shapes from this one file (specs/polish/ui-themes.md,
+   row 335). Dev only: ?uitheme=dark. */
 [data-ui-theme="dark"] {
   --ui-bg: #161618;
   --ui-panel: #1c1c1f;
@@ -121,4 +122,74 @@
   --ui-paper-tray: #26221e;
   --ui-paper-plate: #f2efe8;
   --ui-paper-washi: url("/assets/ui/washi.png");
+  /* The game HUD, overlays and world labels (the packs swap these too; clean keeps today's values). */
+  --ui-heading-night: #0b0d18;
+  --ui-nametag-ink: #f2f2f2;
+  --ui-mastery-a: #f2c14e;
+  --ui-mastery-b: #ffe48a;
+  --ui-hp-a: #ff7a6a;
+  --ui-hp-b: #ffa07a;
+  --ui-energy-a: #5fc2ea;
+  --ui-energy-b: #b892ff;
+  --ui-nametag-resident: #ffdba8;
+  --ui-tag-paper: #27272b;
+  --ui-tag-ink: #f2f2f2;
+  --ui-tag-special-ink: #ef7a5a;
+  --ui-warn-ink: #f0a07a;
+  --ui-toast-ink: #f2f2f2;
+  --ui-cap-hover: #2d2d32;
+  --ui-tier-good: #6cc685;
+  --ui-tier-warn: #ffe48a;
+  --ui-pip: #6f6f76;
+  --ui-pip-on: #d98a1a;
+  --ui-emote-petal: #3a332e;
+  --ui-btn-hover: #3f7a8f;
+  --ui-progress-a: #6cc685;
+  --ui-progress-b: #6cc685;
+  --ui-xp-a: #6cc685;
+  --ui-xp-b: #a8cf7e;
+  --ui-plaque-a: #4a4032;
+  --ui-plaque-b: #3a3227;
+  --ui-plaque-edge: #8a7a66;
+  --ui-plaque-ink: #f2f2f2;
+  --ui-pin-hole: #3a3a3a;
+  --ui-hud-pill: #1c1c1f;
+  --ui-toast-panel: #27272b;
+  --ui-toast-rule: #3a3a3a;
+  --ui-shadow-paper: #000000;
+  --ui-shadow-bubble: #000000;
+  --ui-shadow-well: #000000;
+  --ui-nametag-outline: #000000;
+  --ui-pin-shade: #000000;
+  --ui-pin-ring: #000000;
+  --ui-strike: #000000;
+  --ui-key-edge: #000000;
+  --ui-scene-shadow: #000000;
+  --ui-ring-highlight: #ffffff;
+  --ui-closed-outline: #f2c14e;
+  --ui-preview-scrim: #000000;
+  --ui-preview-shadow: #000000;
+  --ui-glyph-ring: #f2c14e;
+  --ui-progress-sheen: #ffffff;
+  --ui-contrast-ink: #000000;
+  --ui-contrast-key: #ffe14d;
+  --ui-contrast-focus: #ffb000;
+  --ui-nametag-resident-hc: #ffe9c4;
+  /* ── The shapes and the type (row 335): a UI pack swaps these with the colours. ── */
+  --ui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ui-weight: 600;
+  --ui-weight-strong: 800;
+  --ui-r-panel: 12px;    /* the dark sample's squarer cut proves a shape swap */
+  --ui-r-card: 8px;
+  --ui-r-blob: 8px;
+  --ui-r-tag: 4px;
+  --ui-r-button: 10px;
+  --ui-r-field: 6px;
+  --ui-border: 1px;      /* hairlines: a sheet's foot, a card's ring */
+  --ui-shadow-sm: none;
+  --ui-shadow-md: 0 8px 22px rgb(0 0 0 / 0.3);
+  --ui-shadow-lg: 0 24px 80px rgb(0 0 0 / 0.55);
+  --ui-shadow-press: none;
+  --ui-shadow-inset: none;
+  --ui-panel-texture: none;  /* a texture over sheets and panels (a pack's paper grain, say) */
 }

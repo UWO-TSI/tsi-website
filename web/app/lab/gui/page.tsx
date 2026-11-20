@@ -2,14 +2,12 @@
 /* eslint-disable @next/next/no-img-element -- a dev-only showroom of the real item icons */
 
 /**
- * /lab/gui — the GUI sheet showroom (specs/polish/gui-sheet.md §1): every token and component in every state, each
- * beside a small crop of David's Animal Crossing UI kit (served from outside the repo by ./ref, dev only), then the
- * game's overlays standalone. Dev only (the lab layout 404s in production). `?only=<id>` shows one overlay full
+ * /lab/gui — the flat kit's showroom (specs/design-bible.md UI, "How it's built" 3; ledger row 334): every token and
+ * component in every state, in the base theme (clean), then the game's overlays standalone. Dev only (the lab layout 404s in production). `?only=<id>` shows one overlay full
  * screen, for screenshots.
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Backpack, BookOpen, Coins, Fish, Mail, MapIcon, PackageOpen, Settings, ShoppingBasket, Sprout, Volume2 } from "lucide-react";
-import FishReveal from "@/components/game/FishReveal";
 import FlatPieces from "./FlatPieces";
 import { FamilyReveal } from "@/components/game/oracle/OracleSheetEmbed";
 import IncantationOverlay from "@/components/game/combat/IncantationOverlay";
@@ -18,9 +16,8 @@ import TourPeek from "@/components/game/hq/TourPeek";
 import { DANCE_RING } from "@/lib/game/emoteWheel";
 import ToastHub, { toast } from "@/components/game/ToastHub";
 import { Amount } from "@/components/economy/Amount";
-import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, ErrorNote, Field, IconButton, ItemTile, Keycap, List, ListRow, Loading, NameTag, Panel, Progress, Select,
+import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, ErrorNote, Field, IconButton, ItemTile, Keycap, List, ListRow, Loading, NameTag, Progress, Select,
   RarityBadge, Sheet, Slider, Tabs, TextArea, Toggle, Tooltip } from "@/components/gui";
-import { FISH } from "@/lib/game/fishing";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
 import { RODS, TACKLE } from "@/lib/game/rods";
@@ -31,7 +28,6 @@ import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTr
 import { ActionBar, ActionIcon, BarRows, CHART, ChartCard, Columns, Delta, Heatmap, Segmented, StatTile, TimeChart, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyHome, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
-import PhoneSignup from "@/components/game/hq/PhoneSignup";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
 import s from "./showroom.module.css";
 import FlatRewards from "./FlatRewards";
@@ -111,12 +107,6 @@ function PhoneShow() {
     { id: "mail", label: "Mail", icon: "mail", keyLabel: "L", badge: 2, onOpen: () => {} },
   ];
   return <Phone open={t < 9} away={t >= 4 && t < 7} apps={apps} hint="X" onClose={() => {}} />;
-}
-/** The pitch (round 13, not shipped): Alice's phone in place of the ID, again from the start each time it's done. It sits
- *  straight in the overlay (Loop's wrapper has no size, and the phone sizes itself to its parent). */
-function PitchShow() {
-  const [n, setN] = useState(0);
-  return <PhoneSignup key={n} open name="Marlowe" signedIn={false} friendCode={null} onDone={() => window.setTimeout(() => setN(v => v + 1), 1200)} />;
 }
 /** Every peek (TourPeek in the kit's KeyPeek), one after another: each pops in, plays its loop, then fades as if the key
  *  were let go. The HUD and the minimap have none: the real pieces fly in from above the card (FlyHome, above). */
@@ -201,7 +191,6 @@ function CoinFlyShow() {
 const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "key-board", title: "Keys (a light Spotlight, KeyBoard, KeyPeek, SlotPop and FlyHome)", render: () => <KeyBoardShow /> },
   { id: "phone", title: "The phone (Phone): up, an app open (it tucks away), back", render: () => <PhoneShow /> },
-  { id: "phone-pitch", title: "A pitch, not shipped: the phone in place of the ID (PhoneSignup, round 13)", render: () => <PitchShow /> },
   { id: "key-peek", title: "A key's peek (KeyPeek), every kind", render: () => <KeyPeekShow /> },
   { id: "wallet", title: "The wallet (WalletSlot), its slot under the time", render: () => <WalletShow /> },
   { id: "keyword", title: "Keywords in a line (Keyword)", render: () => <KeywordShow /> },
@@ -211,7 +200,6 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "coin-fly", title: "A sale's coins, into the purse (flyCoins)", render: () => <Loop ms={3400}>{() => <CoinFlyShow />}</Loop> },
   { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
   { id: "printed-card", title: "Printed card as the overlay (CardOverlay, PrintedCard, PaperField)", render: () => <PrintedShow /> },
-  { id: "fish-reveal", title: "Fish reveal", render: () => <Loop ms={9000}>{done => <FishReveal fish={FISH.find(f => f.rarity === "rare") ?? FISH[0]} sizeCm={42} onDone={done} />}</Loop> },
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },
   { id: "emotes", title: "Emote wheel", render: () => <EmoteWheelShow /> },
@@ -233,30 +221,19 @@ function Stage({ children, tall }: { children: ReactNode; tall?: boolean }) {
   return <div className={`gui ${s.stage}`} data-tall={tall || undefined}>{children}</div>;
 }
 
-/** One section: our pieces on the left, the kit's crop (or crops) on the right. */
-function Section({ id, title, kit, note, children }: { id: string; title: string; kit?: string[]; note?: ReactNode; children: ReactNode }) {
+/** One section of the kit. */
+function Section({ id, title, note, children }: { id: string; title: string; note?: ReactNode; children: ReactNode }) {
   return <section id={id} className={s.section}>
     <header className={s.sectionHead}><h2>{title}</h2>{note && <p>{note}</p>}</header>
-    <div className={s.sectionBody}>
-      <div className={s.ours}>{children}</div>
-      {kit && <aside className={s.kit} aria-label="From the Animal Crossing UI kit">
-        <small>From the kit</small>
-        {kit.map(k => <KitCrop key={k} name={k} />)}
-      </aside>}
-    </div>
+    <div className={s.sectionBody}><div className={s.ours}>{children}</div></div>
   </section>;
-}
-function KitCrop({ name }: { name: string }) {
-  const [missing, setMissing] = useState(false);
-  return missing ? <p className={s.missing}>Kit crop “{name}” isn’t on this machine: run specs/evidence/gui-sheet/ref_crops.py.</p> : <img src={`/lab/gui/ref/${name}`} alt={`Kit: ${name}`} onError={() => setMissing(true)} />;
 }
 const Row = ({ label, children }: { label?: string; children: ReactNode }) => <div className={s.row}>{label && <span className={s.rowLabel}>{label}</span>}<div className={s.rowItems}>{children}</div></div>;
 
 const SWATCHES: [string, string][] = [
-  ["page", "Page"], ["paper", "Paper"], ["paper-hi", "Paper, light"], ["paper-warm", "Paper, warm"], ["paper-deep", "Paper, deep"], ["paper-edge", "Rule"], ["paper-line", "Line"],
-  ["butter", "Butter"], ["highlight", "Highlighter"], ["ink-strong", "Ink, strong"], ["ink", "Ink"], ["ink-2", "Ink, soft"], ["muted", "Muted"], ["taupe", "Taupe (large only)"],
-  ["sage", "Sage"], ["sage-deep", "Sage, deep"], ["sage-soft", "Sage, soft"], ["teal", "Teal (no text)"], ["teal-ink", "Teal ink"], ["teal-pill", "Name pill"], ["wood", "Wood"],
-  ["wood-light", "Honey"], ["bark", "Bark"], ["coral", "Coral"], ["coral-ink", "Coral ink"], ["amber", "Amber"], ["orange", "Ribbon"], ["gold", "Gold"], ["grey", "Grey"],
+  ["page", "Page"], ["paper", "Panel"], ["paper-hi", "Card"], ["paper-warm", "Card, dim"], ["paper-deep", "Well"], ["paper-edge", "Line"], ["paper-line", "Line, strong"],
+  ["butter", "Selected"], ["highlight", "Highlight"], ["ink-strong", "Ink"], ["ink", "Ink, body"], ["ink-2", "Ink, soft"], ["muted", "Muted"], ["taupe", "Quiet"],
+  ["sage", "Accent"], ["sage-deep", "Accent, deep"], ["sage-soft", "Pill"], ["teal", "Teal (no text)"], ["teal-ink", "Teal ink"], ["teal-pill", "Name pill"], ["coral", "Coral"], ["coral-ink", "Coral ink"], ["amber", "Amber"], ["orange", "Ribbon"], ["gold", "Gold"], ["grey", "Grey"],
   ["success", "Success"], ["warn", "Warn"], ["danger", "Danger"], ["info", "Info"], ["tethos-blue", "Tethos blue"], ["tethos-gold", "Tethos gold"],
 ];
 const TYPE: [string, string][] = [["3xl", "36 · Island title"], ["2xl", "28 · Banner"], ["xl", "22 · Sheet title"], ["lg", "18 · Lead"], ["md", "15 · Body"], ["sm", "13 · Small"], ["xs", "12 · Tags (the floor)"]];
@@ -271,42 +248,34 @@ export default function GuiShowroom() {
   const [tile, setTile] = useState("fish_arowana");
   const [toggles, setToggles] = useState({ sound: true, hud: false });
   const [volume, setVolume] = useState(70);
-  const [sheet, setSheet] = useState<null | "sm" | "md" | "lg" | "butter" | "oracle">(only === "sheet" ? "md" : null);
+  const [sheet, setSheet] = useState<null | "sm" | "md" | "lg">(only === "sheet" ? "md" : null);
   const [confirm, setConfirm] = useState(false);
   const [moment, setMoment] = useState(only === "moment");
   if (overlay) return <Stage tall>{overlay.render()}</Stage>;
 
   return <main className={`gui ${s.page}`}>
     <header className={s.top}>
-      <h1>Our GUI sheet</h1>
-      <p>The member game, portal and companion, drawn from David’s Animal Crossing UI kit: warm paper, sage, wood and Tethos accents. Tokens in <code>styles/game-tokens.css</code>, pieces in <code>components/gui</code>.</p>
+      <h1>The flat kit</h1>
+      <p>One look for the member game, the portal and the companion (design bible, UI; ledger row 334), in the base theme. Tokens in <code>styles/themes</code> (a UI pack swaps them whole) and <code>styles/game-tokens.css</code>, paper in <code>styles/paper.css</code>, pieces in <code>components/gui</code>.</p>
       <nav className={s.toc} aria-label="Sections">{["colour", "type", "paper", "buttons", "tabs", "lists", "tiles", "controls", "dialogue", "badges", "progress", "tooltips", "banners", "cards", "sheets", "states", "toasts", "rewards", "overlays", "fishing"].map(id => <a key={id} href={`#${id}`}>{id}</a>)}</nav>
     </header>
 
-    <Section id="colour" title="Colour" kit={["palette"]} note="The kit’s creams and inks, with our sage, wood and the Tethos accents. Every text pair is AA (lib/gui/contrast.test.ts).">
+    <Section id="colour" title="Colour" note="The theme’s panel, cards and inks (the kit’s --gui-* names for the --ui-* tokens), and the fixed accents. Every text pair is AA (lib/gui/contrast.test.ts).">
       <div className={s.swatches}>{SWATCHES.map(([k, name]) => <figure key={k}><span style={{ background: `var(--gui-${k})` }} /><figcaption>{name}<small>--gui-{k}</small></figcaption></figure>)}</div>
     </Section>
 
-    <Section id="type" title="Type" kit={["type"]} note="One rounded face (Nunito, self-hosted), 600 for text and 800 for titles; nothing under 12 px.">
+    <Section id="type" title="Type" note="One rounded face (Nunito, self-hosted; the pack’s --ui-font); nothing under 12 px.">
       <div className={s.typeScale}>{TYPE.map(([k, label]) => <p key={k} style={{ fontSize: `var(--gui-text-${k})`, fontWeight: ["3xl", "2xl", "xl"].includes(k) ? 800 : 600 }}>{label}<small>--gui-text-{k}</small></p>)}</div>
     </Section>
 
-    <Section id="paper" title="Paper, edges, radii, shadows" kit={["banner", "inventory"]} note="Painted by scripts/gui-paper.mjs (seeded): fibre grain, tumbling confetti, a wavy band edge, a torn edge and three cut-paper shapes.">
-      <div className={s.paperGrid}>
-        <figure><span className={s.texture} style={{ background: "var(--gui-grain) var(--gui-paper)" }} /><figcaption>Grain</figcaption></figure>
-        <figure><span className={s.texture} style={{ background: "var(--gui-confetti) var(--gui-butter)" }} /><figcaption>Confetti</figcaption></figure>
-        <figure><span className={s.edge} data-edge="wave" /><figcaption>Wave edge</figcaption></figure>
-        <figure><span className={s.edge} data-edge="deckle" /><figcaption>Torn edge</figcaption></figure>
-        <figure><span className={s.blob} style={{ maskImage: "var(--gui-blob-dialogue)", WebkitMaskImage: "var(--gui-blob-dialogue)" }} /><figcaption>Dialogue</figcaption></figure>
-        <figure><span className={s.blob} style={{ maskImage: "var(--gui-blob-menu)", WebkitMaskImage: "var(--gui-blob-menu)", background: "var(--gui-butter)" }} /><figcaption>Menu box</figcaption></figure>
-        <figure><span className={s.blob} style={{ maskImage: "var(--gui-blob-bag)", WebkitMaskImage: "var(--gui-blob-bag)" }} /><figcaption>Bag</figcaption></figure>
-      </div>
+    <Section id="paper" title="Radii, shadows and paper" note="The pack's shapes (--ui-r-*, --ui-shadow-*), and paper, the material, only for things that are paper in the world (data-gui-paper; styles/paper.css).">
       <Row label="Radii">{["sm", "md", "lg", "card", "paper", "blob", "tag"].map(r => <span key={r} className={s.radius} style={{ borderRadius: `var(--gui-r-${r})` }}>{r}</span>)}</Row>
       <Row label="Shadows">{["sm", "md", "lg"].map(h => <span key={h} className={s.radius} style={{ boxShadow: `var(--gui-shadow-${h})`, borderRadius: "var(--gui-r-card)" }}>{h}</span>)}</Row>
+      <Row label="Paper"><Card pinned tilt={-0.8} data-gui-paper=""><b>A notice</b><p>Fishing derby, Saturday at the pier.</p></Card></Row>
     </Section>
 
-    <Section id="buttons" title="Buttons and keycaps" kit={["buttons", "keycaps"]} note="Pill actions in sage (primary), butter, cream and soft red; round brown keycaps, square ones for tab keys. Hover lifts, a press sinks.">
-      <Row label="Pills"><Button>Primary</Button><Button variant="secondary">Butter</Button><Button variant="quiet">Cream</Button><Button variant="danger">Remove</Button><Button disabled>Disabled</Button></Row>
+    <Section id="buttons" title="Buttons and keycaps" note="Flat pills: the accent for the one action, white for the rest, the error ink for danger; keys on a small ink cap.">
+      <Row label="Pills"><Button>Primary</Button><Button variant="secondary">Secondary</Button><Button variant="quiet">Quiet</Button><Button variant="danger">Remove</Button><Button disabled>Disabled</Button></Row>
       <Row label="Small"><Button size="sm">Buy</Button><Button size="sm" variant="secondary" leadingKey="E">Talk</Button><Button size="sm" variant="quiet" leadingKey="B">Back</Button><Button size="sm" disabled>Sold out</Button></Row>
       <Row label="Focus"><span className={s.forceFocus}><Button size="sm">Focused</Button></span><span className={s.forceFocus}><IconButton label="Settings (focused)"><Settings size={18} aria-hidden /></IconButton></span></Row>
       <Row label="Icon buttons"><IconButton label="Mail" badge={2}><Mail size={18} aria-hidden /></IconButton><IconButton label="Sound"><Volume2 size={18} aria-hidden /></IconButton>
@@ -315,13 +284,13 @@ export default function GuiShowroom() {
       <Row label="Keycaps"><Keycap>E</Keycap><Keycap>B</Keycap><Keycap>Tab</Keycap><Keycap>Space</Keycap><Keycap data-shape="square">[</Keycap><Keycap data-shape="square">]</Keycap></Row>
     </Section>
 
-    <Section id="tabs" title="Tabs" kit={["tabs"]} note="The chosen tab is butter with the highlighter; arrows move, and in a dialog the menu’s [ and ] keys do too.">
+    <Section id="tabs" title="Tabs" note="Text tabs, the chosen one on the accent pill that slides to the next; arrows move, and in a dialog the menu’s [ and ] keys do too.">
       <Tabs label="Shop" value={tab} onChange={setTab} keyHints={["[", "]"]} tabs={[{ id: "tools", label: "Tools", icon: <img src={iconUrl("rod_cedar")} alt="" /> },
         { id: "outfits", label: "Outfits", icon: <img src={iconUrl("top_cardigan")} alt="" /> }, { id: "furniture", label: "Furniture", icon: <img src={iconUrl("lounge-sofa")} alt="" /> }, { id: "specials", label: "Today’s specials", badge: 3 }]} />
       <Row label="Plain"><Tabs label="Journal" value="quests" onChange={() => {}} tabs={[{ id: "quests", label: "Quests" }, { id: "chapters", label: "Chapters" }, { id: "museum", label: "Museum", disabled: true }]} /></Row>
     </Section>
 
-    <Section id="lists" title="List rows" kit={["shop-row", "recipe"]} note="Dashed rules between rows, a dashed leader to the value, and for the chosen row the butter stripes and our pointing glove.">
+    <Section id="lists" title="List rows" note="Rules between rows, a leader to the value, the chosen row on the selection colour with the pointing hand.">
       <List label="Shop">
         <ListRow icon={iconUrl("acc_cap")} title="Cap" detail="Accessory" leader value={<Amount n={350} />} onClick={() => setRow(0)} selected={row === 0} />
         <ListRow icon={iconUrl("acc_backpack")} title="Backpack" detail="Accessory" leader value={<Amount n={1200} />} onClick={() => setRow(1)} selected={row === 1} />
@@ -331,7 +300,7 @@ export default function GuiShowroom() {
       </List>
     </Section>
 
-    <Section id="tiles" title="Item tiles" kit={["inventory", "wheel"]} note="The real item icons on cream, a rarity edge, the stack count; a dot while new, a silhouette until found, the kit’s little dot for a free slot.">
+    <Section id="tiles" title="Item tiles" note="The real item icons on a white card, a rarity edge, the stack count; a dot while new, a silhouette until found, a little dot for a free slot.">
       <div className={s.tiles}>
         {(["fish_dace", "fruit_pear", "fish_arowana", "bug_emperor_butterfly", "fish_coelacanth", "fish_golden_koi", "fish_barreleye"] as const).map((k, i) => <ItemTile key={k} icon={iconUrl(k)} name={k.replace(/^[a-z]+_/, "").replace(/_/g, " ")}
           rarity={RARITIES[i]} count={[1, 12, 2, 1, 1, 1, 1][i]} isNew={i === 4} selected={tile === k} onClick={() => setTile(k)} caption={RARITY_LABEL[RARITIES[i]]} />)}
@@ -341,7 +310,7 @@ export default function GuiShowroom() {
       </div>
     </Section>
 
-    <Section id="controls" title="Toggles, sliders and fields" kit={["bells"]} note="Settings rows: a switch, a slider with its value, a paper select, and the recruit kit’s fields in this sheet’s ink.">
+    <Section id="controls" title="Toggles, sliders and fields" note="Settings rows: a switch, a slider with its value, a select, and the kit’s fields on a grey well.">
       <div className={s.form}>
         <Toggle checked={toggles.sound} onChange={v => setToggles(t => ({ ...t, sound: v }))} hint="Music, ambience and effects">Sound</Toggle>
         <Toggle checked={toggles.hud} onChange={v => setToggles(t => ({ ...t, hud: v }))}>Show the full HUD</Toggle>
@@ -354,7 +323,7 @@ export default function GuiShowroom() {
       </div>
     </Section>
 
-    <Section id="dialogue" title="Dialogue" kit={["dialogue", "menu", "tutorial"]} note="Our painted speech paper with the coral name tag and the amber continue chevron (the recruit kit’s NPCDialogue, in this sheet’s scope).">
+    <Section id="dialogue" title="Dialogue" note="Someone talking: a white card, their name on a tag at the top, the way on under the words.">
       <Dialogue speaker="Alice · HQ lead" onContinue={() => {}} continueLabel="Next"><p>Welcome to Tethos Island, <strong>Juniper</strong>! Your plot is waiting past the café.</p></Dialogue>
       <Row label="Name tags"><NameTag>Alice</NameTag><NameTag tone="sage">Rosa · Café</NameTag><NameTag tone="paper">Sable</NameTag></Row>
     </Section>
@@ -363,7 +332,7 @@ export default function GuiShowroom() {
       <RodGearShow />
     </Section>
 
-    <Section id="badges" title="Badges and counters" kit={["recipe", "phone"]} note="Status tags and the red count on a shoulder (nothing at zero).">
+    <Section id="badges" title="Badges and counters" note="Status tags and the red count on a shoulder (nothing at zero).">
       <Row label="Badges"><Badge>Basic</Badge><Badge tone="sage">Owned</Badge><Badge tone="success">Done</Badge><Badge tone="warn">Ready</Badge><Badge tone="danger">Sold out</Badge><Badge tone="info">Event</Badge><Badge tone="gold">Daily selection</Badge><Badge tone="new">New!</Badge></Row>
       <Row label="Rarity">{RARITIES.map(r => <RarityBadge key={r} rarity={r}>{RARITY_LABEL[r]}</RarityBadge>)}</Row>
       <Row label="Counters"><Counter n={1} /><Counter n={4} /><Counter n={12} /><span className={s.note}>(0 shows nothing)</span><Counter n={0} /></Row>
@@ -433,36 +402,33 @@ export default function GuiShowroom() {
       <BoardBody mine={DEFAULT_LOOK} board={{ sample: true, rows: [["Kelpie", 14], ["Sandpiper", 11], ["Driftwood", 9], ["Pebble", 7], ["Tidepool", 5], ["Coralie", 4], ["Gull", 2], ["Islander", 1]].map(([name, wins], i) => ({ rank: i + 1, name: name as string, wins: wins as number, you: name === "Islander" })) }} />
     </Section>
 
-    <Section id="tooltips" title="Tooltips" kit={["wheel"]} note="The teal name pill with a tail, on hover and on keyboard focus.">
+    <Section id="tooltips" title="Tooltips" note="A name pill with a tail, on hover and on keyboard focus.">
       <Row><Tooltip label="Open your mail (L)"><IconButton label="Mail"><Mail size={18} aria-hidden /></IconButton></Tooltip>
         <span className={s.tipShown}><Tooltip label="Cedar rod · Mid tier"><IconButton label="Rod"><Fish size={18} aria-hidden /></IconButton></Tooltip></span>
         <span className={s.tipShown}><Tooltip label="Below, too" place="bottom"><Button size="sm" variant="quiet">Hover me</Button></Tooltip></span></Row>
     </Section>
 
-    <Section id="banners" title="Banners" kit={["banner", "bells"]} note="The shop’s butter band with our confetti and wavy edge; the notched ribbon for deadlines.">
+    <Section id="banners" title="Banners" note="A flat tinted band; a tag at its end for deadlines.">
       <Banner title="Today’s specials" ribbon="Until 11:59 PM" icon={<ShoppingBasket size={26} />}>Three things the shopkeeper set aside for you.</Banner>
       <Banner title="Chapter 1: Settle in" tone="sage" icon={<BookOpen size={26} />}>Claim your plot, catch something, report to HQ.</Banner>
       <Banner title="GENESIS week" tone="coral" ribbon="3 days left">The posters are up by the café.</Banner>
     </Section>
 
-    <Section id="cards" title="Panels and cards" kit={["inventory"]} note="Paper cards, pinned notices with a little tilt and a pin, a torn foot; the recruit kit’s big panel.">
+    <Section id="cards" title="Panels and cards" note="White cards, tinted ones; pinned notices are paper (data-gui-paper), with their pin and a little tilt.">
       <div className={s.cards}>
-        <Card><b>Paper card</b><p>Plain paper on the page.</p></Card>
-        <Card tone="butter"><b>Butter</b><p>A highlighted choice.</p></Card>
-        <Card tone="sage"><b>Sage</b><p>Something done.</p></Card>
-        <Card pinned tilt={-1.2}><b>Pinned notice</b><p>Help reopen the café: 40 wood.</p></Card>
-        <Card pinned torn tilt={0.8}><b>Torn notice</b><p>Fishing derby, Saturday.</p></Card>
+        <Card><b>Card</b><p>A white card on the panel.</p></Card>
+        <Card tone="butter"><b>Selected</b><p>A highlighted choice.</p></Card>
+        <Card tone="sage"><b>Pill</b><p>Something done.</p></Card>
+        <Card pinned tilt={-1.2} data-gui-paper=""><b>Pinned notice</b><p>Help reopen the café: 40 wood.</p></Card>
       </div>
-      <Panel tone="cream"><b>Panel</b> (the recruit kit’s, for big surfaces).</Panel>
     </Section>
 
-    <Section id="sheets" title="Sheets and confirm dialogs" kit={["inventory", "tutorial"]} note="The one dialog frame: a wavy header band, the close button, Escape and the opening key close it, focus stays inside, a soft paper sound, a scale-and-fade in and out; a bottom sheet on a phone.">
+    <Section id="sheets" title="Sheets and confirm dialogs" note="The one dialog frame: one flat light panel, the title and a round close, Escape and the opening key close it, focus stays inside, a soft paper sound, a scale-and-fade in and out; a bottom sheet on a phone.">
       <Row><Button size="sm" onClick={() => setSheet("sm")}>Small sheet</Button><Button size="sm" onClick={() => setSheet("md")}>Sheet</Button><Button size="sm" onClick={() => setSheet("lg")}>Wide sheet</Button>
-        <Button size="sm" variant="secondary" onClick={() => setSheet("butter")}>Butter header</Button><Button size="sm" variant="quiet" onClick={() => setSheet("oracle")}>Oracle tone</Button>
         <Button size="sm" variant="danger" onClick={() => setConfirm(true)}>Confirm dialog</Button></Row>
     </Section>
 
-    <Section id="states" title="Loading, empty and error" kit={["inventory"]} note="Waiting says what for; empty says what’s missing and what to do; errors say what happened, never “empty”.">
+    <Section id="states" title="Loading, empty and error" note="Waiting says what for; empty says what’s missing and what to do; errors say what happened, never “empty”.">
       <div className={s.cards}>
         <Card><Loading label="Laying out your recipes…" /></Card>
         <Card><Empty icon={<PackageOpen size={34} />} title="Nothing in your bag yet" action={<Button size="sm" variant="quiet">Go fishing</Button>}>Catches, fruit and finds land here.</Empty></Card>
@@ -472,7 +438,7 @@ export default function GuiShowroom() {
     </Section>
 
     <Section id="charts" title="Charts (flat kit)" note="components/gui/flat/charts.tsx, for the admin analytics page: a headline tile with its change, days over time (bars and lines, hover for the read-out), bars along rows with a drop line, a distribution, a heatmap. One hue per job from the theme, values in ink.">
-      <div data-gui-flat style={{ display: "grid", gap: 12, padding: 16, borderRadius: 22, background: "var(--ui-panel)" }}>
+      <div style={{ display: "grid", gap: 12, padding: 16, borderRadius: 22, background: "var(--ui-panel)" }}>
         <Segmented label="Range" value={30} onChange={() => {}} options={[{ id: 7, label: "7 days" }, { id: 30, label: "30 days" }, { id: 90, label: "90 days" }]} />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8, padding: 16, borderRadius: 16, background: "var(--ui-card)" }}>
           <StatTile label="Players a day" value="14.2" sub={<Delta now={14.2} before={11} />} />
@@ -500,7 +466,7 @@ export default function GuiShowroom() {
       </div>
     </Section>
 
-    <Section id="toasts" title="Toasts" note="The island’s toast lane in paper, with the real item icon.">
+    <Section id="toasts" title="Toasts" note="The island’s toast lane, with the real item icon.">
       <Row><Button size="sm" onClick={() => toast("You caught a dace! 14 cm.", iconUrl("fish_dace"))}>Catch toast</Button>
         <Button size="sm" variant="quiet" onClick={() => toast("A new room is ready. 1,240 TC left.", iconUrl("home-bed"))}>Room toast</Button>
         <Button size="sm" variant="quiet" onClick={() => toast("Your backpack is full.")}>Plain toast</Button></Row>
@@ -540,8 +506,8 @@ export default function GuiShowroom() {
       {sheet === null && !confirm && OVERLAYS.map(o => <div key={o.id} className={s.overlay}><h3>{o.title}</h3><Stage>{o.render()}</Stage></div>)}
     </section>
 
-    <Sheet open={sheet !== null} onClose={() => setSheet(null)} title={sheet === "oracle" ? "The Oracle" : sheet === "butter" ? "Shop" : "Settings"} eyebrow={sheet === "lg" ? "HQ" : undefined}
-      size={sheet === "sm" ? "sm" : sheet === "lg" ? "lg" : "md"} tone={sheet === "butter" ? "butter" : sheet === "oracle" ? "oracle" : undefined} icon={sheet === "butter" ? <img src={iconUrl("shopping-cart")} alt="" /> : undefined}
+    <Sheet open={sheet !== null} onClose={() => setSheet(null)} title="Settings" eyebrow={sheet === "lg" ? "HQ" : undefined}
+      size={sheet === "sm" ? "sm" : sheet === "lg" ? "lg" : "md"}
       footer={<><Button size="sm" variant="quiet" onClick={() => setSheet(null)}>Close</Button><Button size="sm" onClick={() => setSheet(null)}>Save</Button></>} testId="showroom-sheet">
       <Tabs label="Settings" value={tab} onChange={setTab} tabs={[{ id: "tools", label: "Text" }, { id: "outfits", label: "Sound" }, { id: "furniture", label: "Keys" }]} />
       <div className={s.form} style={{ marginTop: 16 }}>

@@ -6,7 +6,7 @@ import { useProgression } from "@/lib/progression/useProgression";
 import { onBoard } from "@/lib/progression/seasonal";
 import type { LetterView } from "@/lib/progression/types";
 import { Card, Empty } from "@/components/gui";
-import { Section } from "@/components/gui/cream";
+import { Section } from "@/components/gui/flat";
 import ClubGoal, { UpNextGoal, isUpNext } from "./ClubGoal";
 import ContributeSheet from "./ContributeSheet";
 import { LetterReader, lettersTransport, useLetters, when, type LettersTransport } from "./LettersSheet";
@@ -60,7 +60,7 @@ export function NoticeBody({ transport = lettersTransport }: { transport?: Lette
 
 export default function NoticeSheet({ open, onClose, transport, keys }: ProgressionSheetProps & { transport?: LettersTransport; keys?: string }) {
   return (
-    <ProgressionPanel flat open={open} onClose={onClose} title="Notice board" wide keys={keys} icon={<ClipboardList size={20} />}>
+    <ProgressionPanel open={open} onClose={onClose} title="Notice board" wide keys={keys} icon={<ClipboardList size={20} />}>
       <NoticeBody transport={transport} />
     </ProgressionPanel>
   );

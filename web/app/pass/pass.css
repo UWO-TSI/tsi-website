@@ -1,0 +1,23 @@
+/* The GENESIS pass: plain and phone-first until David's design. The site's loader never shows here. */
+[data-ts-loader] { display: none !important; }
+.gp { min-height: 100dvh; max-width: 480px; margin: 0 auto; padding: 24px 20px 48px; font-family: system-ui, -apple-system, sans-serif; color: #f1ffff; }
+.gp a { color: inherit; }
+.gp-kicker { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #1d9bf0; margin: 0 0 8px; }
+.gp h1 { font-size: 30px; line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.01em; }
+.gp h2 { font-size: 18px; margin: 28px 0 10px; }
+.gp p { line-height: 1.5; color: rgba(241,255,255,0.78); margin: 0 0 12px; }
+.gp-card { border: 1px solid rgba(241,255,255,0.14); border-radius: 18px; padding: 20px; background: #16171a; }
+.gp-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border-radius: 999px; background: #1d9bf0; color: #fff !important; font-weight: 600; text-decoration: none; border: 0; font-size: 16px; cursor: pointer; }
+.gp-btn--quiet { background: transparent; border: 1px solid rgba(241,255,255,0.25); }
+.gp-input { width: 100%; min-height: 50px; border-radius: 12px; border: 1px solid rgba(241,255,255,0.25); background: #0f0f10; color: #f1ffff; font-size: 17px; padding: 0 14px; margin: 8px 0 16px; }
+.gp-stamps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+.gp-stamp { aspect-ratio: 1; border-radius: 50%; border: 2px dashed rgba(241,255,255,0.22); display: grid; place-items: center; text-decoration: none; }
+.gp-stamp i { width: 60%; height: 60%; background: rgba(241,255,255,0.18); -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
+.gp-stamp[data-on] { border: 2px solid #1d9bf0; background: rgba(29,155,240,0.14); }
+.gp-stamp[data-on] i { background: #f1ffff; }
+.gp-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.gp-list a { display: flex; justify-content: space-between; padding: 14px 16px; border-radius: 14px; background: #16171a; text-decoration: none; }
+.gp-list span { color: rgba(241,255,255,0.5); font-size: 14px; }
+.gp-banner { border-radius: 14px; padding: 14px 16px; background: rgba(29,155,240,0.16); border: 1px solid rgba(29,155,240,0.5); margin-bottom: 18px; animation: gp-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes gp-pop { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+.gp-photo { display: block; width: 100%; border-radius: 18px; background: #16171a; }

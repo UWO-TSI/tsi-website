@@ -7,16 +7,16 @@
 
 /* Golden-hour mist: warm cream at its heart, the morning haze round it. Opacity is driven by the sequence. */
 .mist { position: absolute; inset: 0; z-index: 80; pointer-events: none !important;
-  background: radial-gradient(ellipse 85% 70% at 50% 46%, #fff8e6 0%, #f8e7c4 40%, #e8d7b9 70%, #cfd6cc 100%); }
+  background: radial-gradient(ellipse 85% 70% at 50% 46%, #fff8e6 0%, #f8e7c4 40%, #e8d7b9 70%, #cfd6cc 100%); } /* world */
 
 /* The opening's fade in: black a moment (the loading card leaves over it, Bram's first words in the dark), then lifting
    off his boat, once. */
-.fadeIn { position: absolute; inset: 0; z-index: 85; background: #0d0b09; pointer-events: none !important; animation: fadeIn var(--fade-ms, 1600ms) linear both; }
+.fadeIn { position: absolute; inset: 0; z-index: 85; background: #0d0b09; pointer-events: none !important; animation: fadeIn var(--fade-ms, 1600ms) linear both; } /* world */
 @keyframes fadeIn { 0%, 40% { opacity: 1; animation-timing-function: ease-out; } 100% { opacity: 0; } }
 
 /* Cinematic bars for the crossing, slid in from the edges. */
 .letterbox { position: absolute; inset: 0; z-index: 2; pointer-events: none !important; }
-.letterbox i { position: absolute; left: 0; right: 0; height: clamp(28px, 7vh, 64px); background: #1b1611; animation: bar 0.9s var(--gui-ease) both; }
+.letterbox i { position: absolute; left: 0; right: 0; height: clamp(28px, 7vh, 64px); background: #1b1611; animation: bar 0.9s var(--gui-ease) both; } /* world */
 .letterbox i:first-child { top: 0; transform-origin: top; }
 .letterbox i:last-child { bottom: 0; transform-origin: bottom; }
 @keyframes bar { from { transform: scaleY(0); } }
@@ -27,7 +27,7 @@
   font-size: var(--gui-text-sm); font-weight: 800; box-shadow: var(--gui-shadow-md); cursor: pointer; transform: translateX(-50%); zoom: var(--tsi-text-scale, 1);
   animation: hintIn 0.45s ease-out 0.9s both; opacity: 0.92; }
 .skip:hover { opacity: 1; }
-.skip:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 2px; }
+.skip:focus-visible { outline: 3px solid var(--gui-focus, var(--ui-focus)); outline-offset: 2px; }
 .skip[data-touch] { padding-left: 18px; }
 .arrival[data-phase="creator"] .skip { display: none; }
 @keyframes hintIn { from { opacity: 0; transform: translate(-50%, 8px); } }
@@ -39,7 +39,7 @@
   animation: glyphIn 0.35s var(--gui-spring) both, glyphPulse 0.7s ease-in-out 0.45s 1, glyphOut 0.5s ease-in calc(var(--glyph-ms, 4800ms) - 500ms) forwards; }
 .glyph svg { color: var(--gui-teal-ink); }
 @keyframes glyphIn { from { opacity: 0; transform: translate(-50%, 10px) scale(0.9); } }
-@keyframes glyphPulse { 50% { transform: translateX(-50%) scale(1.14); box-shadow: var(--gui-shadow-md), 0 0 0 6px rgb(255 204 0 / 0.45); } }
+@keyframes glyphPulse { 50% { transform: translateX(-50%) scale(1.14); box-shadow: var(--gui-shadow-md), 0 0 0 6px color-mix(in srgb, var(--ui-glyph-ring) 45%, transparent); } }
 @keyframes glyphOut { to { opacity: 0; transform: translate(-50%, 6px); } }
 
 /* The dock's move (the box, the dash): its key held up above the prompt lane until you do it, the cap pressing. */
@@ -51,10 +51,10 @@
 
 /* Leaving the tour: small, out of the way at the top, one click. */
 .leave { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); min-height: 36px; padding: 6px 16px; border: 0;
-  border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.88); color: var(--gui-muted); font: 800 var(--gui-text-xs)/1 var(--gui-font); box-shadow: var(--gui-shadow-sm);
+  border-radius: var(--gui-r-pill); background: color-mix(in srgb, var(--ui-hud-pill) 88%, transparent); color: var(--gui-muted); font: 800 var(--gui-text-xs)/1 var(--gui-font); box-shadow: var(--gui-shadow-sm);
   cursor: pointer; zoom: var(--tsi-text-scale, 1); }
 .leave:hover { color: var(--gui-ink-strong); background: var(--gui-paper); }
-.leave:focus-visible { outline: 3px solid var(--gui-focus, #3e7fa6); outline-offset: 2px; }
+.leave:focus-visible { outline: 3px solid var(--gui-focus, var(--ui-focus)); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
   .letterbox i, .skip, .glyph, .teach, .teachCap { animation: none; }

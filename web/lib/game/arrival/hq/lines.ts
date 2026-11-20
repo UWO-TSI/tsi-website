@@ -21,15 +21,6 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
     "[happy] There you are! Bram said you'd be up. I'm Alice. I keep HQ running, more or less.",
     "You've washed up somewhere special. Let me tell you where.",
   ],
-  // Your island ID: the card opens after these.
-  idAsk: [
-    "[happy] Now, every islander gets an ID. Let's make yours.",
-    "A few questions, then I'll print it for you.",
-  ],
-  idDone: [
-    "[happy] Nice! Your profile is set up, {name}.",
-    "Your friend code's on it. Give it to anyone you want to find again.",
-  ],
   // Money: each currency's icon pops up and flies to where it lives on your screen.
   coins: [
     "Now, money. Coins first.",
@@ -79,7 +70,6 @@ export const HQ_TITLE = "Register at HQ";
 export const HQ_TRACKER: Readonly<Record<string, string>> = {
   report: "Report to Alice at HQ",
   lore: "Hear about Tethos Island",
-  id: "Make your island ID",
   coins: "Find out about coins",
   gems: "Find out about gems",
   events: "Find out about check-ins",
@@ -105,64 +95,6 @@ export const FLY_CARDS = {
   gems: { name: "Gems", text: "For rare items and real merch" },
 } as const;
 export type FlyTarget = keyof typeof FLY_CARDS;
-
-/**
- * Your island ID (the front desk): Alice asks, prints it and stamps it. What a player card means in a game you share
- * with others (David's v5 review: "remove like where youre from and put stuff thats important in game, like
- * pronouns"): your world name, your pronouns, your birthday (private) and a line about you (`bio`), plus your friend
- * code. Your world name only, never a real name.
- */
-/**
- * A pitch, not shipped (round 13, dev only, ?idphone=1): Alice hands you the phone at the ID's beat and you make your
- * profile on it (components/game/hq/PhoneSignup.tsx). Her two ID lines, as they'd read, and what the phone says.
- */
-export const PHONE_PITCH = {
-  idAsk: [
-    "[happy] Now, every islander gets a phone. Here's yours.",
-    "Make your profile on it, and I'll stamp you in.",
-  ],
-  idDone: [
-    "[happy] Nice! Your profile is set up, {name}.",
-    "Your friend code's on your phone. Give it to anyone you want to find again.",
-  ],
-  hello: "Hello!",
-  title: "Profile",
-  stampIt: "Stamp it",
-  app: "Profile",
-  noCode: "Soon",
-} as const;
-
-export const ID_CARD = {
-  eyebrow: "HQ front desk",
-  title: "Your island ID",
-  island: "Tethos Island",
-  kind: "Resident",
-  name: "World name",
-  /** Signed out (a preview): no world name. */
-  noName: "Your world name",
-  nameHint: "The only name anyone sees here.",
-  birthday: "Birthday",
-  birthdayHint: "Optional. Only HQ sees it.",
-  pronouns: "Pronouns",
-  pronounsHint: "Optional. Shown with your world name.",
-  pronounsSample: "she/her, he/him, they/them",
-  /** Offered as you type (any other is fine too). */
-  pronounsPicks: ["she/her", "he/him", "they/them", "she/they", "he/they", "any pronouns"],
-  about: "About you",
-  aboutHint: "Optional. One line about you, on your profile.",
-  aboutSample: "Say hi in a line",
-  /** An empty row on the printed card. */
-  blank: "·",
-  code: "Friend code",
-  /** No account to issue one for (signed out, a preview). */
-  codeLater: "Issued once you're signed in",
-  print: "Print my ID",
-  printing: "Printing…",
-  stamp: "Resident",
-  done: "Done",
-  /** The save didn't take: said under the card, and Done still works. */
-  unsaved: "HQ couldn't save that just now. Your card's still yours.",
-} as const;
 
 /** The check-in card: where a gathering's check-in code goes (the existing flow: the door's QR, lib/portal/checkIn.ts). */
 export const CHECKIN_CARD = {

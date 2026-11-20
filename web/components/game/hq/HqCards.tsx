@@ -4,7 +4,7 @@
  * The HQ visit's cards (row 312, specs/hq-onboarding.md), from the GUI kit over the room: where a gathering's check-in
  * code goes (the existing flow: the QR at the door), the Founder's plaque (blank until David writes it), the lore
  * overlay (the island, a page at a time, over a dimmed room) and the fly card (an icon up in the middle, then off to
- * its place on screen; David's v2 review: coins and gems). Your island ID is IdCard.tsx. Copy: lib/game/arrival/hq/lines.ts (drafts).
+ * its place on screen; David's v2 review: coins and gems). Copy: lib/game/arrival/hq/lines.ts (drafts).
  * Their words and icons come from the icon library (KeywordLine, KeywordIcon; round 7).
  */
 import { useState } from "react";
@@ -19,7 +19,7 @@ import s from "./HqCards.module.css";
 /** Where a gathering's check-in code goes: the QR at the door, which opens the check-in page. */
 export function CheckInCard({ open, onDone }: { open: boolean; onDone: () => void }) {
   const host = CHECK_IN_ORIGIN.replace(/^https?:\/\//, "");
-  return <Sheet open={open} onClose={onDone} title={CHECKIN_CARD.title} eyebrow={CHECKIN_CARD.eyebrow} icon={<KeywordIcon kind="gathering" />} size="sm" tone="sage" testId="hq-checkin"
+  return <Sheet open={open} onClose={onDone} title={CHECKIN_CARD.title} eyebrow={CHECKIN_CARD.eyebrow} icon={<KeywordIcon kind="gathering" />} size="sm" testId="hq-checkin"
     footer={<Button onClick={onDone} data-testid="hq-checkin-done">{CHECKIN_CARD.done}</Button>}>
     <ol className={s.steps}>
       {CHECKIN_CARD.steps.map((step, i) => <li key={i}>{i === 0 ? <KeywordIcon kind="qr" size={18} /> : <span className={s.num}>{i + 1}</span>}<span><KeywordLine line={step.replace("{host}", host)} /></span></li>)}

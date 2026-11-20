@@ -87,7 +87,7 @@ function MapPlot({ playerPosRef, plot, className }: { playerPosRef: React.RefObj
       {plot.content}
       <text ref={north} x={plot.north[0]} y={plot.north[1]} textAnchor="middle" fill="#244855" fontSize={4} fontWeight="700">N</text>
       {/* friends in view (v1) */}
-      {friends.map(([fx, fz], i) => <circle key={i} cx={sx(fx)} cy={-fz} r={0.95} fill="#E2826A" stroke="#FFFBE7" strokeWidth="0.55" />)}
+      {friends.map(([fx, fz], i) => <circle key={i} cx={sx(fx)} cy={-fz} r={0.95} strokeWidth="0.55" style={{ fill: "var(--gui-coral)", stroke: "var(--ui-card)" }} />)}
       {/* player */}
       {dot ? <circle cx={sx(dot[0])} cy={-dot[1]} r={1.1} fill="#FFDD57" stroke="#7A5A00" strokeWidth="0.7" /> : null}
     </g>

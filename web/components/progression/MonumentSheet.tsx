@@ -62,7 +62,7 @@ export default function MonumentSheet({ open, onClose, keys }: ProgressionSheetP
   const [contributeSlug, setContributeSlug] = useState<string | null>(null);
   const goals = state.goals.filter((g) => onBoard(g) && !isUpNext(g));
   return (
-    <ProgressionPanel flat open={open} onClose={onClose} title="Club monument" keys={keys} icon={<Landmark size={20} />}>
+    <ProgressionPanel open={open} onClose={onClose} title="Club monument" keys={keys} icon={<Landmark size={20} />}>
       {goals.length ? goals.map((g) => <Goal key={g.slug} goal={g} onContribute={setContributeSlug} />)
         : <Empty icon={<Flag size={32} />} title="No club goal right now">The next one goes up on the notice board.</Empty>}
       <ContributeSheet open={contributeSlug !== null} goalSlug={contributeSlug ?? undefined} onClose={() => setContributeSlug(null)} />

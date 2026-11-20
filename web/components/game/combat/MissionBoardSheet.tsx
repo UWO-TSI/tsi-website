@@ -19,7 +19,7 @@ import { completeMissionRemote, missionBoard, postMissionEvents, startMissionRem
 import { attachProgressId, combat, setMission, takeMissionQueue, useCombatVersion } from "@/lib/game/combat/runtime";
 import IslandSheet from "../IslandSheet";
 import { Button, Progress, SignInText } from "@/components/gui";
-import { Fold, Folds, QuietButton, Section } from "@/components/gui/cream";
+import { Fold, Folds, QuietButton, Section } from "@/components/gui/flat";
 import { Amount } from "@/components/economy/Amount";
 import menus from "@/components/progression/menus.module.css";
 import s from "./MissionBoard.module.css";
@@ -32,7 +32,7 @@ const hoursLeft = (iso: string) => Math.ceil((Date.parse(iso) - Date.now()) / 3_
 
 /** E at the board opens it and E closes it. The board's body subscribes to the combat runtime only while it shows. */
 export default function MissionBoardSheet({ open, onClose, gateNote }: { open: boolean; onClose: () => void; gateNote: string | null }) {
-  return <IslandSheet flat open={open} title="Ruins mission board" onClose={onClose} testId="mission-board" keys="e" size="lg" icon={<Swords size={20} />}><MissionBoard gateNote={gateNote} /></IslandSheet>;
+  return <IslandSheet open={open} title="Ruins mission board" onClose={onClose} testId="mission-board" keys="e" size="lg" icon={<Swords size={20} />}><MissionBoard gateNote={gateNote} /></IslandSheet>;
 }
 
 /** How hard, out of five, as pips. */

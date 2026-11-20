@@ -9,10 +9,10 @@
   max-width: 220px;
   padding: 4px 10px 4px 5px;
   border-radius: 12px;
-  background: #fffaf0;
-  box-shadow: 0 0 0 1.5px rgb(46 34 24 / 0.16), 0 3px 10px rgb(46 34 24 / 0.22);
+  background: var(--ui-tag-paper);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--ui-nametag-outline) 16%, transparent), 0 3px 10px color-mix(in srgb, var(--ui-nametag-outline) 22%, transparent);
   font: 800 13px/1.2 var(--gui-font);
-  color: var(--gui-ink-strong, #3b2f25);
+  color: var(--gui-ink-strong, var(--ui-tag-ink));
   pointer-events: none;
   user-select: none;
   zoom: var(--tsi-text-scale, 1);
@@ -20,7 +20,7 @@
 }
 .icon { grid-row: span 2; width: 30px; height: 30px; object-fit: contain; }
 .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.special { font-size: 11px; font-weight: 700; color: var(--gui-coral, #d9694f); }
+.special { font-size: 11px; font-weight: 700; color: var(--gui-coral, var(--ui-tag-special-ink)); }
 @keyframes rise { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
 @media (prefers-reduced-motion: reduce) { .tag { animation: none; } }
-:global(html[data-contrast="high"]) .tag { box-shadow: 0 0 0 2px #000000; color: #000000; }
+:global(html[data-contrast="high"]) .tag { box-shadow: 0 0 0 2px var(--ui-contrast-ink); color: var(--ui-contrast-ink); }

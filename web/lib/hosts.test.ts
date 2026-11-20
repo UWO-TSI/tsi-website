@@ -76,6 +76,32 @@ describe("www.tethos.ca and play.tethos.ca", () => {
   });
 });
 
+describe("genesis.tethos.ca (the GENESIS pass)", () => {
+  it.each([
+    // Its pages are /pass's, served from the root.
+    ["https://genesis.tethos.ca/", "page /pass"],
+    ["https://genesis.tethos.ca/start", "page /pass/start"],
+    ["https://genesis.tethos.ca/s/ark-aid", "page /pass/s/ark-aid"],
+    ["https://genesis.tethos.ca/p/ark-aid?stamped=1", "page /pass/p/ark-aid"],
+    ["https://genesis.tethos.ca/setup", "page /pass/setup"],
+    // The API, Next's own files, public files and /pass itself are not rewritten.
+    ["https://genesis.tethos.ca/api/positions", "page /api/positions"],
+    ["https://genesis.tethos.ca/_next/static/chunks/a.js", "page /_next/static/chunks/a.js"],
+    ["https://genesis.tethos.ca/logos/partners/arkaid.svg", "page /logos/partners/arkaid.svg"],
+    ["https://genesis.tethos.ca/pass", "page /pass"],
+    // Opened on the site or the portal, the pass goes across to its own host.
+    ["https://www.tethos.ca/pass", "redirect https://genesis.tethos.ca"],
+    ["https://www.tethos.ca/pass/p/ark-aid", "redirect https://genesis.tethos.ca/p/ark-aid"],
+    ["https://play.tethos.ca/pass/start", "redirect https://genesis.tethos.ca/start"],
+    // Local checks: genesis.localhost behaves like the host; previews serve /pass in place.
+    ["http://genesis.localhost:3000/", "page /pass"],
+    ["http://genesis.localhost:3000/s/bgc", "page /pass/s/bgc"],
+    ["https://uwotsi-abc.vercel.app/pass/p/bgc", "page /pass/p/bgc"],
+  ])("%s → %s", async (href, expected) => {
+    expect(await route(href)).toBe(expected);
+  });
+});
+
 describe("siteHomeFor", () => {
   it.each([
     ["play.tethos.ca", "https://www.tethos.ca/"],

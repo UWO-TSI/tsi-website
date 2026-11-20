@@ -1,0 +1,39 @@
+/* Paper, the material (specs/design-bible.md UI 2; ledger rows 320 and 334): only for things that are paper in the world
+   (a letter, the notice board's notices, the club goal, an HQ notice, a menu). Set `data-gui-paper` on one and the kit's
+   --gui-* tokens inside it are paper's: warm paper, brown ink, the old kit's soft cut shapes. Paper stays paper in every UI
+   pack, so this block sits outside the theme tokens (styles/themes), and it is the one place outside recruitment where
+   these colours may be written (components/gui/flatOnly.test.ts). The flat menu around it keeps the theme's. Every text
+   pair here is AA (lib/gui/contrast.test.ts). */
+[data-gui-paper] {
+  --gui-page: #f7f1da;
+  --gui-paper: #fffbe7;
+  --gui-paper-hi: #fffff7;
+  --gui-paper-warm: #f8f4e8;
+  --gui-paper-deep: #eee9ca;
+  --gui-paper-edge: #e3d9b8;
+  --gui-paper-line: #d3c39c;
+  --gui-butter: #ffeea0;
+  --gui-highlight: #ffcc00;
+  --gui-ink-strong: #3a2e22;
+  --gui-ink: #4f3f31;
+  --gui-ink-2: #6b5843;
+  --gui-muted: #726450;
+  --gui-taupe: #8a7b66;
+  --gui-sage: #426b5b;
+  --gui-sage-deep: #2f5143;
+  --gui-sage-soft: #dfe9d9;
+  --gui-focus: #a8722f;
+  --gui-stripe-a: #f6d32d;
+  --gui-stripe-b: #f7e43f;
+  --gui-wood: #946429;
+  --gui-wood-light: #bb813f;
+  --gui-bark: #725c4e;
+  --gui-paper-hover: #fffff0;
+  --gui-shade: 114 92 78;
+  --gui-r-card: 18px 22px 17px 21px / 20px 17px 22px 18px;
+  --gui-r-blob: 46% 50% 44% 48% / 54% 50% 46% 52%;
+  --gui-r-tag: 40% 43% 38% 40% / 45% 42% 45% 43%;
+  --gui-shadow-sm: 0 2px 0 rgb(114 92 78 / 0.14);
+  --gui-shadow-md: 0 4px 0 rgb(114 92 78 / 0.16), 0 10px 24px rgb(79 63 49 / 0.1);
+  color: var(--gui-ink);
+}

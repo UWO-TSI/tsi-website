@@ -63,4 +63,4 @@
   .grid { --slot: 120px; --slot-w: 100px; gap: 8px; }
   .pin { min-width: 0; flex: 1; }
 }
-:global(html[data-contrast="high"]) .pin, :global(html[data-contrast="high"]) .empty { background: #ffffff; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .pin, :global(html[data-contrast="high"]) .empty { background: var(--ui-on-scrim); box-shadow: inset 0 0 0 2px var(--ui-contrast-ink); }

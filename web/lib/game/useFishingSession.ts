@@ -1,7 +1,7 @@
 /**
  * One cast from the wind-up to the card (the fishing overlays' shared rules; specs/polish/fishing.md, specs/launch/
  * v1-gameplay.md "Fish tiers and fights"): the state machine both overlays drive, the applicant island's
- * (components/game/FishingOverlay.tsx) and the member island's (components/game/fishing/MemberFishing.tsx), so neither
+ * (components/recruit/FishingOverlay.tsx) and the member island's (components/game/fishing/MemberFishing.tsx), so neither
  * owns a copy. It listens for `tsi:fish-start` from the world's E handler at a fishing spot, then runs
  *
  *   charging (the cast meter) → casting → waiting (2-6 s) → bite (the hook window) → [surfacing] → reeling → revealing

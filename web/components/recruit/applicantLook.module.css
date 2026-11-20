@@ -1,0 +1,45 @@
+/* The applicant island's own look (row 334): recruitment keeps the cream studio it has always had, here in recruitment's
+   code, so no game screen can reach it. ApplicantIsland wears `.look` on its <main>; the game's shared pieces under it
+   (the creator, the collection's rarity tags, the kit's round buttons and sliders) read these values there, exactly as
+   they read the old cream base before row 334. The member game is flat (styles/themes/clean.css). */
+.look {
+  --gui-page: #f7f1da;
+  --gui-paper: #fffbe7;
+  --gui-paper-hi: #fffff7;
+  --gui-paper-warm: #f8f4e8;
+  --gui-paper-deep: #eee9ca;
+  --gui-paper-edge: #e3d9b8;
+  --gui-paper-line: #d3c39c;
+  --gui-butter: #ffeea0;
+  --gui-highlight: #ffcc00;
+  --gui-ink-strong: #3a2e22;
+  --gui-ink: #4f3f31;
+  --gui-ink-2: #6b5843;
+  --gui-muted: #726450;
+  --gui-taupe: #8a7b66;
+  --gui-sage: #426b5b;
+  --gui-sage-deep: #2f5143;
+  --gui-sage-soft: #dfe9d9;
+  --gui-focus: #a8722f;
+  --gui-scrim: rgb(64 52 36 / 0.3);
+  --gui-stripe-a: #f6d32d;
+  --gui-stripe-b: #f7e43f;
+  --gui-wood: #946429;
+  --gui-wood-light: #bb813f;
+  --gui-bark: #725c4e;
+  --gui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --gui-weight: 600;
+  --gui-weight-strong: 800;
+  --gui-r-paper: 30px 36px 28px 34px / 32px 28px 36px 30px;
+  --gui-r-card: 18px 22px 17px 21px / 20px 17px 22px 18px;
+  --gui-r-blob: 46% 50% 44% 48% / 54% 50% 46% 52%;
+  --gui-r-tag: 40% 43% 38% 40% / 45% 42% 45% 43%;
+  --gui-shadow-sm: 0 2px 0 rgb(114 92 78 / 0.14);
+  --gui-shadow-md: 0 4px 0 rgb(114 92 78 / 0.16), 0 10px 24px rgb(79 63 49 / 0.1);
+  --gui-shadow-lg: 0 6px 0 rgb(114 92 78 / 0.18), 0 22px 48px rgb(79 63 49 / 0.18);
+  --gui-shadow-press: 0 1px 0 rgb(114 92 78 / 0.2);
+  --gui-shadow-inset: inset 0 2px 0 rgb(114 92 78 / 0.08);
+  --gui-grain: url("data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 width%3D%27160%27 height%3D%27160%27%3E%3Cfilter id%3D%27g%27 x%3D%270%27 y%3D%270%27%3E%3CfeTurbulence type%3D%27fractalNoise%27 baseFrequency%3D%270.85%27 numOctaves%3D%273%27 seed%3D%277%27 stitchTiles%3D%27stitch%27%2F%3E %3CfeColorMatrix values%3D%270 0 0 0 0.36 0 0 0 0 0.29 0 0 0 0 0.21 0 0 0 0.55 -0.2%27%2F%3E%3C%2Ffilter%3E%3Crect width%3D%27160%27 height%3D%27160%27 filter%3D%27url(%23g)%27%2F%3E%3C%2Fsvg%3E");
+  --gui-paper-hover: #fffff0;
+  --gui-shade: 114 92 78;
+}

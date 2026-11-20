@@ -3526,17 +3526,6 @@
    "action": "shelf"
   },
   {
-   "id": "display",
-   "name": "Trophy display",
-   "pos": [
-    10.4,
-    4.6
-   ],
-   "level": 0,
-   "range": 1.4,
-   "action": "display"
-  },
-  {
    "id": "founder",
    "name": "The Founder's desk",
    "pos": [

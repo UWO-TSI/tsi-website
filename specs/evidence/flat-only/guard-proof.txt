@@ -1,0 +1,55 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/flat-only/web/components/game/ScratchCream.tsx
+  1:1  error  '@/components/recruit/ui' import is restricted from being used by a pattern. The recruit kit is recruitment's own. Use the flat kit: @/components/gui (Button, Field, TextArea, Keycap, Dialogue) and @/components/gui/flat (design bible UI; ledger row 334)  no-restricted-imports
+  2:1  error  '@/components/gui/cream' import is restricted from being used by a pattern. The cream kit is gone. Use the flat kit (@/components/gui/flat: Section, Folds, Fold, QuietButton, BackLink; design bible UI; ledger row 334)                                      no-restricted-imports
+✖ 2 problems (2 errors, 0 warnings)
+eslint exit 1
+ RUN  v3.2.6 /Users/DavidLiu/Developer/uwotsi/.claude/worktrees/flat-only/web
+   × flat is the only look (rows 334, 335) > nothing outside recruitment imports the recruit kit or a cream path 173ms
+     → Use the flat kit (@/components/gui: Button, Field, TextArea, Keycap, Dialogue; @/components/gui/flat for the rest). The recruit kit is recruitment's own.
+components/game/ScratchCream.tsx:1: import { VillageButton } from "@/components/recruit/ui";
+components/game/ScratchCream.tsx:2: import { Fold } from "@/components/gui/cream";: expected [ …(2) ] to deeply equal []
+   ✓ flat is the only look (rows 334, 335) > components/gui/cream is gone 0ms
+   ✓ flat is the only look (rows 334, 335) > there is no cream theme 0ms
+   ✓ flat is the only look (rows 334, 335) > no code asks for the cream variant or theme 62ms
+   × flat is the only look (rows 334, 335) > no cream palette hex outside the themes, the paper block and recruitment 49ms
+     → Read a --ui-* token (styles/themes/clean.css). For a thing that is paper in the world, set data-gui-paper and read the --gui-* paper tokens (styles/paper.css).
+components/game/ScratchCream.module.css:1: .x { color: #fffbe7; background: #946429; }: expected [ Array(1) ] to deeply equal []
+   ✓ flat is the only look (rows 334, 335) > only clean.css sets :root or body; every other theme file only its own [data-ui-theme] 17ms
+   ✓ flat is the only look (rows 334, 335) > no component names a UI theme 50ms
+ FAIL  components/gui/flatOnly.test.ts > flat is the only look (rows 334, 335) > nothing outside recruitment imports the recruit kit or a cream path
+AssertionError: Use the flat kit (@/components/gui: Button, Field, TextArea, Keycap, Dialogue; @/components/gui/flat for the rest). The recruit kit is recruitment's own.
+components/game/ScratchCream.tsx:1: import { VillageButton } from "@/components/recruit/ui";
+components/game/ScratchCream.tsx:2: import { Fold } from "@/components/gui/cream";: expected [ …(2) ] to deeply equal []
+- Expected
++ Received
+- []
++ [
++   "components/game/ScratchCream.tsx:1: import { VillageButton } from \"@/components/recruit/ui\";",
++   "components/game/ScratchCream.tsx:2: import { Fold } from \"@/components/gui/cream\";",
++ ]
+     29| /** Every line of `paths` matching `re`, as "file:line: text". */
+     30| const hits = (paths: readonly string[], re: RegExp) => paths.flatMap(p…
+     31| const fail = (found: string[], instead: string) => expect(found, found…
+       |                                                                                                                         ^
+     32| 
+     33| describe("flat is the only look (rows 334, 335)", () => {
+ FAIL  components/gui/flatOnly.test.ts > flat is the only look (rows 334, 335) > no cream palette hex outside the themes, the paper block and recruitment
+AssertionError: Read a --ui-* token (styles/themes/clean.css). For a thing that is paper in the world, set data-gui-paper and read the --gui-* paper tokens (styles/paper.css).
+components/game/ScratchCream.module.css:1: .x { color: #fffbe7; background: #946429; }: expected [ Array(1) ] to deeply equal []
+- Expected
++ Received
+- []
++ [
++   "components/game/ScratchCream.module.css:1: .x { color: #fffbe7; background: #946429; }",
++ ]
+     29| /** Every line of `paths` matching `re`, as "file:line: text". */
+     30| const hits = (paths: readonly string[], re: RegExp) => paths.flatMap(p…
+     31| const fail = (found: string[], instead: string) => expect(found, found…
+       |                                                                                                                         ^
+     32| 
+     33| describe("flat is the only look (rows 334, 335)", () => {
+ Test Files  1 failed (1)
+      Tests  2 failed | 5 passed (7)
+   Start at  00:44:52
+   Duration  728ms (transform 90ms, setup 109ms, collect 40ms, tests 352ms, environment 0ms, prepare 62ms)

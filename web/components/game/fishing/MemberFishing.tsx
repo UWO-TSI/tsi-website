@@ -4,7 +4,7 @@
  * The member island's fishing overlay (David, 2026-10-28: "update the ui for fishing to look nicer ... add small micro
  * animation and juice ... redo the fishing bar"; specs/design-bible.md UI): the flat kit's fishing pieces
  * (components/gui/flat/reel) over the shared rules (lib/game/useFishingSession, useReelLoop, useCastMeter,
- * useCatchCard). The applicant island keeps its own (components/game/FishingOverlay.tsx), on the same rules.
+ * useCatchCard). The applicant island keeps its own (components/recruit/FishingOverlay.tsx), on the same rules.
  *
  * Calm while you fish, juicy at the big moments: the hook (the black chip springs in and tugs; the "!" over you and
  * its sound are the world's), the catch (the fish leaps out of the track in a burst, the card lands with a spring),

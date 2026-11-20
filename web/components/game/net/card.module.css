@@ -3,7 +3,7 @@
 .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--gui-tethos-blue); box-shadow: 0 0 0 2px var(--gui-paper-hi); }
 .lead { margin: 0 0 10px; font-size: var(--gui-text-sm); font-weight: 700; color: var(--gui-ink); }
 .small { margin: 10px 0 0; font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
-.error { margin: 8px 0 0; font-size: var(--gui-text-xs); font-weight: 800; color: var(--gui-danger, #b4572e); }
+.error { margin: 8px 0 0; font-size: var(--gui-text-xs); font-weight: 800; color: var(--gui-danger, var(--ui-warn-ink)); }
 .reasons { display: grid; gap: 6px; }
 .reason { min-height: 40px; padding: 8px 14px; border: 0; border-radius: 14px; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px var(--gui-paper-line);
   font: 700 var(--gui-text-sm)/1.2 var(--gui-font); color: var(--gui-ink); text-align: left; cursor: pointer; }
@@ -18,7 +18,7 @@
 .rowActions { display: inline-flex; gap: 6px; }
 .add { display: grid; gap: 6px; }
 .code { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 16px; border-radius: 16px; background: var(--gui-butter);
-  box-shadow: inset 0 0 0 2px rgb(114 92 78 / 0.14); }
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ui-shadow-paper) 14%, transparent); }
 .code span { font: 900 22px/1 var(--gui-font); letter-spacing: 0.12em; color: var(--gui-ink-strong); font-variant-numeric: tabular-nums; }
 .codeForm { display: grid; gap: 6px; margin-top: 10px; }
 .codeForm .lead { margin: 0; }
