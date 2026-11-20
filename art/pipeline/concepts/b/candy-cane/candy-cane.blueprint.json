@@ -1,0 +1,238 @@
+{
+ "asset": "rod_candy_cane",
+ "name": "Candy Cane rod",
+ "family": "B",
+ "rarity": "rare",
+ "source": "pre-registration reward",
+ "length_game_m": 1.28,
+ "triangle_budget": 600,
+ "material_budget": 5,
+ "pivot": "grip centre at the origin (right-hand socket), tip toward +Z, front -Y, reel hanging toward -Y (build_rods.py conventions)",
+ "sheet": "art/pipeline/concepts/b/candy-cane/anime/",
+ "concept": "art/pipeline/concepts/b/candy-cane/approved.webp",
+ "palette": {
+  "red": "#D0241C",
+  "white": "#F4EEE4",
+  "green": "#1F5A34",
+  "gold": "#E2A93A",
+  "line": "#F1EAD8"
+ },
+ "parts": [
+  {
+   "n": 1,
+   "part": "EndCap",
+   "size_m": [
+    0.05,
+    0.05,
+    0.06
+   ],
+   "colour": "gold",
+   "material": "P_Metal"
+  },
+  {
+   "n": 2,
+   "part": "Grip",
+   "size_m": [
+    0.045,
+    0.045,
+    0.22
+   ],
+   "colour": "green",
+   "material": "P_Velvet",
+   "detail": "6-sided tapered grip, spiral wrap read through faceting"
+  },
+  {
+   "n": 3,
+   "part": "Collars",
+   "size_m": [
+    0.05,
+    0.05,
+    0.05
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "two gold bands with a thin green stripe"
+  },
+  {
+   "n": 4,
+   "part": "Shaft",
+   "size_m": [
+    0.03,
+    0.03,
+    0.68
+   ],
+   "colour": "red+white",
+   "material": "P_Paint",
+   "detail": "red and white spiral stripes: vertex colours or a 2-colour stripe texture 64x8"
+  },
+  {
+   "n": 5,
+   "part": "Hook",
+   "size_m": [
+    0.14,
+    0.03,
+    0.16
+   ],
+   "colour": "red+white",
+   "material": "P_Paint",
+   "detail": "candy-cane curl at the tip, same stripe"
+  },
+  {
+   "n": 6,
+   "part": "Bow",
+   "size_m": [
+    0.14,
+    0.04,
+    0.12
+   ],
+   "colour": "red",
+   "material": "P_Cloth",
+   "detail": "two loops and two tails, gold star at the knot"
+  },
+  {
+   "n": 7,
+   "part": "Guides",
+   "size_m": [
+    0.025,
+    0.01,
+    0.03
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "3 guide rings under the shaft"
+  },
+  {
+   "n": 8,
+   "part": "ReelFoot",
+   "size_m": [
+    0.02,
+    0.02,
+    0.04
+   ],
+   "colour": "gold",
+   "material": "P_Metal"
+  },
+  {
+   "n": 9,
+   "part": "ReelBody",
+   "size_m": [
+    0.05,
+    0.05,
+    0.05
+   ],
+   "colour": "red",
+   "material": "P_Paint"
+  },
+  {
+   "n": 10,
+   "part": "Spool",
+   "size_m": [
+    0.05,
+    0.05,
+    0.04
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "red face with a gold star"
+  },
+  {
+   "n": 11,
+   "part": "Crank",
+   "size_m": [
+    0.04,
+    0.01,
+    0.04
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "handle with the jingle bell; moving part"
+  },
+  {
+   "n": 12,
+   "part": "Bell",
+   "size_m": [
+    0.02,
+    0.02,
+    0.02
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "jingle bell on the crank"
+  },
+  {
+   "n": 13,
+   "part": "StarCharm",
+   "size_m": [
+    0.06,
+    0.015,
+    0.08
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "star hanging from the hook on a short loop; moving part"
+  },
+  {
+   "n": 14,
+   "part": "Line",
+   "colour": "line",
+   "material": "game code"
+  }
+ ],
+ "moving": [
+  {
+   "part": "Crank",
+   "pivot": "spool axle",
+   "axis": "spool axis",
+   "range": "continuous while reeling",
+   "rest": "handle down",
+   "driver": "game code (reel)"
+  },
+  {
+   "part": "StarCharm",
+   "pivot": "hook loop",
+   "axis": "X",
+   "range": "+-15 deg sway",
+   "rest": "hanging",
+   "driver": "rodfx bob/sway"
+  }
+ ],
+ "animation": [
+  {
+   "clip": "none on the mesh",
+   "note": "cast and reel come from the character rig; crank turns while reeling"
+  }
+ ],
+ "effects": [
+  {
+   "name": "BellJingle",
+   "socket": "FX_Bell",
+   "trigger": "on cast and on catch",
+   "colours": [
+    "#FFE7A3"
+   ],
+   "loop": false,
+   "length_s": 0.5,
+   "sheet": "small gold glints + the jingle sound"
+  },
+  {
+   "name": "StarTwinkle",
+   "socket": "FX_Star",
+   "trigger": "always",
+   "colours": [
+    "#FFE7A3"
+   ],
+   "loop": true,
+   "sheet": "two hair-thin glints"
+  },
+  {
+   "name": "RareAura",
+   "socket": "FX_Grip",
+   "trigger": "while held",
+   "colours": [
+    "#3B82D6"
+   ],
+   "loop": true,
+   "sheet": "rarity aura, RodAura.tsx"
+  }
+ ]
+}

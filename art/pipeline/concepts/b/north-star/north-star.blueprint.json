@@ -1,0 +1,205 @@
+{
+ "asset": "rod_north_star",
+ "name": "North Star rod",
+ "family": "B",
+ "rarity": "legendary",
+ "source": "Christmas event, Dec 20 to Jan 6 (limited)",
+ "length_game_m": 1.45,
+ "triangle_budget": 600,
+ "material_budget": 5,
+ "pivot": "grip centre at the origin (right-hand socket), tip toward +Z, front -Y (build_rods.py conventions)",
+ "sheet": "art/pipeline/concepts/b/north-star/anime/",
+ "concept": "art/pipeline/concepts/b/north-star/approved.webp",
+ "palette": {
+  "gold": "#D9A24A",
+  "violet": "#4B2C6E",
+  "violet_core": "#8E6BD8",
+  "crystal": "#B9D2F2",
+  "star": "#FFFFFF",
+  "line": "#F1EAD8"
+ },
+ "parts": [
+  {
+   "n": 1,
+   "part": "Pommel",
+   "size_m": [
+    0.05,
+    0.05,
+    0.09
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "diamond point with a violet gem inset (gem = violet_core)"
+  },
+  {
+   "n": 2,
+   "part": "Grip",
+   "size_m": [
+    0.035,
+    0.035,
+    0.24
+   ],
+   "colour": "violet",
+   "material": "P_Leather",
+   "detail": "criss-cross wrap read as a 6-sided tapered tube"
+  },
+  {
+   "n": 3,
+   "part": "GripCollars",
+   "size_m": [
+    0.045,
+    0.045,
+    0.04
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "two rings above the grip"
+  },
+  {
+   "n": 4,
+   "part": "ShaftLower",
+   "size_m": [
+    0.02,
+    0.02,
+    0.22
+   ],
+   "colour": "gold",
+   "material": "P_Metal"
+  },
+  {
+   "n": 5,
+   "part": "Core",
+   "size_m": [
+    0.03,
+    0.03,
+    0.12
+   ],
+   "colour": "violet_core",
+   "material": "P_Glass",
+   "detail": "violet crystal section, emissive #8E6BD8 at 0.6"
+  },
+  {
+   "n": 6,
+   "part": "Rings",
+   "size_m": [
+    0.11,
+    0.11,
+    0.16
+   ],
+   "colour": "gold",
+   "material": "P_Metal",
+   "detail": "3 open rings orbiting the core at different tilts; moving part"
+  },
+  {
+   "n": 7,
+   "part": "ShaftUpper",
+   "size_m": [
+    0.018,
+    0.018,
+    0.4
+   ],
+   "colour": "gold",
+   "material": "P_Metal"
+  },
+  {
+   "n": 8,
+   "part": "HeadCollar",
+   "size_m": [
+    0.04,
+    0.04,
+    0.035
+   ],
+   "colour": "gold",
+   "material": "P_Metal"
+  },
+  {
+   "n": 9,
+   "part": "Fingers",
+   "size_m": [
+    0.14,
+    0.14,
+    0.13
+   ],
+   "colour": "crystal",
+   "material": "P_Glass",
+   "detail": "6 crystal fingers in thin gold frames curving forward like an opening lotus, symmetric about the rod axis"
+  },
+  {
+   "n": 10,
+   "part": "Star",
+   "size_m": [
+    0.06,
+    0.06,
+    0.06
+   ],
+   "colour": "star",
+   "material": "P_Glass",
+   "detail": "four-point star on the axis between the fingertips, emissive #CFE3FF at 2.0; moving part"
+  },
+  {
+   "n": 11,
+   "part": "Line",
+   "colour": "line",
+   "material": "game code",
+   "detail": "fishing line drawn by game code from the head collar"
+  }
+ ],
+ "moving": [
+  {
+   "part": "Rings",
+   "pivot": "core centre",
+   "axis": "rod axis (Z)",
+   "range": "continuous",
+   "rest": "as sheet",
+   "driver": "rodfx spin 0.8 rad/s, alternate rings opposite directions"
+  },
+  {
+   "part": "Star",
+   "pivot": "star centre",
+   "axis": "Z",
+   "range": "continuous + bob 0.01 m",
+   "driver": "rodfx spin 1.5 rad/s, bob rate 1.2"
+  }
+ ],
+ "animation": [
+  {
+   "clip": "none on the mesh",
+   "note": "all motion is rodfx (spin, bob, pulse); cast and reel come from the character rig"
+  }
+ ],
+ "effects": [
+  {
+   "name": "StarGlow",
+   "socket": "FX_Star",
+   "trigger": "always",
+   "colours": [
+    "#FFFFFF",
+    "#CFE3FF"
+   ],
+   "loop": true,
+   "sheet": "Halo size 0.18"
+  },
+  {
+   "name": "StarTrail",
+   "socket": "FX_Star",
+   "trigger": "on cast",
+   "colours": [
+    "#FFFFFF",
+    "#9EC2FF"
+   ],
+   "loop": false,
+   "length_s": 0.8,
+   "sheet": "North Star cast sprite sheet (Pinterest reference) - later round"
+  },
+  {
+   "name": "LegendaryAura",
+   "socket": "FX_Grip",
+   "trigger": "while held",
+   "colours": [
+    "#E2B23A"
+   ],
+   "loop": true,
+   "sheet": "rarity aura, RodAura.tsx"
+  }
+ ]
+}
