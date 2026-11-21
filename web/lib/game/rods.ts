@@ -141,6 +141,9 @@ export const RODS: readonly RodTier[] = [
     { passive: passive("Sunlit", "+10 control in sunny weather.", { control: 10 }, { weather: ["sunny"] }) }),
   rod(3, "rod_riptide", "Riptide rod", "rare", "crafted", stats(30, 30, 36, 42, 34, 30),
     { passive: passive("Current", "+10 reel speed in the sea.", { reel: 10 }, { water: ["sea"] }) }),
+  // Christmas (David 2026-11-20): the pre-registration reward, never sold. No snow on the island, so cloudy days.
+  rod(3, "rod_candy_cane", "Candy Cane rod", "rare", "found", stats(34, 38, 30, 34, 38, 34),
+    { passive: passive("Festive", "+10 lure on cloudy days.", { lure: 10 }, { weather: ["cloudy"] }) }),
   rod(4, "rod_lighthouse", "Lighthouse rod", "rare", "crafted", stats(44, 46, 38, 36, 40, 34),
     { passive: passive("Beacon", "+10 luck after dark (8 pm to 6 am).", { luck: 10 }, { night: true }) }),
   // The epics' awakenings (David 2026-11-06, rg8-table: "tide warden titanium and tempes only have 1 awakenings, and
@@ -159,6 +162,9 @@ export const RODS: readonly RodTier[] = [
     passive: passive("Storm born", "+10 reel speed and +10 luck in the rain.", { reel: 10, luck: 10 }, { weather: ["rain"] }),
     awakenings: [{ at: AWAKEN_AT, base: up(TEMPEST, { reel: 16, lure: 6, luck: 10, control: 6 }), looks: "epic",
       passive: passive("Storm born", "+10 reel speed and +10 luck in rain or cloud.", { reel: 10, luck: 10 }, { weather: ["rain", "cloudy"] }), model: "/assets/game/tools/rod-tempest-a1.glb" }] }),
+  // Christmas (David 2026-11-20): the event rod, Dec 20 to Jan 6, never sold.
+  rod(5, "rod_north_star", "North Star rod", "legendary", "found", stats(98, 94, 90, 96, 100, 98),
+    { passive: passive("Guiding star", "+10 luck after dark (8 pm to 6 am).", { luck: 10 }, { night: true }) }),
 ];
 /** The rod seller at the tackle shop (David 2026-11-04: "rod seller will be named Gary"). */
 export const ROD_SELLER = "Gary";
@@ -219,7 +225,10 @@ export const ownsRod = (r: Pick<RodTier, "key" | "source">, owned: readonly stri
 
 /** The shop's rods go up to rare for now (legendary fish aren't out yet); rarer rods stay off its shelf. */
 export const SHOP_ROD_MAX: Rarity = "rare";
-export const onShopShelf = (r: Pick<RodTier, "rarity">) => RARITY_RANK[r.rarity] <= RARITY_RANK[SHOP_ROD_MAX];
+/** The Christmas rods are rewards, never teased on the shelf (honest scarcity, row 326). */
+export const LIMITED_RODS: readonly string[] = ["rod_candy_cane", "rod_north_star"];
+export const onShopShelf = (r: Pick<RodTier, "rarity"> & { key?: string }) =>
+  RARITY_RANK[r.rarity] <= RARITY_RANK[SHOP_ROD_MAX] && !LIMITED_RODS.includes(r.key ?? "");
 
 /** Add-on slots on every rod (more kinds later). */
 export const SLOTS = ["bait", "bobber"] as const;

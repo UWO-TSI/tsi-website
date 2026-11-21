@@ -17,7 +17,7 @@ const tool = (kind: ToolKind, tier: ToolTier, key: string, name: string, source:
 /** A rod's model: the launch five's tools/rod-<tier>.glb, the rest's tools/rod-<name>.glb. */
 const LAUNCH_RODS = ["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "rod_tidewarden"];
 const rodTool = (r: (typeof RODS)[number]): Tool =>
-  ({ ...tool("rod", r.tier, r.key, r.name, r.source), model: LAUNCH_RODS.includes(r.key) ? `/assets/game/tools/rod-${r.tier}.glb` : `/assets/game/tools/${r.key.replace("_", "-")}.glb` });
+  ({ ...tool("rod", r.tier, r.key, r.name, r.source), model: LAUNCH_RODS.includes(r.key) ? `/assets/game/tools/rod-${r.tier}.glb` : `/assets/game/tools/${r.key.replaceAll("_", "-")}.glb` });
 
 export const TOOLS: readonly Tool[] = [
   ...RODS.map(rodTool),

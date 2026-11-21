@@ -12,7 +12,7 @@ const total = (s: Stats) => STAT_KEYS.reduce((n, k) => n + s[k], 0);
 
 describe("rod tiers", () => {
   it("lists the rods weakest first, and the launch five only ever get more forgiving", () => {
-    expect(RODS.map(r => r.tier)).toEqual([1, 1, 1, 2, 2, 3, 3, 4, 5, 5, 5]);
+    expect(RODS.map(r => r.tier)).toEqual([1, 1, 1, 2, 2, 3, 3, 3, 4, 5, 5, 5, 5]);
     for (let i = 1; i < RODS.length; i++) expect(total(RODS[i].base), RODS[i].key).toBeGreaterThan(total(RODS[i - 1].base));
     const launch = ["rod_flimsy", "rod_cedar", "rod_glass", "rod_lighthouse", "rod_tidewarden"].map(k => rodByKey(k)!);
     for (let i = 1; i < launch.length; i++) {
@@ -68,7 +68,7 @@ describe("rod tiers", () => {
 
 describe("rod rarity (David 2026-10-28)", () => {
   it("climbs the ladder: Flimsy, Training and Precision common, Cedar and Carrot uncommon, Glass, Riptide and Lighthouse rare, Titanium, Tidewarden and Tempest epic", () => {
-    expect(RODS.map(r => r.rarity)).toEqual(["common", "common", "common", "uncommon", "uncommon", "rare", "rare", "rare", "epic", "epic", "epic"]);
+    expect(RODS.map(r => r.rarity)).toEqual(["common", "common", "common", "uncommon", "uncommon", "rare", "rare", "rare", "rare", "epic", "epic", "epic", "legendary"]);
     expect(RODS.filter(r => r.rarity === "epic").map(r => [r.key, r.source])).toEqual([["rod_titanium", "crafted"], ["rod_tidewarden", "crafted"], ["rod_tempest", "found"]]);
   });
   it("hooks fish up to one rung above the rod's own rarity", () => {
@@ -134,7 +134,7 @@ describe("the rescale (David 2026-11-04)", () => {
 describe("passives (David 2026-11-04)", () => {
   const sunny = { water: "river" as const, hour: 14, weather: "sunny" };
   it("rare and up have one; commons and uncommons none", () => {
-    for (const r of RODS) expect(!!r.passive, r.key).toBe(r.rarity === "rare" || r.rarity === "epic");
+    for (const r of RODS) expect(!!r.passive, r.key).toBe(r.rarity === "rare" || r.rarity === "epic" || r.rarity === "legendary");
   });
   it("adds its gains only while its water, weather or hour holds", () => {
     const glass = rodByKey("rod_glass")!, lh = rodByKey("rod_lighthouse")!, rip = rodByKey("rod_riptide")!;
