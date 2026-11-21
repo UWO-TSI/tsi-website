@@ -164,6 +164,17 @@ All GENESIS tables have RLS on with no policies: only genesis.tethos.ca's server
 - **Bad venue internet:** the photo id is made on the laptop, so the receipt prints straight away and the upload retries in
   the background. The QR code works as soon as the upload lands.
 
+### Built (2026-11-20)
+- `/booth`: staff only (T1 to T3, signed in on the laptop). Camera picker, mirrored preview, 3-2-1 countdown (Space or a
+  click), the colour photo (1600 px JPEG, mirrored as the guest saw it) queued in IndexedDB and uploaded with retries
+  every 5 s, so photos survive a dropped connection or a reload. "Full screen" for the iPad view.
+- Receipt: 72 mm wide (80 mm paper), Floyd-Steinberg dithered photo, QR to `genesis.tethos.ca/ph/<id>`, the short link
+  under it. Prints through Chrome's print dialog; run Chrome with `--kiosk-printing` to print straight to the default
+  printer with no dialog. Checked headless with a fake camera; the real printer test waits on the model.
+- `/staff`: staff only, live numbers (checked in, passes, saved, photos taken and opened, stamps per booth). Moves into
+  the club admin once `site/admin-portal` merges.
+- `/map`, `/schedule`, `/sponsors`: read `web/lib/genesis/event.ts`, empty until David sends the details, and say so.
+
 ## NFC stickers
 - **Tags:** NTAG213 (or 215) inside a printed sticker of David's design. One web address per booth, the same on every
   sticker for that booth. Written with an NFC writing app (NFC Tools), then locked so nobody can rewrite them.

@@ -51,7 +51,7 @@ export default async function PassHome({ searchParams }: { searchParams: Promise
       </ul>
       <h2>GENESIS</h2>
       <ul className="gp-list">
-        {["Map", "Schedule", "Sponsors"].map((s) => <li key={s}><a aria-disabled>{s}<span>Coming before GENESIS</span></a></li>)}
+        {[["Map", "/map"], ["Schedule", "/schedule"], ["Sponsors", "/sponsors"]].map(([s, p]) => <li key={s}><Link href={href(p)}>{s}<span>→</span></Link></li>)}
       </ul>
     </>
   );
