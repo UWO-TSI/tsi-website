@@ -284,6 +284,24 @@ def flat_leaf(pc, base, d, L, W, face, n=2, blunt=False):
         pc.f([prev[0], pc.v(end), prev[1]], V(base) - V(face))
 
 
+def torn(pc, top, tip, w0, feather=False):
+    """A torn strip of cloth (or a feather, pointed) hanging from `top` to `tip`, w0 wide, its end ragged; its face
+    toward -X. 6 triangles."""
+    top, tip = V(top), V(tip)
+    dn = (tip - top).normalized()
+    sd = dn.cross(V((-1, 0, 0))).normalized()
+    m = top.lerp(tip, 0.55) + V((-w0 * 0.2, 0, 0))
+    if feather:
+        ring_ = [top - sd * w0 * 0.15, m - sd * w0 * 0.5, tip - sd * w0 * 0.15 - dn * w0 * 0.3, tip, tip + sd * w0 * 0.2 - dn * w0 * 0.5,
+                 m + sd * w0 * 0.45, top + sd * w0 * 0.15]
+    else:
+        ring_ = [top - sd * w0 * 0.5, m - sd * w0 * 0.6, tip - sd * w0 * 0.4, tip + dn * (-w0 * 0.3), tip + sd * w0 * 0.3 - dn * w0 * 0.7,
+                 m + sd * w0 * 0.55, top + sd * w0 * 0.5]
+    vs = [pc.v(p) for p in ring_]
+    for i in range(1, 6):
+        pc.f([vs[0], vs[i], vs[i + 1]], m + V((0.05, 0, 0)))
+
+
 def tri_count(ob):
     return sum(len(p.vertices) - 2 for p in ob.data.polygons)
 
@@ -299,7 +317,7 @@ def cedar():
     S, LEN, F0 = 1080.0, 0.95, 70.0                     # the sheet's side view: 1080 px butt to tip; the hand at 70 px
     Z = lambda px: (px - F0) / S * LEN                  # a station (px from the butt) to rig z
     P = lambda px: px / S * LEN                          # a size in px to rig units
-    rad = lambda px: 1.18 * P(12.0 - 3.2 * min(1, max(0, (px - 230) / 300)) - 5.0 * max(0, (px - 230) / 850))   # blank radius
+    rad = lambda px: 1.25 * P(12.0 - 3.2 * min(1, max(0, (px - 310) / 300)) - 5.0 * max(0, (px - 230) / 850))   # blank radius
     bend = lambda px: V((0, 0.012 * max(0, (px - 150) / 930) ** 2, Z(px)))
     at = Atlas(512)
 
@@ -360,9 +378,9 @@ def cedar():
             pp.put(pp.disc(cs, ct + 0.02, 0.05), "#C98A55", 0.5)
 
     GOLD, GOLDD, WOOD, BLANK, TWINE, LINE = "#D9A75C", "#B8843F", "#9C5130", "#A3482A", "#D8B479", "#EDE4CF"
-    Q = lambda px: P(px) * 1.15                          # the grip, the reel and the charm a little chunkier, toward the hero
-    RC = V((-Q(4), -Q(37), Z(225)))                       # the reel's hub; its axis along X, its face toward -X
-    RR, RW = Q(37), Q(26)                                # its radius and its width
+    Q = lambda px: P(px) * 1.45                          # the grip, the reel's parts and the charm at the hero's girth
+    RC = V((-P(6), -P(84), Z(312)))                       # the reel's hub; its axis along X, its face toward -X
+    RR, RW = P(54), P(46)                                # its radius and its width
 
     def b(pc):
         # the butt cap and its flower end
@@ -371,14 +389,14 @@ def cedar():
         pc.paint("#FFFFFF", disc_uv(ep, (0, 0, Z(0)), Q(21), (0, 0, -1), up=(0, 1, 0)))
         lathe(pc, (0, 0, Z(0)), [(0.0, 0.0), (Q(19), Q(1))], n=8)
         # the carved grip, a touch fuller at the butt
-        pc.paint("#FFFFFF", cyl_uv(gp, (0, 0, 0), Z(18), Z(136)), "P_Wood")
-        lathe(pc, (0, 0, 0), [(Q(20.5), Z(18)), (Q(21), Z(40)), (Q(19.8), Z(80)), (Q(18.4), Z(120)), (Q(17.6), Z(136))], n=8)
+        pc.paint("#FFFFFF", cyl_uv(gp, (0, 0, 0), Z(18), Z(195)), "P_Wood")
+        lathe(pc, (0, 0, 0), [(Q(20.5), Z(18)), (Q(21), Z(55)), (Q(19.8), Z(110)), (Q(18.4), Z(165)), (Q(17.6), Z(195))], n=10)
         # the collar
         pc.paint(GOLD, mat="P_Metal")
-        lathe(pc, (0, 0, 0), [(Q(17), Z(134)), (Q(19), Z(136)), (Q(19), Z(150)), (Q(16), Z(152))], n=8)
+        lathe(pc, (0, 0, 0), [(Q(17), Z(193)), (Q(19), Z(195)), (Q(19), Z(209)), (Q(16), Z(211))], n=10)
         # the blank: the reel seat's thick dark wood, then the taper to the tip
         pc.paint(BLANK, mat="P_Wood")
-        zs = [152, 175, 230, 320, 480, 640, 800, 940, 1064]
+        zs = [211, 230, 285, 360, 480, 640, 800, 940, 1064]
         loft(pc, [bend(z) for z in zs], [rad(z) for z in zs], sides=6, tip=False, cap=False)
         # the gold tip-top and its ring
         pc.paint(GOLD, mat="P_Metal")
@@ -410,6 +428,10 @@ def cedar():
         hood = [[arc(math.radians(a), RR + Q(3) + Q(2.5) * math.sin(math.pi * k / 2), -RW * 0.62 + RW * 0.42 * k) for k in range(3)]
                 for a in (35, 5, -25, -55, -85, -115)]
         pc.band(hood, closed=False)
+        pc.paint("#E3B56A")
+        pc.tube([arc(math.radians(a), RR + Q(5), -RW * 0.62) for a in (40, 14, -14, -42, -70, -98, -118)],    # its raised gold branch on the face side
+                [Q(7), Q(6.6), Q(6), Q(5.4), Q(4.8), Q(4.2), Q(3.6)], sides=6, tip=False)
+        pc.paint(GOLD)
         lf = arc(math.radians(-115), RR + Q(3), -RW * 0.4)  # its end: a leaf hanging toward the butt, the charm's ring
         flat_leaf(pc, lf, V((-0.2, -0.75, -1.0)), Q(36), Q(10), V((-1, 0, 0)))
         ringc = arc(math.radians(-140), RR + Q(3), -RW * 0.45)
@@ -430,8 +452,14 @@ def cedar():
         for f in pc.since(n0):
             pc.ref[f] = tuple(RC + yaw @ (V(pc.ref[f]) - RC))
         ringc = RC + yaw @ (ringc - RC)
-        pc.paint(GOLD, None, "P_Metal")                   # the hood's stalk off the reel seat
-        pc.tube([bend(250) + V((0, -rad(250) * 0.7, 0)), RC + yaw @ (arc(math.radians(20), RR + Q(5), 0.0) - RC)], [Q(5), Q(4)], sides=5, tip=False)
+        pc.paint("#E3B56A", None, "P_Metal")              # the gold branch bracket: two arms off the seat, forking down to the reel
+        for zb, ang, side_ in ((285, -40, -0.45), (350, 30, -0.35), (318, 0, 0.3)):
+            foot = RC + yaw @ (arc(math.radians(ang), RR + Q(4), RW * side_) - RC)
+            seat = bend(zb) + V((-rad(zb) * 0.5, -rad(zb) * 0.8, 0))
+            mid = seat.lerp(foot, 0.5) + V((-Q(4), Q(3), 0))
+            pc.tube([seat, mid, foot], [Q(5.5), Q(5), Q(4.2)], sides=6, tip=False)
+        lf2 = bend(300) + V((-Q(6), -rad(300) - Q(10), 0))   # a gold leaf on the fork
+        flat_leaf(pc, lf2, V((0, 0.3, -1)), Q(26), Q(8), V((-1, 0, 0)))
         # the pinecone charm: a short cord, a green bead, the cone; two grass ribbons off the bead
         pc.paint(TWINE, None, "P_Cloth")
         bead = ringc + V((0, -Q(11), Q(1)))
@@ -456,15 +484,15 @@ def cedar():
     # -- the boughs: flat fronds fanned round the blank and swept toward the tip, long by the grip and short by the tip
     at2 = Atlas(256)                                     # the frond: pinnate leaflets, light at their tips, on a dark spray
     fp = at2.region(128, 224)
-    fp.fill("#23491C")
-    for k in range(10):
-        a = 0.04 + 0.86 * k / 10                         # along the frond from its base (t = 1) to its tip (t = 0)
+    fp.fill("#3F7A2E")
+    for k in range(7):
+        a = 0.05 + 0.85 * k / 7                         # along the frond from its base (t = 1) to its tip (t = 0)
         t, w = 1 - a, 0.47 * (1 - 0.72 * a)
         for sx in (-1, 1):
-            fp.put(fp.leafm((0.5, t), (0.5 + sx * w, t - 0.085), 0.065 * (1 - 0.4 * a)), "#4E8A33")
-            fp.put(fp.leafm((0.5 + sx * w * 0.35, t - 0.03), (0.5 + sx * w * 1.0, t - 0.085), 0.04 * (1 - 0.4 * a)), "#8FC453")
+            fp.put(fp.leafm((0.5, t), (0.5 + sx * w, t - 0.085), 0.075 * (1 - 0.4 * a)), "#6FAA42")
+            fp.put(fp.leafm((0.5 + sx * w * 0.35, t - 0.03), (0.5 + sx * w * 1.0, t - 0.085), 0.05 * (1 - 0.4 * a)), "#A6D468")
     fp.put(fp.leafm((0.5, 0.12), (0.5, 0.0), 0.06), "#8FC453")
-    fp.put(fp.seg((0.5, 1.0), (0.5, 0.04), 0.014), "#35612A")
+    fp.put(fp.seg((0.5, 1.0), (0.5, 0.04), 0.012), "#4A6E2A")
 
     def frond(pc, base, d, n, L, W, lobes, tint):
         """A cedar frond: a rib from `base` along `d` in the plane whose normal is `n`, `lobes` broad leaflets a side
@@ -483,12 +511,12 @@ def cedar():
             notch = [rib[0]]
             for i in range(1, lobes + 1):
                 u = i / lobes
-                w = W * 0.55 * (1 - 0.72 * u)
+                w = W * 0.8 * (1 - 0.72 * u)
                 notch.append(rib[i] + side * (sgn * w) + n * (w * 0.2) - d * (L / lobes * 0.1))
             for i in range(lobes):
                 u = (i + 0.7) / lobes
                 w = W * (1.0 - 0.75 * u)
-                tip = rib[i] + d * (L / lobes * 0.95) + side * (sgn * w) + n * (w * 0.25)
+                tip = rib[i] + d * (L / lobes * 0.8) + side * (sgn * w) + n * (w * 0.25)
                 F([rib[i], notch[i], tip])
                 F([rib[i], tip, notch[i + 1]])
                 if i < lobes - 1:
@@ -496,29 +524,28 @@ def cedar():
             F([rib[-1], notch[-1], base + d * Lm])
 
     def boughs(pc):
+        pc.paint("#A8502E", None, "P_Wood")             # the branch wound round the blank, the boughs leaving it
+        hel = lambda px, ph=0.0: bend(px) + V((math.cos(ph + TAU * 3.5 * (px - 220) / 740), math.sin(ph + TAU * 3.5 * (px - 220) / 740), 0)) * (rad(px) + P(2.5))
+        pts = [hel(220 + 740 * k / 39) for k in range(40)]
+        pc.tube(pts, [P(3.4 - 2.0 * k / 39) for k in range(40)], sides=3, tip=True, cap=True)
         pc.paint("#FFFFFF", None, "P_Cloth")
         rng = np.random.default_rng(11)
-        n = 36
+        n = 32
         for i in range(n):
             u = i / (n - 1)
-            px = 150 + 910 * u ** 1.1
-            a = (i * 2.39996) % TAU                     # golden-angle spiral round the blank, leaning to the top (+Y)
-            a = math.atan2(math.sin(a) * 0.75 + 0.3, math.cos(a))
-            if px < 340 and math.sin(a) < 0.1:          # none in front of the reel: they leave the blank's top
-                a = math.pi / 2 + (a - math.pi * 1.5) * 0.5
+            px = 215 + 815 * u ** 1.05
+            up = i % 2 == 0                             # alternately over and under the blank; by the reel, under it only behind
+            a = (math.pi / 2 if up else -math.pi / 2) + (0.15 + 0.6 * rng.random()) * (1 if (i // 2) % 2 else -1) * (1 if up else -1)
+            if not up and px < 430:
+                a = -math.pi / 2 + 0.9
             r = V((math.cos(a), math.sin(a), 0))
-            c = bend(px) + r * rad(px) * 0.5
-            beta = math.radians(26 - 4 * u + 8 * (rng.random() - 0.5))     # its angle off the blank
+            c = bend(px) + r * rad(px) * 0.7
+            beta = math.radians(32 - 10 * u + 8 * (rng.random() - 0.5))   # its angle off the blank
             d = r * math.sin(beta) + V((0, 0, math.cos(beta)))
-            L = P(35 + 140 * (1 - u) ** 1.15) * (0.85 + 0.3 * rng.random())
+            L = P(40 + 130 * (1 - u) ** 1.1) * (0.85 + 0.3 * rng.random())
+            L *= 0.85 if r.y < -0.2 else 1.0            # the fronds under the blank a little shorter
             tint = ("#FFFFFF", "#E6EEDD", "#F6FFE6")[i % 3]
-            L *= 0.65 if r.y < -0.2 else 1.0           # the fronds under the blank are short
-            frond(pc, c, d, r.cross(V((0, 0, 1))), L, L * 0.42, 4 if u < 0.5 else 3, tint)
-        pc.paint("#B0532E", mat="P_Wood")                # three red twigs where the boughs leave the blank
-        for px, a, ln in ((330, 1.9, 55), (470, 1.3, 45), (600, 2.2, 40)):
-            c = bend(px)
-            r = V((math.cos(a), math.sin(a), 0))
-            pc.tube([c, c + r * P(ln * 0.5) + V((0, 0, P(ln * 0.5))), c + r * P(ln * 0.8) + V((0, 0, P(ln)))], [P(2.6), P(2), P(1.2)], sides=3, tip=True, cap=False)
+            frond(pc, c, d, r.cross(V((0, 0, 1))), L, L * 0.4, 5 if L > P(100) else 4, tint)
 
     fx = build_c("Boughs", at2, ["P_Cloth", "P_Wood"], boughs, grad=(1.0, 1.0))
     fx["sway"] = 1.0
@@ -534,12 +561,12 @@ def flimsy():
     S, LEN, F0 = 1171.0, 0.95, 85.0
     Z = lambda px: (px - F0) / S * LEN
     P = lambda px: px / S * LEN * 1.1                    # sizes a touch chunkier than the sheet's thin side view
-    rad = lambda px: P(11.5 - 6.2 * max(0.0, (px - 270) / 900) ** 1.2)
+    rad = lambda px: P(13 - 7.2 * max(0.0, (px - 270) / 900) ** 1.2)
     bend = lambda px: V((0, 0.018 * max(0.0, (px - 300) / 870) ** 2.5, Z(px)))
     at = Atlas(512)
 
     gp = at.region(192, 160)                             # the grip: dark stain worn pale in streaks
-    gp.fill("#6B3F26")
+    gp.fill("#553019")
     rng = np.random.default_rng(5)
     gp.put(np.clip(np.sin(gp.t * 55 + np.sin(gp.s * 13) * 1.5) * 0.5 + 0.5, 0, 1) ** 6, "#5A321D", 0.6)
     for k in range(22):                                  # worn patches: ragged streaks along the grain, more toward the rag
@@ -547,8 +574,8 @@ def flimsy():
         ln, w = 0.1 + 0.25 * rng.random(), 0.01 + 0.025 * rng.random()
         for j in range(3):
             a0 = (s0 + 0.015 * j, t0 + ln * j / 3)
-            gp.put(gp.leafm(a0, (a0[0] + 0.01 * (rng.random() - 0.5), a0[1] + ln / 2), w * (1 - 0.25 * j)), "#C38C56", 0.9)
-    gp.put(np.clip((gp.t - 0.93) * 20, 0, 1), "#C38C56", 0.7)                    # the butt end's worn rim
+            gp.put(gp.leafm(a0, (a0[0] + 0.01 * (rng.random() - 0.5), a0[1] + ln / 2), w * (1 - 0.25 * j)), "#A9784A", 0.75)
+    gp.put(np.clip((gp.t - 0.93) * 20, 0, 1), "#A9784A", 0.6)                    # the butt end's worn rim
     bp = at.region(64, 256)                              # the blank: pale cane, faint grain
     bp.fill("#DCA35F")
     bp.put(np.clip(np.sin(bp.s * 40 + np.sin(bp.t * 30) * 0.6) * 0.5 + 0.5, 0, 1) ** 5, "#C98E4E", 0.35)
@@ -576,13 +603,14 @@ def flimsy():
     cp.put(np.abs(cp.t - 0.5) < 0.04, "#DA6248", 0.6)
 
     TWINE, RAG, STRAP, REEL, LINE = "#C39253", "#DCCFB4", "#A9703A", "#C99158", "#EFEADF"
-    RC = V((-P(3), -P(44), Z(322)))
-    RR, RW = P(31), P(28)
+    G = 1.45                                            # the grip, rag and charm at the hero's girth
+    RC = V((-P(4), -P(56), Z(330)))
+    RR, RW = P(41), P(44)
 
     def b(pc):
         # the grip: a rounded butt, tapering to the rag
         pc.paint("#FFFFFF", cyl_uv(gp, (0, 0, 0), Z(55), Z(230)), "P_Wood")
-        lathe(pc, (0, 0, 0), [(0.0, Z(55)), (P(16), Z(55)), (P(18.5), Z(59)), (P(18.5), Z(70)), (P(17.5), Z(130)), (P(15.5), Z(200)), (P(15), Z(230))], n=8)
+        lathe(pc, (0, 0, 0), [(0.0, Z(55)), (P(16) * G, Z(55)), (P(18.5) * G, Z(60)), (P(18.5) * G, Z(72)), (P(17.5) * G, Z(130)), (P(15.5) * G, Z(200)), (P(15) * G, Z(230))], n=10)
         # the blank
         pc.paint("#FFFFFF", cyl_uv(bp, (0, 0, 0), Z(220), Z(1226)), "P_Wood")
         zs = [225, 300, 420, 560, 700, 840, 980, 1100, 1190]
@@ -591,9 +619,9 @@ def flimsy():
         lathe(pc, tz, [(rad(1190), 0.0), (P(5), P(14)), (P(3.5), P(30)), (0.0, P(38))], n=6, axis=d)
         # the rag round the grip's top, its two torn ends hanging toward the butt, twine round it and a knot
         pc.paint(RAG, None, "P_Cloth")
-        lathe(pc, (0, 0, 0), [(P(15.5), Z(222)), (P(17.5), Z(228)), (P(18), Z(250)), (P(16.5), Z(268)), (P(11.5), Z(274))], n=7)
-        for tip, w0 in (((-P(12), -P(70), Z(196)), P(9)), ((-P(14), -P(46), Z(206)), P(7))):
-            top = V((-P(8), -P(15), Z(240)))
+        lathe(pc, (0, 0, 0), [(P(15.5) * G, Z(222)), (P(17.5) * G, Z(228)), (P(18) * G, Z(250)), (P(16) * G, Z(268)), (rad(276) * 1.15, Z(278))], n=9)
+        for tip, w0 in (((-P(16), -P(98), Z(185)), P(13)), ((-P(20), -P(66), Z(200)), P(10))):
+            top = V((-P(11), -P(21), Z(240)))
             tip = V(tip)
             dn = (tip - top).normalized()
             sd = dn.cross(V((-1, 0, 0))).normalized()
@@ -603,53 +631,58 @@ def flimsy():
             for i in range(1, 6):
                 pc.f([vs[0], vs[i], vs[i + 1]], m + V((0.05, 0, 0)))
         pc.paint("#FFFFFF", None, "P_Cloth")
-        for z in (250, 286, 352, 425, 630, 855, 1125):
+        for z in (250, 292, 372, 440, 640, 860, 1125):
             c = bend(z)
-            r = (P(18.3) if z == 250 else rad(z) * 1.22)
-            pc.paint(uvfn=cyl_uv(wp, c, c.z - P(8), c.z + P(8)))
-            w = P(16 if z > 270 else 12)
-            lathe(pc, c - V((0, 0, w / 2)), [(r * 0.92, 0.0), (r * 1.06, w * 0.5), (r * 0.92, w)], n=8)
+            r = (P(18.5) * G if z == 250 else rad(z) * 1.38)
+            w = P(22 if z > 270 else 16)
+            pc.paint("#C08A52", None)                    # three raised turns of twine, lit on their crowns
+            prof = [(r * 0.9, 0.0)] + [(r * (1.07 if k % 2 else 0.94), w * k / 6) for k in range(1, 6)] + [(r * 0.9, w)]
+            n0 = pc.mark()
+            lathe(pc, c - V((0, 0, w / 2)), prof, n=8)
+            for f in pc.since(n0):                      # the crowns lighter than the grooves
+                pc.vcols[f] = {v: ("#E2B47A" if (v.co - c).xy.length > r * 1.0 else "#9A6A38") for v in f.verts}
         # the bobber charm: a cord from a knot under the wrap, the cork, a tassel
         pc.paint(TWINE, None, "P_Cloth")
-        knot = V((-P(4), -P(19), Z(252)))
-        pc.blob(knot, P(4), segs=5, rings=3)
-        bob = V((-P(4), -P(70), Z(255)))
-        pc.tube([knot, bob + V((0, P(22), 0))], [P(1.5)] * 2, sides=3, tip=False, cap=False)
-        pc.paint("#FFFFFF", cyl_uv(cp, bob, -P(22), P(16), axis=(0, -1, 0)), "P_Wood")
-        lathe(pc, bob + V((0, P(22), 0)), [(0.0, 0.0), (P(5), -P(1)), (P(11), -P(4)), (P(13), -P(9)), (P(13), -P(29)), (P(11), -P(34)), (P(5), -P(37)), (0.0, -P(38))], n=8, axis=(0, 1, 0))
+        knot = V((-P(6), -P(27), Z(252)))
+        pc.blob(knot, P(5.5), segs=6, rings=3)
+        bob = V((-P(6), -P(96), Z(256)))
+        pc.tube([knot, bob + V((0, P(30), 0))], [P(2)] * 2, sides=3, tip=False, cap=False)
+        pc.paint("#FFFFFF", cyl_uv(cp, bob, -P(30), P(22), axis=(0, -1, 0)), "P_Wood")
+        lathe(pc, bob + V((0, P(30), 0)), [(0.0, 0.0), (P(7), -P(1.5)), (P(15), -P(5.5)), (P(18), -P(12.5)), (P(18), -P(40)), (P(15), -P(47)), (P(7), -P(51)), (0.0, -P(52))], n=10, axis=(0, 1, 0))
         pc.paint(TWINE, None, "P_Cloth")
-        tas = bob + V((0, -P(18), 0))
+        tas = bob + V((0, -P(22), 0))
+        pc.blob(tas, P(4), segs=5, rings=3)
         for k in (-1, 0, 1):
-            pc.tube([tas, tas + V((P(2) * k, -P(20), P(3) * k))], [P(1.8), P(1.2)], sides=3, tip=False)
+            pc.tube([tas, tas + V((P(3) * k, -P(28), P(4) * k))], [P(2.4), P(1.6)], sides=3, tip=False)
         # the reel on its leather strap: the back plate, the line, the face with its flower, turned toward the tip
         n0 = pc.mark()
         x = V((1, 0, 0))
         pc.paint(REEL, None, "P_Wood")
         lathe(pc, RC + x * (RW / 2), [(0.0, 0.0), (RR * 0.95, 0.0), (RR * 0.97, -P(4))], n=12, axis=(-1, 0, 0))
         pc.paint(LINE, mat="P_Cloth")
-        lathe(pc, RC + x * (RW / 2 - P(4)), [(RR * 0.88, 0.0), (RR * 0.88, P(14))], n=12, axis=(-1, 0, 0))
+        lathe(pc, RC + x * (RW / 2 - P(4)), [(RR * 0.9, 0.0), (RR * 0.9, RW - P(8))], n=12, axis=(-1, 0, 0))
         pc.paint("#B47C47", mat="P_Wood")
         lathe(pc, RC - x * (RW / 2 - P(4)), [(RR, 0.0), (RR, P(4))], n=12, axis=(-1, 0, 0))
         pc.paint("#FFFFFF", disc_uv(rp, RC - x * (RW / 2), RR, (-1, 0, 0), up=(0, 1, 0)))
         lathe(pc, RC - x * (RW / 2), [(RR, 0.0), (0.0, 0.0)], n=12, axis=(-1, 0, 0))
         hub = RC - x * (RW / 2)
-        kn = hub + V((-P(14), -P(28), P(26)))
+        kn = hub + V((-P(18), -P(36), P(34)))
         pc.paint("#8E5A30", None, "P_Wood")                 # the crank: a dowel arm, a knob
-        pc.tube([hub + x * P(2), hub - x * P(6), kn + V((P(6), P(6), -P(6)))], [P(4)] * 3, sides=5, tip=False)
+        pc.tube([hub + x * P(2), hub - x * P(6), kn + V((P(6), P(6), -P(6)))], [P(5)] * 3, sides=5, tip=False)
         kd = V((-0.4, -0.35, 1.0)).normalized()
-        capsule(pc, kn, kd, P(6.5), P(24), n=7, rings=2)
+        capsule(pc, kn, kd, P(8.5), P(30), n=8, rings=2)
         yaw = Matrix.Rotation(math.radians(40), 3, "Y")
         for v in {v for f in pc.since(n0) for v in f.verts}:
             v.co = RC + yaw @ (v.co - RC)
         for f in pc.since(n0):
             pc.ref[f] = tuple(RC + yaw @ (V(pc.ref[f]) - RC))
         pc.paint(STRAP, None, "P_Leather")                # the strap: round the blank and down to the reel's back, a rivet
-        c = bend(334)
-        ring(pc, c, (0, 0, 1), rad(334) * 1.3, P(22), sides=7)
-        top, foot = c + V((0, -rad(334), 0)), V((RC.x, RC.y + RR * 0.7, c.z))
-        pc.tube([top, foot], [(P(4), P(11)), (P(4), P(11))], sides=6, tip=False)
+        c = bend(332)
+        ring(pc, c, (0, 0, 1), rad(332) * 1.35, P(28), sides=8)
+        top, foot = c + V((0, -rad(332), 0)), V((RC.x, RC.y + RR * 0.7, c.z))
+        pc.tube([top, foot], [(P(5), P(14)), (P(5), P(14))], sides=6, tip=False)
         pc.paint("#8A5A2E", mat="P_Metal")
-        pc.blob(top.lerp(foot, 0.45) + V((-P(4.5), 0, 0)), P(3.2), segs=5, rings=3)
+        pc.blob(top.lerp(foot, 0.45) + V((-P(5.5), 0, 0)), P(4), segs=5, rings=3)
         # the line
         pc.paint(LINE, None, "P_Cloth")
         start = RC + V((0, -RR * 0.85, P(6)))
@@ -690,35 +723,37 @@ def training(stage=1):
     S, LEN, F0 = 1137.0, 0.95, 118.0
     Z = lambda px: (px - F0) / S * LEN
     P = lambda px: px / S * LEN
-    rad = lambda px: P(12.5 - 4.0 * max(0.0, (px - 270) / 808))
+    rad = lambda px: P(15 - 4.5 * max(0.0, (px - 300) / 778))
     bend = lambda px: V((0, 0.008 * max(0.0, (px - 270) / 808) ** 2, Z(px)))
     worn = stage == 2
     at = Atlas(512)
 
     # -- the grip: the sheet's side view, its top nearly straight, finger waves under it, rounded at the butt
-    GL = 248.0
+    GL, G = 285.0, 1.35                                 # the grip's length and its girth over the side view (the hero's)
+    BS = GL + 22                                        # the blank's start, past the collar
 
     def gsurf(th, px, lift=0.0):
         u = px / GL
-        top = 13 + 14 * u + 1.5 * math.cos(TAU * 3.5 * u + 1.0)
-        bot = -(54 - 23 * u) + (4.5 * math.cos(TAU * 3.5 * u) if 0.08 < u < 0.9 else 0.0)
-        rx = 31 - 6 * u
+        win = math.sin(math.pi * min(1.0, max(0.0, (u - 0.06) / 0.86))) ** 0.6     # the finger bumps, eased in and out
+        top = G * (13 + 14 * u) + 4.5 * math.cos(TAU * 4 * u + 0.6) * win
+        bot = -G * (54 - 23 * u) + 7.5 * math.cos(TAU * 4 * u) * win
+        rx = G * (31 - 6 * u) + 3.5 * math.cos(TAU * 4 * u + 0.3) * win
         k = 1.0 if px >= 12 else (0.72 + 0.28 * (px / 12) ** 0.5)
         cy, ry = (top + bot) / 2, (top - bot) / 2
         return V((P(rx * k + lift) * math.cos(th), P(cy + (ry * k + lift) * math.sin(th)), Z(px)))
 
     gp = at.region(224, 160)                             # the fabric: blue, stitched in cream round both ends and along it
-    gp.fill("#3E7FD2" if not worn else "#2E4C88")
-    gp.put(np.clip(np.sin(gp.s * TAU - 1.2) * 0.5 + 0.5, 0, 1) ** 2, "#5D9BE6", 0.45)            # its lit top
+    gp.fill("#3E7FD2" if not worn else "#263F6E")
+    gp.put(np.clip(np.sin(gp.s * TAU - 1.2) * 0.5 + 0.5, 0, 1) ** 2, "#5D9BE6" if not worn else "#4A66A0", 0.45)            # its lit top
     gp.put((np.sin(gp.s * 220) * np.sin(gp.t * 160) * 0.5 + 0.5) ** 6, "#2F67B3", 0.25)         # the weave
     if worn:
         rng = np.random.default_rng(8)
-        gp.put(np.ones_like(gp.s), "#34508A", 0.3)    # faded
-        for _ in range(40):                             # scuffs worn through to the pale under-fabric, ragged
+        gp.put(np.ones_like(gp.s), "#3A4F78", 0.3)    # faded
+        for _ in range(70):                             # scuffs worn through to the pale under-fabric, ragged
             c = (rng.random(), rng.random() ** 0.7)
             a = rng.random() * TAU
             ln = 0.03 + 0.06 * rng.random()
-            gp.put(gp.leafm(c, (c[0] + ln * math.cos(a), c[1] + ln * math.sin(a) * 1.5), 0.006 + 0.012 * rng.random()), "#C9B58A", 0.9)
+            gp.put(gp.leafm(c, (c[0] + ln * math.cos(a), c[1] + ln * math.sin(a) * 1.5), 0.008 + 0.016 * rng.random()), "#C9B58A", 0.9)
     st = "#F1E6CC"
     for t in (0.04, 0.92):
         dashes(gp, [(0.0, t), (1.0, t)], 0.006, st)
@@ -726,17 +761,20 @@ def training(stage=1):
         dashes(gp, [(s0 + 0.012 * math.sin(i * 1.3), 0.06 + 0.84 * i / 12) for i in range(13)], 0.006, st)
 
     bp = at.region(40, 400)                              # the blank: yellow, two blue bands, the "III" marks
-    bp.fill("#F3C537" if not worn else "#E2AC2C")
+    bp.fill("#F3C537" if not worn else "#C9A546")
     bp.put(np.clip(np.sin(bp.s * TAU - 1.2) * 0.5 + 0.5, 0, 1) ** 4, "#FFE27A", 0.7)
-    T = lambda px: (1078 - px) / 808                     # a station to the patch's t (0 at the tip)
+    T = lambda px: (1078 - px) / (1078 - BS)                     # a station to the patch's t (0 at the tip)
     if worn:                                             # fish scales cut in, the paint worn off in patches
-        for row in range(64):
-            for k in range(5):
-                cs, ct = (k + 0.5 * (row % 2)) / 5, row / 64
-                ring = np.abs(np.hypot(bp.s - cs, (bp.t - ct) * bp.h / bp.w * 0.32) - 0.11)
-                bp.put((ring < 0.012) & (bp.t > ct), "#A8761A", 0.8)
+        for row in range(44):                            # engraved scale arcs, faint
+            for k in range(4):
+                cs, ct = (k + 0.5 * (row % 2)) / 4, row / 44
+                ring = np.abs(np.hypot(bp.s - cs, (bp.t - ct) * bp.h / bp.w * 0.3) - 0.14)
+                bp.put((ring < 0.011) & (bp.t > ct), "#9A7A2C", 0.6)
         rng = np.random.default_rng(4)
-        bp.put(np.ones_like(bp.s), "#D9A72A", 0.2)
+        bp.put(np.ones_like(bp.s), "#BFA65E", 0.25)
+        for _ in range(40):                              # scratches across the scales
+            a0 = (rng.random(), rng.random())
+            bp.put(bp.seg(a0, (a0[0] + 0.3 * (rng.random() - 0.5), a0[1] + 0.03 * (rng.random() - 0.5)), 0.006), "#EFE4C4", 0.8)
         for _ in range(26):
             c = (rng.random(), rng.random())
             bp.put(bp.leafm(c, (c[0] + 0.15 * (rng.random() - 0.5), c[1] + 0.02 + 0.02 * rng.random()), 0.03 + 0.04 * rng.random()), "#EDE3C8", 0.8)
@@ -758,11 +796,12 @@ def training(stage=1):
     tg.put(tg.disc(0.36, 0.64, 0.02), "#D8AE4E")
     if worn:
         bd = at.region(96, 64)                           # the bandage: cream cloth, stained, a blue mark
-        bd.fill("#DACDAE")
+        bd.fill("#CDBF9E")
         bd.put((np.sin(bd.s * 70) * 0.5 + 0.5) ** 8, "#CFC2A5", 0.6)
         bd.put(np.clip(1 - np.abs(bd.t - 0.5) * 2.2, 0, 1) < 0.15, "#BFAF8E", 0.5)
-        for a, b_ in (((0.4, 0.35), (0.55, 0.35)), ((0.42, 0.55), (0.58, 0.5)), ((0.48, 0.3), (0.45, 0.68))):
-            bd.put(bd.seg(a, b_, 0.022), "#5578B8")
+        for a, b_ in (((0.42, 0.4), (0.5, 0.4)), ((0.43, 0.52), (0.52, 0.5)), ((0.47, 0.36), (0.45, 0.58))):
+            bd.put(bd.seg(a, b_, 0.014), "#5578B8", 0.8)
+        bd.put(np.clip((np.abs(bd.t - 0.5) - 0.4) * 12, 0, 1), "#A8987A", 0.7)        # frayed, darker edges
         wv = at.region(64, 96)                           # the torn tassel: indigo, a wave print
         wv.fill("#3C4F9A")
         for row in range(5):
@@ -778,16 +817,17 @@ def training(stage=1):
             tw.put(u ** 0.6, "#A8743F")
             tw.put(u ** 3, "#C99558")
 
-    RED, WHITE, CREAM, GOLD, BLUE = ("#DE4537", "#F4EFE6", "#EFE6D6", "#E0B24A", "#3E7FD2") if not worn else ("#C9533F", "#E4DDCF", "#D9D2C4", "#C99E45", "#4A72AE")
-    RC, RR = V((-P(4), -P(72), Z(283))), P(45)
+    RED, WHITE, CREAM, GOLD, BLUE = ("#DE4537", "#F4EFE6", "#EFE6D6", "#E0B24A", "#3E7FD2") if not worn else ("#9C3A2C", "#E4DDCF", "#C9C1B2", "#B8913E", "#4A72AE")
+    RC, RR = V((-P(4), -P(93), Z(GL + 62))), P(65)
+    K = RR / P(45)                                      # the crank and hub grow with the reel
     glow_bits = []
 
-    def strip(pc, surf, z0, tilt, w, n=12, patch=None, lift=1.5, sweep=1.0):
+    def strip(pc, surf, z0, tilt, w, n=12, patch=None, lift=1.5, sweep=1.0, amp=30):
         """A band of tape or cloth round a surface (surf(theta, px, lift) -> point) at station z0, tilted, w wide."""
         rows = []
         for i in range(n + 1):
             th = TAU * sweep * i / n
-            zc = z0 + math.tan(tilt) * 30 * math.cos(th) + (tilt and 0)
+            zc = z0 + math.tan(tilt) * amp * math.cos(th)
             rows.append((surf(th, zc - w / 2, lift), surf(th, zc + w / 2, lift)))
         for i in range(n):
             (a, b_), (c, d) = rows[i], rows[i + 1]
@@ -802,14 +842,14 @@ def training(stage=1):
     def b(pc):
         # the grip: rings round its odd section, its fabric laid on by angle and station
         pc.paint("#FFFFFF", None, "P_Cloth")
-        stations = [0, 4, 12, 24] + [24 + (GL - 24) * i / 13 for i in range(1, 14)]
-        N = 10
+        stations = [0, 4, 12, 24] + [24 + (GL - 24) * i / 22 for i in range(1, 23)]
+        N = 12
         rings = [[gsurf(TAU * k / N, z) for k in range(N)] for z in stations]
         for i in range(len(stations) - 1):
             for k in range(N):
                 k1 = (k + 1) % N
                 ta, tb = 1 - stations[i] / GL, 1 - stations[i + 1] / GL
-                pc.f([pc.v(rings[i][k]), pc.v(rings[i][k1]), pc.v(rings[i + 1][k1]), pc.v(rings[i + 1][k])], V((0, rings[i][0].y * 0 + (rings[i][2].y + rings[i][7].y) / 2, rings[i][0].z)),
+                pc.f([pc.v(rings[i][k]), pc.v(rings[i][k1]), pc.v(rings[i + 1][k1]), pc.v(rings[i + 1][k])], V((0, (rings[i][3].y + rings[i][9].y) / 2, rings[i][0].z)),
                      uv=[gp.uv(k / N, ta), gp.uv((k + 1) / N, ta), gp.uv((k + 1) / N, tb), gp.uv(k / N, tb)])
         cb = sum(rings[0], V()) / N                    # the butt's end
         cv = pc.v(cb - V((0, 0, P(2))))
@@ -817,10 +857,10 @@ def training(stage=1):
             pc.f([pc.v(rings[0][(k + 1) % N]), pc.v(rings[0][k]), cv], cb + V((0, 0, 0.05)), uv=[gp.uv(0.5, 0.98)] * 3)
         # the collar
         pc.paint(CREAM, None, "P_Paint")
-        lathe(pc, (0, 0, 0), [(P(21), Z(GL - 2)), (P(23.5), Z(GL + 2)), (P(23.5), Z(266)), (P(20), Z(271)), (rad(271), Z(272))], n=10)
+        lathe(pc, V((0, -P(3), 0)), [(P(27), Z(GL - 4)), (P(31), Z(GL + 1)), (P(31), Z(BS - 6)), (P(26), Z(BS - 1)), (rad(BS) + P(1), Z(BS))], n=12)
         # the blank
-        pc.paint("#FFFFFF", cyl_uv(bp, (0, 0, 0), Z(270), Z(1078)), "P_Paint")
-        zs = [270, 420, 600, 780, 940, 1078]
+        pc.paint("#FFFFFF", cyl_uv(bp, (0, 0, 0), Z(BS), Z(1078)), "P_Paint")
+        zs = [BS, 440, 600, 780, 940, 1078]
         loft(pc, [bend(z) for z in zs], [rad(z) for z in zs], sides=8, tip=False, cap=False)
         # the ferrule and the safety ball
         pc.paint(WHITE, None, "P_Paint")
@@ -831,7 +871,7 @@ def training(stage=1):
         lathe(pc, bc, [(0.0, -P(27))] + [(P(27) * math.sin(math.pi * i / 5), -P(27) * math.cos(math.pi * i / 5)) for i in range(1, 5)] + [(0.0, P(27))], n=8)
         # the tag's loop round the grip, and the tag on the camera side
         pc.paint(GOLD, None, "P_Metal")
-        tz_ = 198 if not worn else 222
+        tz_ = 228 if not worn else 255
         lp = [gsurf(TAU * k / 8, tz_, 1.2) for k in range(8)]
         pc.tube(lp, [P(1.4)] * 8, sides=3, closed_loop=True)
         side = gsurf(math.pi, tz_, 2.0)
@@ -839,14 +879,14 @@ def training(stage=1):
         if worn:                                         # the red cord: a loop knot under the grip's side, down to the tag
             pc.paint("#B43A2A", None, "P_Cloth")
             for a, r_ in ((0.0, 7), (2.1, 7), (4.2, 7)):  # three loops
-                c = side + V((-P(3), -P(18), 0)) + V((0, math.cos(a) * P(9), math.sin(a) * P(9)))
-                pc.tube([c + V((-P(1), math.cos(TAU * j / 5) * P(r_ * 0.6), math.sin(TAU * j / 5) * P(r_ * 0.6))) for j in range(5)], [P(1.6)] * 5, sides=3, closed_loop=True)
-            pc.blob(side + V((-P(3), -P(18), 0)), P(3.5), segs=5, rings=3)
-            pc.tube([side + V((-P(2), 0, 0)), side + V((-P(3), -P(18), 0)), top], [P(1.6)] * 3, sides=3, tip=False)
+                c = side + V((-P(4), -P(18), 0)) + V((0, math.cos(a) * P(15), math.sin(a) * P(15)))
+                pc.tube([c + V((-P(1), math.cos(TAU * j / 6) * P(r_ * 1.1), math.sin(TAU * j / 6) * P(r_ * 1.1))) for j in range(6)], [P(2.6)] * 6, sides=3, closed_loop=True)
+            pc.blob(side + V((-P(4), -P(18), 0)), P(6), segs=6, rings=3)
+            pc.tube([side + V((-P(2), 0, 0)), side + V((-P(3), -P(18), 0)), top], [P(2.2)] * 3, sides=3, tip=False)
             pc.paint("#4C7FD8", None, "P_Paint")
             pc.blob(top + V((-P(2), -P(8), P(16))), P(4.5), segs=6, rings=3)
             pc.paint(GOLD, None, "P_Metal")
-        tw_, th_ = P(36), P(44)
+        tw_, th_ = P(42), P(52)
         if not worn:
             top = top + V((0, P(12), 0))
         tc = top + V((-P(1.5), -th_ / 2 - P(2), 0))
@@ -875,7 +915,7 @@ def training(stage=1):
         for i in range(lat):
             pc.paint(RED if i < lat // 2 else WHITE, None, "P_Paint")
             if worn and i >= lat // 2:
-                pc.paint("#AEB4BA", None, "P_Metal")     # the steel plate over its lower half
+                pc.paint("#6E747B", None, "P_Metal")     # the battered steel plate over its lower half
             for k in range(segs):
                 k1 = (k + 1) % segs
                 if i == 0:
@@ -884,46 +924,67 @@ def training(stage=1):
                     pc.f([pole_b, rows[-1][k], rows[-1][k1]], RC)
                 else:
                     pc.f([rows[i - 1][k], rows[i - 1][k1], rows[i][k1], rows[i][k]], RC)
+        if not worn:                                     # the dark seam between the halves
+            pc.paint("#8E2A22", None, "P_Paint")
+            pc.tube([RC + V((math.cos(TAU * k / 14) * RR * sx * 1.01, 0, math.sin(TAU * k / 14) * RR * 1.01)) for k in range(14)], [P(2.2)] * 14, sides=3, closed_loop=True)
         if worn:                                         # the plate's rivets, and its lip at the equator
             pc.paint("#7E858C", None, "P_Metal")
             for a in (-60, -20, 20, 60):
                 th = math.radians(180 + a)
                 p_ = RC + V((math.cos(th) * RR * sx * 0.93, -RR * 0.36, math.sin(th) * RR * 0.93))
-                pc.blob(p_, P(3.4), segs=4, rings=2)
+                pc.blob(p_, P(3.4) * K, segs=4, rings=2)
             glow_bits.append(("ring", RC, RR, sx))
+            sp = lambda az, la, k=1.04: RC + V((math.cos(az) * math.cos(la) * RR * sx * k, math.sin(la) * RR * k, math.sin(az) * math.cos(la) * RR * k))
+            pc.paint("#8E959C", None, "P_Metal")         # a patch plate riveted over a split in the red half
+            g = [[pc.v(sp(math.pi - 0.55 + 0.35 * i, 0.28 + 0.3 * j)) for j in range(3)] for i in range(3)]
+            for i in range(2):
+                for j in range(2):
+                    pc.f([g[i][j], g[i + 1][j], g[i + 1][j + 1], g[i][j + 1]], RC)
+            pc.paint("#5E646B")
+            for i, j in ((0, 0), (2, 0), (0, 2), (2, 2)):
+                pc.blob(sp(math.pi - 0.5 + 0.3 * i, 0.32 + 0.26 * j, 1.06), P(3) * K, segs=4, rings=2)
+            pc.paint("#5A1E18", None, "P_Paint")          # a dent in the paint
+            dc = sp(math.pi + 0.55, 0.75, 1.005)
+            n_ = (dc - RC).normalized()
+            t1 = n_.cross(V((0, 0, 1))).normalized()
+            t2 = n_.cross(t1)
+            ring_ = [pc.v(dc + (t1 * math.cos(TAU * q / 6) + t2 * math.sin(TAU * q / 6)) * P(7) * K) for q in range(6)]
+            for q in range(1, 5):
+                pc.f([ring_[0], ring_[q], ring_[q + 1]], RC)
         pc.paint(GOLD, None, "P_Metal")
         hub = RC + V((-RR * sx, 0, 0))
-        lathe(pc, hub + V((P(4), 0, 0)), [(P(16), 0.0), (P(16), -P(5)), (P(10), -P(8)), (0.0, -P(9))], n=8, axis=(1, 0, 0))
-        kn = hub + V((-P(16), -P(32), P(46)))
-        pc.tube([hub - V((P(8), 0, 0)), hub + V((-P(11), -P(14), P(22))), kn + V((P(3), P(2), -P(12)))], [(P(5), P(3))] * 3, sides=4, tip=False)
+        lathe(pc, hub + V((P(4), 0, 0)), [(P(16) * K, 0.0), (P(16) * K, -P(5) * K), (P(10) * K, -P(8) * K), (0.0, -P(9) * K)], n=10, axis=(1, 0, 0))
+        kn = hub + V((-P(16), -P(32), P(46))) * K
+        pc.tube([hub - V((P(8), 0, 0)) * K, hub + V((-P(11), -P(14), P(22))) * K, kn + V((P(3), P(2), -P(12))) * K], [(P(4) * K, P(8) * K)] * 3, sides=6, tip=False)
         pc.paint(RED, None, "P_Paint")
-        capsule(pc, kn, V((0, -0.2, 1)), P(12), P(38), n=8, rings=2)
+        capsule(pc, kn, V((0, -0.2, 1)), P(12) * K, P(38) * K, n=8, rings=2)
         # its foot: a cream post off the blank with a gold rivet
         pc.paint(CREAM, None, "P_Paint")
-        ft, fb = bend(283) + V((0, -rad(283) * 0.8, 0)), RC + V((0, RR * 0.92, 0))
-        pc.tube([ft, fb], [(P(6), P(14)), (P(6), P(14))], sides=6, tip=False)
-        lathe(pc, ft + V((0, -P(1), 0)), [(P(15), 0.0), (P(15), -P(4))], n=6, axis=(0, -1, 0), sx=0.6)
+        ft, fb = bend(RC.z * 0 + GL + 58) + V((0, -rad(GL + 58) * 0.8, 0)), RC + V((0, RR * 0.92, 0))
+        pc.tube([ft, fb], [(P(7), P(17)), (P(7), P(17))], sides=6, tip=False)
+        lathe(pc, ft + V((0, -P(1), 0)), [(P(19), 0.0), (P(19), -P(5))], n=6, axis=(0, -1, 0), sx=0.6)
         pc.paint(GOLD, None, "P_Metal")
         pc.blob(ft.lerp(fb, 0.55) + V((-P(6), 0, 0)), P(3), segs=5, rings=3)
         if worn:
             # black grip tape: four turns, crossing
             pc.paint("#3A3A40", None, "P_Cloth")
-            for z0, tl in ((64, 0.45), (96, 0.45), (128, 0.45), (100, -0.55)):
-                strip(pc, gsurf, z0, tl, 19, n=10, lift=1.2 + 0.4 * (tl < 0))
+            for z0, tl in ((70, 0.5), (112, 0.5), (154, 0.5), (132, -0.6)):
+                strip(pc, gsurf, z0, tl, 26, n=12, lift=2.2 + 0.8 * (tl < 0), amp=44)
             # the bandage round the blank's middle, twine at both ends, its torn end hanging
             pc.paint("#FFFFFF", None, "P_Cloth")
-            for z0, tl, l_ in ((612, 0.7, 3.0), (636, -0.6, 4.5), (660, 0.65, 6.5), (686, -0.65, 5.5), (712, 0.6, 4.0)):
-                strip(pc, bsurf, z0, tl, 34, n=10, patch=bd, lift=l_)
+            for z0, tl, l_ in ((596, 0.7, 4.0), (624, -0.6, 6.5), (652, 0.65, 9.0), (680, -0.65, 10.5), (708, 0.6, 8.5), (734, -0.6, 5.5)):
+                strip(pc, bsurf, z0, tl, 50, n=10, patch=bd, lift=l_, amp=30)
             pc.paint("#FFFFFF", None, "P_Cloth")
-            for z in (596, 738):
+            for z in (570, 754):
                 c = bend(z)
                 pc.paint(uvfn=cyl_uv(tw, c, c.z - P(5), c.z + P(5)))
                 lathe(pc, c - V((0, 0, P(5))), [(rad(z) + P(3), 0.0), (rad(z) + P(5), P(5)), (rad(z) + P(3), P(10))], n=7)
             pc.paint("#E3D8BF", None, "P_Cloth")
-            e0 = bsurf(-math.pi * 0.6, 705, 5.0)
-            flat_leaf(pc, e0, V((0, -1, 0.7)), P(44), P(10), V((-1, 0, 0)), n=3, blunt=True)
+            for z_, dd, ln in ((712, V((0, -1, 0.7)), P(62)), (690, V((0, -1, 0.35)), P(46))):    # its frayed ends hanging
+                e0 = bsurf(-math.pi * 0.6, z_, 7.0)
+                torn(pc, e0, e0 + dd.normalized() * ln, P(12))
             pc.paint("#8A5A2E", None, "P_Cloth")       # the twine's cord, a blue bead and two gold ones, the tassel
-            cd = bsurf(-math.pi / 2, 596, 5.0)
+            cd = bsurf(-math.pi / 2, 570, 6.0)
             bead = cd + V((-P(3), -P(52), -P(6)))
             pc.tube([cd, cd + V((0, -P(20), -P(4))), bead + V((0, P(5), 0))], [P(1.5)] * 3, sides=3, tip=False)
             pc.paint("#4C7FD8", None, "P_Paint")
@@ -932,11 +993,11 @@ def training(stage=1):
             for dz in (-P(5), P(5)):
                 pc.blob(bead + V((0, -P(9), dz)), P(3.5), segs=5, rings=3)
             pc.paint("#FFFFFF", None, "P_Cloth")
-            for base, ln, wd in ((bead + V((0, -P(12), 0)), P(42), P(7)), (top + V((-P(1), -th_ - P(4), -P(5))), P(58), P(6)), (top + V((-P(1.5), -th_ - P(4), P(5))), P(48), P(6))):
+            for base, ln, wd in ((bead + V((0, -P(12), 0)), P(52), P(10)), (top + V((-P(1), -th_ - P(4), -P(8))), P(80), P(13)), (top + V((-P(1.5), -th_ - P(4), P(6))), P(66), P(12)), (top + V((-P(2), -th_ - P(4), -P(1))), P(72), P(11))):
                 n0 = pc.mark()
-                flat_leaf(pc, base, V((0, -1, -0.25)), ln, wd, V((-1, 0, 0)), n=3, blunt=True)
+                torn(pc, base, base + V((0, -1, -0.25)).normalized() * ln, wd * 1.4, feather=True)
                 for f in pc.since(n0):              # the wave print laid along it
-                    pc.fuv[f] = {v: wv.uv(0.5 + (v.co - base).z / (2 * wd) * 0.9, min(1, (base.y - v.co.y) / ln)) for v in f.verts}
+                    pc.fuv[f] = {v: wv.uv(0.5 + (v.co - base).z / (3 * wd), min(1, max(0, (base.y - v.co.y) / ln))) for v in f.verts}
             glow_bits.append(("cracks",))
         # the line: off the reel's top, to the ferrule
         pc.paint(WHITE if not worn else "#EDE7DA", None, "P_Cloth")
@@ -954,8 +1015,8 @@ def training(stage=1):
             a0, a1 = TAU * k / segs_, TAU * (k + 1) / segs_
             ring_ = [RC + V((math.cos(a) * RR * 0.78 * 1.07, dy, math.sin(a) * RR * 1.07)) for a in (a0, a1) for dy in (-P(4), P(4))]
             pc.f([pc.v(ring_[0]), pc.v(ring_[2]), pc.v(ring_[3]), pc.v(ring_[1])], RC)
-        for z0, tl, l_ in ((612, 0.7, 3.0), (636, -0.6, 4.5), (660, 0.65, 6.5), (686, -0.65, 5.5), (712, 0.6, 4.0)):
-            strip(pc, bsurf, z0 - 16, tl, 4, n=10, lift=l_ + 0.6)          # light leaking at each turn's edge
+        for z0, tl, l_ in ((596, 0.7, 4.0), (624, -0.6, 6.5), (652, 0.65, 9.0), (680, -0.65, 10.5), (708, 0.6, 8.5), (734, -0.6, 5.5)):
+            strip(pc, bsurf, z0 - 24, tl, 4, n=10, lift=l_ + 0.8, amp=30)          # light leaking at each turn's edge
         rng = np.random.default_rng(2)                   # cracks peeking out of the bandage, zigzags on the blank
         for z0, th0 in ((606, 2.6), (628, 3.6), (660, 2.2), (690, 4.0), (722, 3.0), (640, 1.2), (700, 1.6), (668, 5.0)):
             pts = [bsurf(th0 + 0.22 * j * (1 if j % 2 else 0.5), z0 + 9 * j, 6.5) for j in range(4)]

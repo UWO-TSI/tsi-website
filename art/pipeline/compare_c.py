@@ -64,7 +64,7 @@ for e in (3.0, 1.2):
     sc.collection.objects.link(l)
     lights.append(l)
 # compare_sheet.py's hero: the rod turned by M, the camera 25 degrees above, its suns fixed in the world
-M = Matrix.Rotation(math.radians(60), 3, "Y") @ Matrix.Rotation(math.radians(90), 3, "Z")
+M = Matrix.Rotation(math.radians(62), 3, "Y") @ Matrix.Rotation(math.radians(90), 3, "Z")   # 62: the sheets' heroes lie at 28 degrees
 Mi = M.inverted()
 
 
@@ -89,7 +89,7 @@ def shot(fwd, up, fill, w_, h_, path, wide=False):
 
 
 tmp = out + "-tmp"
-shot(Mi @ Vector((0, math.cos(math.radians(25)), -math.sin(math.radians(25)))), Mi @ Vector((0, 0, 1)), 0.88, 1280, 720, tmp + "-h.png")
+shot(Mi @ Vector((0, math.cos(math.radians(25)), -math.sin(math.radians(25)))), Mi @ Vector((0, 0, 1)), 0.89, 1280, 720, tmp + "-h.png", True)   # framed by width, as the sheet's hero fills it
 subprocess.run(["magick", tmp + "-h.png", hero, "-resize", "x720", "+append", out + "-hero.png"], check=True)
 if turn != "-":
     shot((1, 0, 0), (0, 1, 0), 0.84, 1280, 240, tmp + "-1.png", True)                    # side: crank toward you, tip right

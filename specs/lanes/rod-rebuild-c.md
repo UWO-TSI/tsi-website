@@ -8,10 +8,10 @@ Task (coordinator, 2026-11-20): rebuild the Cedar, Flimsy and Training (stage 1)
 
 - Builder: `art/pipeline/build_rods_c.py` (loads build_rods.py's helpers by exec of its source up to its build section, never runs its builds; build_rods.py untouched). Compare: `art/pipeline/compare_c.py` (compare_sheet.py's hero camera, plus the turnaround's side, top and three-quarter rows and a close-up, COLOR_0 multiplied in, Glow drawn unlit).
 - Outputs: `web/public/assets/game/tools/rod-cedar.glb` + `props/rodfx-cedar-boughs.glb` (the boughs, swaying), `tools/rod-flimsy.glb`, `tools/rod-training.glb` (replaced in place), `tools/rod-training-2.glb` + `props/rodfx-training-2.glb` (amber cracks and reel seam, two Halo sprites, amber sparks).
-- Triangles (rod + effect): Cedar 868 + 729 boughs, Flimsy 930, Training 1002, Training stage 2 1544 + 176 glow. Materials 3 to 4 each. All six GLBs packed (pack-glbs.mjs).
-- Final compares (uncommitted, review only): `specs/evidence/rod-rebuild-c/<rod>-{hero,turn,close}.jpg`. Each is the model on the left, the sheet on the right; Training stage 2's turn row uses the stage-1 turnaround for shape (training2 has no turnaround).
-- Judged against the sheets: shapes, stations and colours match the turnaround side views (measured column by column). The heroes are drawn chunkier than the turnarounds (bigger grip and reel); the models follow the turnaround.
-- Done, awaiting the coordinator's review. Commit: `[build] Rods c: Cedar, Flimsy, Training and Training stage 2 rebuilt against their sheets`.
+- Round 2 (coordinator review, 2026-11-20: "match the HERO's proportions ... budget up to 2500 tris each"): grips, reels and charms scaled to the heroes (measured across the rod axis on each hero), Training's finger bumps and big bobber reel and crank, Flimsy's coiled twine wraps and larger reel, charm and rag, Cedar's fuller fronds over and under the blank with a branch wound round it and a forked gold bracket over the reel, Training stage 2 worn through (thick grip tape, big frayed bandage, battered reel with a patch plate and a dent, red knot, feathers, faded engraved blank).
+- Triangles (rod + effect): Cedar 1072 + 1016 boughs, Flimsy 1474, Training 1406, Training stage 2 1968 + 196 glow. Materials 3 to 4 each. All six GLBs packed (pack-glbs.mjs).
+- Final compares (uncommitted, review only): `specs/evidence/rod-rebuild-c/<rod>-{hero,turn,close}.jpg`, model left, sheet right. The hero camera is compare_sheet's at 62 degrees (the sheets' rods lie at 28), framed by width. Stage 2's turn rows use the stage-1 turnaround for shape.
+- Awaiting the coordinator's review.
 
 ## Mapping changes needed (not made here)
 
@@ -23,7 +23,7 @@ Task (coordinator, 2026-11-20): rebuild the Cedar, Flimsy and Training (stage 1)
 
 - Every face's colour is its vertex colour (COLOR_0). Materials are presets by name (P_Wood, P_Metal, P_Paint, P_Cloth, P_Leather) sharing one painted atlas per rod; plain faces read its white corner, painted parts (carved grip, reel faces, stitching, tag, wraps, bandage) read their patch by projection (`cyl_uv`, `disc_uv`) or explicit uv.
 - Atlas patches carry a copy of their left eighth past their right edge, so faces across a cylinder's seam read correctly.
-- Proportions follow the turnaround's side view (orthographic); grip, reel and charm on the Cedar are 1.15x toward the hero's chunkier read.
+- Proportions follow the heroes (round 2): girths and reels measured across each hero; lengths along the rod from the turnaround.
 
 ## Tools and gotchas
 
