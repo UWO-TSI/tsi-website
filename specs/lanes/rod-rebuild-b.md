@@ -21,7 +21,7 @@ Rebuild the Glass, Lighthouse, Precision and Carrot rod models so each is identi
 - Open: `lib/game/character/heldMesh.test.ts` expects every tool to merge to one mesh; textured or translucent parts stay separate meshes by heldMesh's design, so it fails for every textured rod: candy-cane (already on the branch), the other lanes' rods, and here Glass (grip texture, translucent crystal) and Precision (ruler and knurl textures). Lighthouse and Carrot pass. The coordinator decides: loosen the test to one mesh per unmergeable group, or drop the textures and translucency.
 
 ## Status
-- Round 3 (coordinator 2026-11-20): Precision and Carrot passed round 2 (gold rings kept). Glass and Lighthouse made bigger in the hero view:
+- Head 678b9605e. Round 3 (coordinator 2026-11-20): Precision and Carrot passed round 2 (gold rings kept). Glass and Lighthouse made bigger in the hero view:
   - Glass 2472 tris: blank about 1.8x thicker, its strands translucent (alpha 0.84, glTF BLEND) and shaded per vertex from light on the lit side to teal; grip thicker (0.046) and longer (from station 0.021, the gem behind it); float r 0.047 with a bigger net, tassel and drops; crown, tip shards, scroll and point scaled up.
   - Lighthouse 2386 tris: tower 1.6x thicker, grip end 1.5x, lantern 1.4x, reel 1.45x; red bands 0.05 long; the beam points out along the rod's line (+Z) at rest and breathes (pulse) instead of spinning. Lamp at Blender (0, 0, 0.898).
   - Carrot rebuilt only to drop a Blender-only roughness tweak that split its held mesh (same geometry and colours).
