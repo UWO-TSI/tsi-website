@@ -20,7 +20,7 @@ Rebuild the Glass, Lighthouse, Precision and Carrot rod models so each is identi
 - Done here (coordinator's ask): build_rods.py no longer builds `carrot` and `precision` by default (only with `only`).
 
 ## Status
-- Round 2 (coordinator review 2026-11-20, budget 2500): rebuilt all four against the notes below, about six compare rounds. Not yet reviewed by David.
+- Head 950654f34 (models), 30467d483 (concept refs). Round 2 (coordinator review 2026-11-20, budget 2500): rebuilt all four against the notes below, about six compare rounds. Not yet reviewed by David.
   - Glass 2388 tris: two smooth crystal strands (3.25 turns, 6 stations a half turn, pentagon sections), thicker; a 192x256 swirl-inlay grip texture; a bigger faceted gem cap; a crown and a tip cluster of 3D crystal shards, a big gold scroll; a bigger float (r 0.034) in a 6 + 6 cord net with tassel and crystal drops.
   - Lighthouse 2386 tris: tower 0.0345 across; a brass porthole reel (riveted bezel, glass window over the wound line, hinge lugs, crank with wood knob); a bigger lantern room (gallery with railing, glazing between mullions, red roof, gold ball); arched amber windows with glazing bars. Beam at rest points +Y and spins about the rod's axis.
   - Precision 1452 tris: black knurled grip, silver end cap, silver reel with a gold face ring, gauge, silver side crank and black knob; ruler marks; white ferrules. The concept itself shows thin gold rings at both ends of the grip, so those stay.
