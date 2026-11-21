@@ -173,6 +173,8 @@ All GENESIS tables have RLS on with no policies: only genesis.tethos.ca's server
   printer with no dialog. Checked headless with a fake camera; the real printer test waits on the model.
 - `/staff`: staff only, live numbers (checked in, passes, saved, photos taken and opened, stamps per booth). Moves into
   the club admin once `site/admin-portal` merges.
+- Luma: staff load the CSV export on `/staff` (`genesis_registrations`). A guest who saves with their Luma email is
+  matched: the pass takes the registered name if it has none, and `/staff` shows registered and checked in.
 - `/map`, `/schedule`, `/sponsors`: read `web/lib/genesis/event.ts`, empty until David sends the details, and say so.
 
 ## NFC stickers

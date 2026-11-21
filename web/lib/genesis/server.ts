@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { createPass, PASS_COOKIE, PASS_COOKIE_OPTIONS, passFromSecret, passOfUser, savePass, type Pass } from "./pass";
+import { matchRegistration } from "./luma";
 import { passHref } from "./paths";
 
 /**
@@ -22,7 +23,8 @@ export async function passContext(): Promise<{ db: ReturnType<typeof createAdmin
 export async function saveAfterSignIn(db: ReturnType<typeof createAdminClient>, user: User) {
   const jar = await cookies();
   const device = await passFromSecret(db, jar.get(PASS_COOKIE)?.value);
-  const { merged } = await savePass(db, device, user.id);
+  const { pass, merged } = await savePass(db, device, user.id);
+  if (pass) await matchRegistration(db, pass.id, user.email);
   if (merged) jar.delete(PASS_COOKIE);
 }
 
