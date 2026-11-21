@@ -16,7 +16,7 @@ const tool = (kind: ToolKind, tier: ToolTier, key: string, name: string, source:
 
 /** A rod's model: the launch rods' tools/rod-<tier>.glb, the rest's tools/rod-<name>.glb (the Glass and the Lighthouse
  * rebuilt to their concepts as rod-glass and rod-lighthouse, art/pipeline/build_rods_b.py). */
-const LAUNCH_RODS = ["rod_flimsy", "rod_cedar", "rod_tidewarden"];
+const LAUNCH_RODS = ["rod_tidewarden"];
 const rodTool = (r: (typeof RODS)[number]): Tool =>
   ({ ...tool("rod", r.tier, r.key, r.name, r.source), model: LAUNCH_RODS.includes(r.key) ? `/assets/game/tools/rod-${r.tier}.glb` : `/assets/game/tools/${r.key.replaceAll("_", "-")}.glb` });
 

@@ -199,8 +199,9 @@ describe("awakenings (David 2026-11-04: no levels, only awakenings)", () => {
       expect(existsSync(join(__dirname, "../../public", l.model))).toBe(true);
       expect(existsSync(join(__dirname, "../../public/assets/icons", `${l.icon}.webp`))).toBe(true);
     }
-    // A rod whose awakenings have no model of their own keeps its own (the cutscene's stand-in recolour stays).
-    expect(awakenedLook(awakened(training, 1000))).toBeNull();
+    // The Training rod's first awakening has its worn stage 2 model (2026-11-20); later stages keep it until theirs exist.
+    expect(awakenedLook(awakened(training, 49))).toBeNull();
+    expect(awakenedLook(awakened(training, 1000))).toEqual({ model: "/assets/game/tools/rod-training-2.glb", icon: "rod_training_a1" });
   });
   it("takes the rarity its stats now match (David 2026-11-04: \"when awakened, rarity change\")", () => {
     expect([0, 50, 250, 1000].map(n => awakened(training, n).rarity)).toEqual(["common", "rare", "epic", "legendary"]);

@@ -129,7 +129,7 @@ export const RODS: readonly RodTier[] = [
   // The Training rod (David 2026-11-04): about the Flimsy's stats, hooking up to rare from the start; it awakens three
   // times, unannounced (its card shows only its fish count), to a rare's stats, an epic's and a legendary's.
   rod(1, "rod_training", "Training rod", "common", "found", stats(12, 12, 12, 12, 12, 12), { hooks: "rare", awakenings: [
-    { at: 50, base: stats(36, 38, 32, 34, 34, 38), looks: "rare", hooks: "epic" },
+    { at: 50, base: stats(36, 38, 32, 34, 34, 38), looks: "rare", hooks: "epic", model: "/assets/game/tools/rod-training-2.glb" },
     { at: 250, base: stats(58, 62, 56, 58, 56, 62), looks: "epic", hooks: "legendary" },
     { at: 1000, base: stats(96, 100, 94, 98, 96, 100), looks: "legendary", hooks: "divine",
       passive: passive("Seasoned", "+10 lure in the rain.", { lure: 10 }, { weather: ["rain"] }) },
