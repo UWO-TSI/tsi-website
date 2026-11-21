@@ -137,7 +137,7 @@ export const RODS: readonly RodTier[] = [
   rod(1, "rod_precision", "Precision rod", "common", "shop", stats(12, 22, 12, 12, 12, 26)),
   rod(2, "rod_cedar", "Cedar rod", "uncommon", "shop", stats(22, 20, 18, 16, 22, 16)),
   rod(2, "rod_carrot", "Carrot rod", "uncommon", "shop", stats(22, 16, 18, 18, 30, 16)),
-  rod(3, "rod_glass", "Glass rod", "rare", "shop", stats(36, 34, 16, 36, 30, 44),
+  rod(3, "rod_glass", "Crystal rod", "rare", "shop", stats(36, 34, 16, 36, 30, 44),
     { passive: passive("Sunlit", "+10 control in sunny weather.", { control: 10 }, { weather: ["sunny"] }) }),
   rod(3, "rod_riptide", "Riptide rod", "rare", "crafted", stats(30, 30, 36, 42, 34, 30),
     { passive: passive("Current", "+10 reel speed in the sea.", { reel: 10 }, { water: ["sea"] }) }),

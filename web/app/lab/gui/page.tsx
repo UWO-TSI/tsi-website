@@ -47,7 +47,7 @@ function RodGearShow() {
   const bobber = TACKLE.find(t => t.slot === "bobber")!, bait = TACKLE.find(t => t.slot === "bait")!;
   return <>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24, alignItems: "end" }}>
-      <div data-testid="radar-live"><b>Glass rod, your build</b><RodRadar rod={rodByKey("rod_glass")!} tackle={on ? [bobber.key, bait.key] : []} />
+      <div data-testid="radar-live"><b>Crystal rod, your build</b><RodRadar rod={rodByKey("rod_glass")!} tackle={on ? [bobber.key, bait.key] : []} />
         <GhostButton onClick={() => setOn(v => !v)} data-testid="radar-toggle">{on ? "Take the bobber and bait off" : "Put the lucky bobber and sweet bait on"}</GhostButton></div>
       <div><b>{bobber.name} on its own</b><TackleRadar tackle={bobber} /></div>
       <div style={{ display: "flex", gap: 8, alignSelf: "center" }}>
@@ -300,7 +300,7 @@ export default function GuiShowroom() {
         <ListRow icon={iconUrl("acc_cap")} title="Cap" detail="Accessory" leader value={<Amount n={350} />} onClick={() => setRow(0)} selected={row === 0} />
         <ListRow icon={iconUrl("acc_backpack")} title="Backpack" detail="Accessory" leader value={<Amount n={1200} />} onClick={() => setRow(1)} selected={row === 1} />
         <ListRow icon={iconUrl("lounge-tea")} title="Tea set" detail="Furniture" leader value={<Amount n={220} />} onClick={() => setRow(2)} selected={row === 2} />
-        <ListRow icon={iconUrl("rod_glass")} title="Glass rod" detail="Premium · needs level 8" value="Locked" onClick={() => {}} disabled />
+        <ListRow icon={iconUrl("rod_glass")} title="Crystal rod" detail="Premium · needs level 8" value="Locked" onClick={() => {}} disabled />
         <ListRow icon={iconUrl("rock_stone")} title="Stone" leader value={<><b>2</b> / 5</>} />
       </List>
     </Section>

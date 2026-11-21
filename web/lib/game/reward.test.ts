@@ -41,8 +41,8 @@ describe("the shared reward card's event", () => {
   });
 
   it("unrolls a bottle's recipe: the thing it makes and what it takes", () => {
-    const r = rewardOf("tsi:recipe-learned", { id: "rod-glass", name: "Glass rod" });
-    expect(r).toMatchObject({ kind: "bottle", key: "rod-glass", name: "Glass rod", icon: "/assets/icons/rod_glass.webp" });
+    const r = rewardOf("tsi:recipe-learned", { id: "rod-glass", name: "Crystal rod" });
+    expect(r).toMatchObject({ kind: "bottle", key: "rod-glass", name: "Crystal rod", icon: "/assets/icons/rod_glass.webp" });
     expect(r!.ingredients).toEqual([
       { key: "wood_branch", name: "Tree branch", icon: "/assets/icons/wood_branch.webp", count: 4 },
       { key: "rock_crystal", name: "Crystal", icon: "/assets/icons/rock_crystal.webp", count: 1 },
@@ -69,7 +69,7 @@ describe("the shared reward card's event", () => {
   it("stays up longer for something new or rare, and longest for a recipe to read", () => {
     const plain = rewardOf("tsi:peaceful-got", { key: "apple", name: "Apple", rarity: "common", size: null, isNew: false, kind: "forage" })!;
     const fresh = { ...plain, isNew: true };
-    const bottle = rewardOf("tsi:recipe-learned", { id: "rod-glass", name: "Glass rod" })!;
+    const bottle = rewardOf("tsi:recipe-learned", { id: "rod-glass", name: "Crystal rod" })!;
     expect(rewardHold(fresh)).toBeGreaterThan(rewardHold(plain));
     expect(rewardHold(bottle)).toBeGreaterThan(rewardHold(fresh));
   });

@@ -19,7 +19,7 @@ describe("rod tiers", () => {
       expect(launch[i].biteWindowMs).toBeGreaterThan(launch[i - 1].biteWindowMs);
       expect(launch[i].rarityBonus).toBeGreaterThan(launch[i - 1].rarityBonus);
     }
-    // The Glass rod's line is brittle (David 2026-11-04: "glass strenght lower"); the rest only hold better.
+    // The Crystal rod's line is brittle (David 2026-11-04: "glass strenght lower"); the rest only hold better.
     for (let i = 1; i < launch.length; i++) if (launch[i].key !== "rod_glass" && launch[i - 1].key !== "rod_glass") expect(launch[i].tensionMul).toBeLessThan(launch[i - 1].tensionMul);
     expect(RODS.filter(r => r.source === "shop").map(r => r.key)).toEqual(["rod_precision", "rod_cedar", "rod_carrot", "rod_glass"]);
   });
@@ -124,7 +124,7 @@ describe("the rescale (David 2026-11-04)", () => {
     for (const k of STAT_KEYS) expect(legend.base[k]).toBeGreaterThanOrEqual(90);
     expect(STAT_MAX).toBeGreaterThanOrEqual(120);
   });
-  it("fits each rod: the Glass rod's line is its weakest stat", () => {
+  it("fits each rod: the Crystal rod's line is its weakest stat", () => {
     const glass = rodByKey("rod_glass")!;
     expect(Math.min(...STAT_KEYS.map(k => glass.base[k]))).toBe(glass.base.strength);
     expect(glass.base.strength).toBeLessThan(rodByKey("rod_cedar")!.base.strength);

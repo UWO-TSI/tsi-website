@@ -13,8 +13,9 @@ import { FILM_GRAZE } from "@/lib/game/modelMaterials";
 const PUBLIC = join(__dirname, "../../../public");
 const load = (url: string) => new Promise<THREE.Object3D>((resolve, reject) => {
   const buf = readFileSync(join(PUBLIC, url));
-  // Rods ship meshopt-compressed (scripts/pack-glbs.mjs), as the game's useGLTF decodes them.
-  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), "", g => resolve(g.scene), reject);
+  // Rods ship meshopt-compressed (scripts/pack-glbs.mjs), as the game's useGLTF decodes them. Node has no image
+  // decoding: textures load as empty stand-ins, as heldMesh.test does (the meshes and materials are what's tested).
+  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).register(parser => { (parser as unknown as { loadTextureImage: () => Promise<THREE.Texture> }).loadTextureImage = () => Promise.resolve(new THREE.Texture()); return { name: "stub_textures" }; }).parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), "", g => resolve(g.scene), reject);
 });
 const rods = readdirSync(join(PUBLIC, "assets/game/tools")).filter(f => f.startsWith("rod-")).map(f => `/assets/game/tools/${f}`);
 

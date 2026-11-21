@@ -51,7 +51,7 @@ export const CATALOGUE: CatalogueEntry[] = [
   // Cedar and Carrot two and a half to three hours on a common, Glass five hours on an uncommon.
   e("rod-basic", "Basic rod", "tool", 100, { tier: "basic", slot: "rod", description: "A sturdy starter rod." }),
   e("rod-cedar", "Cedar rod", "tool", 2500, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
-  e("rod-glass", "Glass rod", "tool", 6000, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite. Clear as water, and about as tough." }),
+  e("rod-glass", "Crystal rod", "tool", 6000, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite. Clear as water, and about as tough." }),
   // Round 4's rods (David 2026-11-02; lib/game/rods.ts): their own positions, so no other row's moves. The Training and
   // Tempest rods are never sold (FOUND_ONLY): their prices are only their nominal value.
   rodRow("rod-precision", "Precision rod", 1000, "basic", "A wide catch bar and a long bite window.", 1001),
