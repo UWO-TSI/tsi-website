@@ -1266,8 +1266,9 @@ BUILD = {"carrot": carrot, "precision": precision, "training": training, "cedar"
          "titanium-a1": titanium_a1, "tidewarden-a1": lambda: tidewarden(True), "tempest-a1": tempest_a1,
          "north-star": north_star, "candy-cane": candy_cane}
 BUDGET = {"north-star": 900, "candy-cane": 900}  # the two Christmas event rods' raised triangle budgets
-# the Carrot and the Precision are rebuilt to their concepts in build_rods_b.py (rod-rebuild-b): never by default here
-only = ARGS[ARGS.index("only") + 1].split(",") if "only" in ARGS else [n for n in BUILD if n not in ("carrot", "precision")]
+# the Carrot and the Precision are rebuilt to their concepts in build_rods_b.py (rod-rebuild-b), the Riptide, Tempest,
+# Tidewarden and Titanium in build_rods_a.py (rod-rebuild-a): never by default here (their awakened -a1 forms still are)
+only = ARGS[ARGS.index("only") + 1].split(",") if "only" in ARGS else [n for n in BUILD if n not in ("carrot", "precision", "riptide", "tempest", "tidewarden", "titanium")]
 for name in only:
     out = BUILD[name]()
     rod, fx, rod_extras, fx_extras = out if isinstance(out, tuple) else (out, [], {}, {})

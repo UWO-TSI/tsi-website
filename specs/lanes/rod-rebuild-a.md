@@ -5,26 +5,28 @@ Worktree `.claude/worktrees/fishing`, branch `game/fishing` (shared with rod-reb
 ## Status
 
 - Rebuilt the Riptide, Tempest, Tidewarden and Titanium part by part against their approved concepts in `art/pipeline/concepts/old/<rod>/` (hero, turnaround rod only, effects layer). Builders in `art/pipeline/build_rods_a.py`; it execs build_rods.py's helpers (everything above its `# ==== build` marker, plus its render helpers) without running that file's build.
+- Round 2 (the coordinator's review, budget raised to 2500): Riptide's ribbon a thick band spiralling over and under the blank with a foam roll on its leading edge, big on the crests, an open breaking wave with foam puffs, a bigger whirlpool, claws and crystal drop, a faceted crystal pommel; Tempest's chunky chain bars, flat links and icicles, a dark wood grip, a bigger storm globe (cloud puffs, blue core, wing guard, ice shards), a bigger spear with four barbs; Tidewarden rebuilt to its concept (nautilus reel, pearl pommel in gold leaves, coral trident with two blue crystal prongs, proper gold, pearl and teal, quieter wisps); Titanium thicker hex sections, bolder cyan collar bands, chunkier fork and fin, a proper spinning reel (housing, cyan rings, spool, claw guard, crank and knob), no black dashes. build_rods.py no longer builds these four by default (its -a1 forms still).
 - Outputs (packed with `web/scripts/pack-glbs.mjs`):
 
   | Rod | Rod GLB | Tris | Mats | Effect GLB | FX tris, meshes |
   |---|---|---|---|---|---|
-  | Riptide | tools/rod-riptide.glb | 1498 | 5 | props/rodfx-riptide.glb | 1096, 5 (Water ribbon and wave face, Water whirlpool, Foam crests, Spray drops, Light crescent trail) |
-  | Tempest | tools/rod-tempest.glb | 1496 | 5 | props/rodfx-tempest.glb | 864, 5 (Glow bolts flicker, Glow storm eye and ice shards pulse, Glow tip spark, Light gusts spin with trail, Aura) |
-  | Tidewarden | tools/rod-5.glb | 1472 | 5 | props/rodfx-tidewarden.glb | 502, 3 (Glow veins, Light wisps round the head, Light drift along the shaft) |
-  | Titanium | tools/rod-titanium.glb | 1372 | 1 (P_Polished, film) | props/rodfx-titanium.glb (new) | 586, 3 (Glow bands and slits, Glow coil spinning, Glow sparks flicker) |
+  | Riptide | tools/rod-riptide.glb | 2316 | 5 | props/rodfx-riptide.glb | 1352, 5 (Water ribbon and wave face, Water whirlpool, Foam crests, Spray drops, Light crescent trail) |
+  | Tempest | tools/rod-tempest.glb | 2350 | 5 | props/rodfx-tempest.glb | 864, 5 (Glow bolts flicker, Glow storm eye and shards pulse, Glow tip spark, Light gusts spin with trail, Aura) |
+  | Tidewarden | tools/rod-5.glb | 2060 | 5 | props/rodfx-tidewarden.glb | 62, 2 (Light wisps past the prongs, Light drift along the line) |
+  | Titanium | tools/rod-titanium.glb | 1428 | 1 (P_Polished, film) | props/rodfx-titanium.glb | 586, 3 (Glow bands and slits, Glow coil spinning, Glow sparks flicker) |
 
 - Evidence: `specs/evidence/rod-rebuild-a/<rod>-compare.webp` (top: concept hero beside the model at compare_sheet.py's angle with the effect lit; bottom: the turnaround's side row beside the model side on).
-- Awaiting review. Not seen by David yet.
+- Awaiting the coordinator's round 2 review.
 
 ## David's decisions
 
+- 2026-11-20 round 2 (coordinator's review): include the nautilus reel on the Tidewarden (David wanted B's details); proper gold, pearl white and teal; effects less dominant. Budget 2500 tris per rod.
 - 2026-11-20 (via coordinator): "riptide effects are crucial"; "tidewarden = original model plus the pearls, filigree and small details"; "titanium = match the concept including details". Triangle budget about 900 to 1500 per rod.
 
 ## Next
 
-1. Coordinator review of the four compares; fix marks in `build_rods_a.py` and rerun (commands below).
-2. When groups B and C are done with build_rods.py: delete its riptide, tempest, tidewarden (rod-5) and titanium builders and their BUILD/ROD_FILES entries (a full `build_rods.py` run would overwrite this lane's four GLBs with the old models). Keep `tidewarden(woke=True)`, `tempest_a1`, `titanium_a1` and the TI_* helpers they use: the awakened models still load from rods.ts.
+1. Coordinator review of round 2; fix marks in `build_rods_a.py` and rerun (commands below).
+2. Done in round 2: build_rods.py's default list skips riptide, tempest, tidewarden and titanium. Their old builder functions are still in it (tidewarden(woke=True), tempest_a1 and titanium_a1 use them or their helpers); delete the bodies only once the awakened forms are rebuilt.
 3. Rod icons (lab/icons) and the awakened models (`rod-*-a1.glb`) were not redone; the a1 models no longer match their base rods.
 
 ## Tools and gotchas
