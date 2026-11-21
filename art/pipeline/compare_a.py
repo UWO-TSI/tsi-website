@@ -88,18 +88,18 @@ cam = bpy.data.objects.new("Cam", bpy.data.cameras.new("Cam"))
 cam.data.type = "ORTHO"
 sc.collection.objects.link(cam)
 sc.camera = cam
-for rot, e in (((math.radians(50), 0, math.radians(-30)), 3.0), ((math.radians(60), 0, math.radians(150)), 1.2)):
+for rot, e in (((math.radians(50), 0, math.radians(-30)), 2.0), ((math.radians(60), 0, math.radians(150)), 0.7)):
     l = bpy.data.lights.new("Sun", "SUN"); l.energy = e
     lo = bpy.data.objects.new("Sun", l); lo.rotation_euler = rot; sc.collection.objects.link(lo)
 w = bpy.data.worlds.new("W"); w.use_nodes = True
 w.node_tree.nodes["Background"].inputs[0].default_value = (1, 1, 1, 1)
-w.node_tree.nodes["Background"].inputs[1].default_value = 0.9
+w.node_tree.nodes["Background"].inputs[1].default_value = 0.35
 sc.world = w
 try:
     sc.render.engine = "BLENDER_EEVEE_NEXT"
 except TypeError:
     sc.render.engine = "BLENDER_EEVEE"
-sc.render.film_transparent = False
+sc.render.film_transparent = True             # the world lights softly; the white goes in behind
 sc.view_settings.view_transform = "Standard"
 
 
@@ -126,6 +126,8 @@ side = Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
 shoot(side, 0, out + ".s.png", 1280, 240, 0.9)
 t = out + ".t.png"
 subprocess.run(["magick", turn, "-crop", "1280x200+0+0", "-background", "white", "-gravity", "center", "-extent", "1280x240", t], check=True)
+for f in (out + ".h.png", out + ".s.png"):
+    subprocess.run(["magick", f, "-background", "white", "-flatten", f], check=True)
 subprocess.run(["magick", "(", hero, "-resize", "1280x1280", "-background", "white", "-gravity", "center", "-extent", "1280x1280", out + ".h.png", "+append", ")",
                 "(", t, out + ".s.png", "+append", ")", "-append", out], check=True)
 for f in (out + ".h.png", out + ".s.png", t):
