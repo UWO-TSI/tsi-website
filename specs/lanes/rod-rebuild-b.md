@@ -19,7 +19,7 @@ Rebuild the Glass, Lighthouse, Precision and Carrot rod models so each is identi
 - build_rods.py `carrot()` and `precision()` still write rod-carrot.glb and rod-precision.glb: running build_rods.py without `only` overwrites these rebuilds.
 
 ## Status
-- 2026-11-20 round 1 built, compared and packed (about ten compare rounds, Opus in Blender, no worker). Not yet reviewed by David.
+- Head f59f25482. 2026-11-20 round 1 built, compared and packed (about ten compare rounds, Opus in Blender, no worker). Not yet reviewed by David.
   - Glass 1485 tris, 5 materials (Pearl carries a 128x192 wave-inlay texture); fx: Glints (Glow, flicker), Flecks and Twist (Light, spin round the axis), a teal Halo at the point, sparkle sparks.
   - Lighthouse 1492 tris, 5 materials; the lantern stands on the rod's axis at the tip. fx: Beam (three nested Light cones from the lamp, spin 1.1 about the rod's axis, a lighthouse sweep), Lamp (Glow, pulse), a warm Halo, glow sparks. The lamp's centre is Blender (0, 0, 0.884), glTF (0, 0.884, 0): LanternGlow's GLASS for this model.
   - Precision 987 tris, 5 materials (Blank carries a ruler texture, Grip a knurl texture). No fx.
