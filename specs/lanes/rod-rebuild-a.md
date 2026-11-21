@@ -7,17 +7,18 @@ Worktree `.claude/worktrees/fishing`, branch `game/fishing` (shared with rod-reb
 - Rebuilt the Riptide, Tempest, Tidewarden and Titanium part by part against their approved concepts in `art/pipeline/concepts/old/<rod>/` (hero, turnaround rod only, effects layer). Builders in `art/pipeline/build_rods_a.py`; it execs build_rods.py's helpers (everything above its `# ==== build` marker, plus its render helpers) without running that file's build.
 - Round 2 (the coordinator's review, budget raised to 2500): Riptide's ribbon a thick band spiralling over and under the blank with a foam roll on its leading edge, big on the crests, an open breaking wave with foam puffs, a bigger whirlpool, claws and crystal drop, a faceted crystal pommel; Tempest's chunky chain bars, flat links and icicles, a dark wood grip, a bigger storm globe (cloud puffs, blue core, wing guard, ice shards), a bigger spear with four barbs; Tidewarden rebuilt to its concept (nautilus reel, pearl pommel in gold leaves, coral trident with two blue crystal prongs, proper gold, pearl and teal, quieter wisps); Titanium thicker hex sections, bolder cyan collar bands, chunkier fork and fin, a proper spinning reel (housing, cyan rings, spool, claw guard, crank and knob), no black dashes. build_rods.py no longer builds these four by default (its -a1 forms still).
 - Round 3 (the coordinator's review): compare_a.py lit softer (its white world washed colours out), materials set from colours sampled off the concepts; blanks and grips about 1.6x thicker; Riptide's wave about 1.6x bigger and its crest foam as rolling mounds; Tempest's chain 1.5x thicker, deeper blue ice, the globe back to concept size; Tidewarden's nautilus striped in pastel spiral bands, thicker gold leaves, a bigger coral head; Titanium dark gunmetal under its film, a bigger reel with crescent claws, a bigger fork and fin.
+- Round 4: Riptide's breaker a teal log-spiral curl growing out of the blank's end, foam only on its lip, drops off it; a wider ribbon; a longer mint grip. Tempest's chain closed hexagonal links strung along the bolt, each through the last and turned a quarter, the ice's colour baked into its vertices (faces toward the light pale, their edges white); the globe a blue core in a ring of white cloud puffs. Tidewarden's broad gold ribbon and two strands spiralling the shaft, a log-spiral nautilus shell, a bigger gold setting with scroll leaves, whiter, more branched coral. Titanium's solid reel housing with a short spool and two crescent blades (the glowing coil effect dropped), wider prongs with cyan slits on both, a faint thin-film rainbow baked into the metal's vertex colours.
 - Outputs (packed with `web/scripts/pack-glbs.mjs`):
 
   | Rod | Rod GLB | Tris | Mats | Effect GLB | FX tris, meshes |
   |---|---|---|---|---|---|
-  | Riptide | tools/rod-riptide.glb | 2474 | 5 | props/rodfx-riptide.glb | 1352, 5 (Water ribbon and wave face, Water whirlpool, Foam crests, Spray drops, Light crescent trail) |
-  | Tempest | tools/rod-tempest.glb | 2350 | 5 | props/rodfx-tempest.glb | 864, 5 (Glow bolts flicker, Glow storm eye and shards pulse, Glow tip spark, Light gusts spin with trail, Aura) |
-  | Tidewarden | tools/rod-5.glb | 2060 | 5 | props/rodfx-tidewarden.glb | 62, 2 (Light wisps past the prongs, Light drift along the line) |
-  | Titanium | tools/rod-titanium.glb | 1444 | 1 (P_Polished, film) | props/rodfx-titanium.glb | 586, 3 (Glow bands and slits, Glow coil spinning, Glow sparks flicker) |
+  | Riptide | tools/rod-riptide.glb | 2458 | 5 | props/rodfx-riptide.glb | 1328, 5 (Water ribbon and wave face, Water whirlpool, Foam crests, Spray drops, Light crescent trail) |
+  | Tempest | tools/rod-tempest.glb | 2498 | 5 | props/rodfx-tempest.glb | 864, 5 (Glow bolts flicker, Glow storm eye and shards pulse, Glow tip spark, Light gusts spin with trail, Aura) |
+  | Tidewarden | tools/rod-5.glb | 2465 | 5 | props/rodfx-tidewarden.glb | 62, 2 (Light wisps past the prongs, Light drift along the line) |
+  | Titanium | tools/rod-titanium.glb | 1500 | 1 (P_Polished, film) | props/rodfx-titanium.glb | 230, 2 (Glow bands and slits, Glow sparks flicker) |
 
 - Evidence: `specs/evidence/rod-rebuild-a/<rod>-compare.webp` (top: concept hero beside the model at compare_sheet.py's angle with the effect lit; bottom: the turnaround's side row beside the model side on).
-- Awaiting the coordinator's round 3 review.
+- Awaiting the coordinator's round 4 review.
 
 ## David's decisions
 
@@ -27,7 +28,7 @@ Worktree `.claude/worktrees/fishing`, branch `game/fishing` (shared with rod-reb
 
 ## Next
 
-1. Coordinator review of round 3; fix marks in `build_rods_a.py` and rerun (commands below).
+1. Coordinator review of round 4; fix marks in `build_rods_a.py` and rerun (commands below).
 2. Done in round 2: build_rods.py's default list skips riptide, tempest, tidewarden and titanium. Their old builder functions are still in it (tidewarden(woke=True), tempest_a1 and titanium_a1 use them or their helpers); delete the bodies only once the awakened forms are rebuilt.
 3. Rod icons (lab/icons) and the awakened models (`rod-*-a1.glb`) were not redone; the a1 models no longer match their base rods.
 

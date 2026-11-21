@@ -149,28 +149,27 @@ def riptide():
         if w.z < 0:
             w = -w
         wd = (w + d * 1.5 * top).normalized()
-        hw = P(13)
+        hw = P(17)
         return c - wd * hw, c, c + wd * hw, t.cross(wd).normalized()
 
-    WC = at(1168, 58)                            # the breaking wave's eye
+    WC = at(1150, 50)                            # the breaking wave's eye
 
-    def wave_r(u):
-        """The wave's outer and inner radius at u (0 the lip, curling in over the eye; 1 the hook under it), the outer
-        scalloped into foam."""
-        th = math.radians(160 - 285 * u)
-        ro = P(48 + 60 * math.sin(math.pi * min(1.0, u * 1.15)) ** 0.6) * (1 + 0.13 * abs(math.sin(6 * th)))
-        if u > 0.62:                             # the hook: thinner, curling in
-            ro *= 1 - 0.55 * (u - 0.62) / 0.38
-        ri = P(8 + 18 * u)
-        return max(ro, ri + P(8)), ri
+    def curl(u):
+        """The breaker at u (0 where it leaves the blank's end, 1 its lip): a log spiral round the eye, sweeping down
+        under, up the far side and over the top, curling back in; its point, its thickness in the sheet's plane and
+        across, and the direction out of the curl."""
+        th = math.radians(218 + 400 * u)
+        rho = P(62) * math.exp(-1.15 * u)
+        rad = V((0, math.sin(th), math.cos(th)))
+        return WC + rad * rho, P(16) * (1 - 0.75 * u) + P(2), P(30) * (1 - 0.6 * u) + P(3), rad
 
     def b(pc):
         pc.mat = "Gem"                           # the pommel's crystal point
-        loft(pc, [at(66), at(80), at(88), at(98)], [P(1), P(14), P(16), P(10)], sides=6, tip=False, cap=False)
+        loft(pc, [at(36), at(50), at(58), at(68)], [P(1), P(14), P(16), P(10)], sides=6, tip=False, cap=False)
         pc.mat = "Silver"                        # its cap, flaring, faceted
-        revolve(pc, at(95), [(P(10), 0), (P(20), P(6)), (P(20), P(20)), (P(17.5), P(30))], n=6, phase=math.pi / 6)
+        revolve(pc, at(65), [(P(10), 0), (P(20), P(6)), (P(20), P(20)), (P(17.5), P(30))], n=6, phase=math.pi / 6)
         pc.mat = "Teal"                          # the sea-glass grip
-        revolve(pc, at(124), [(P(17.5), 0), (P(18.3), P(55)), (P(17.5), P(110))], n=8)
+        revolve(pc, at(94), [(P(17.5), 0), (P(18.3), P(70)), (P(17.5), P(140))], n=8)
         pc.mat = "Foam"                          # its white wave lines, two crossing on each face
         for side in (-1, 1):
             for ph in (0.0, math.pi):
@@ -178,7 +177,7 @@ def riptide():
                 for i in range(7):
                     u = i / 6
                     a = (math.pi if side < 0 else 0.0) + 0.75 * math.sin(math.pi * 1.4 * u + ph)
-                    pts.append(at(135 + 92 * u) + V((math.cos(a), math.sin(a), 0)) * P(18.6))
+                    pts.append(at(104 + 124 * u) + V((math.cos(a), math.sin(a), 0)) * P(18.6))
                 strip(pc, pts, [P(5) * math.sin(math.pi * (i + 0.5) / 7) ** 0.5 for i in range(7)],
                       lambda q: V((q.x, q.y, 0)).normalized(), lambda q: V((0, 0, q.z)))
         pc.mat = "Silver"                        # the fore collar
@@ -252,29 +251,22 @@ def riptide():
         pc.mat = "Gem"
         for s in (-1, 1):
             gem(pc, at(1062) + V((s * P(8.5), 0, 0)), P(5), P(2.2), (s, 0, 0))
-        # the wave breaking over the tip: a fat C round its eye, open toward the grip where the blank goes in, its
-        # inside teal water and its outside white foam, scalloped
-        wc, rings = WC, []
-        for i in range(16):
-            u = i / 15
-            th = math.radians(160 - 285 * u)                         # from the lip (curled back down over the eye), over the top, round to the hook
-            ro, ri = wave_r(u)
-            dpt = P(66) * (0.3 + 0.7 * math.sin(math.pi * min(1.0, u * 1.3)) ** 0.7) if u < 0.75 else P(66) * max(0.12, (1 - u) * 3.6) * 0.5
-            rad = V((0, math.sin(th), math.cos(th)))
-            o, inn = wc + rad * ro, wc + rad * ri
-            m1, m2 = inn.lerp(o, 0.3), inn.lerp(o, 0.6 + 0.25 * u * u)
-            rings.append([inn, m1 + V((-dpt * 0.8, 0, 0)), m2 + V((-dpt * 0.62, 0, 0)), o + V((-dpt * 0.4, 0, 0)) - rad * P(2), o + rad * P(4),
-                          o + V((dpt * 0.4, 0, 0)) - rad * P(2), m2 + V((dpt * 0.62, 0, 0)), m1 + V((dpt * 0.8, 0, 0))])
-        sweep(pc, rings, lambda i, k: "Teal" if k in (0, 1, 6, 7) else "Foam")
-        pc.mat = "Foam"                          # puffs of foam along its crown, curling back with the lip
-        for k, th in enumerate((158, 136, 110, 84, 58, 32, 6)):
-            u = max(0.0, (160 - th) / 285)
-            ro = wave_r(u)[0]
-            rad = V((0, math.sin(math.radians(th)), math.cos(math.radians(th))))
-            pc.blob(WC + rad * (ro - P(2)), P(13 + 5 * (k % 2)) * (0.6 if k == 0 else 1.0), segs=6, rings=4)
+        # the breaker over the tip: a teal curl growing out of the blank's end, white foam only on its lip, drops off it
+        rings = []
+        for i in range(19):
+            c, t, dp, rad = curl(i / 18)
+            rings.append([c + rad * t * math.cos(TAU * k / 8) * (1.15 if k in (0, 1, 7) else 1.0) + V((dp * math.sin(TAU * k / 8), 0, 0)) for k in range(8)])
+        sweep(pc, rings, lambda i, k: "Foam" if i >= 14 or (i >= 10 and k in (0, 1, 7)) else "Teal")
+        pc.mat = "Foam"
+        for k, u in enumerate((0.8, 0.88, 0.95)):
+            c, t, dp, rad = curl(u)
+            pc.blob(c + rad * t * 0.9, P(9 - 2 * k), segs=6, rings=4)
+        pc.mat = "Gem"                           # drops flung off the lip
+        for k, (dy, dz) in enumerate(((22, 10), (34, -4), (14, 30), (40, 22))):
+            pc.blob(curl(0.92)[0] + V((P(6) * (k % 2), P(dy), P(dz))), P(3.5 - 0.5 * (k % 2)), segs=5, rings=3)
         pc.mat = "Foam"                          # the line: the reel to the wave's hook
-        pc.tube([rc + V((0, RO * 0.6, RO * 0.6)), at(700, 118), at(1150, 170)], [P(0.9)] * 3, sides=3, tip=False, cap=False)
-    rod = model("rod-riptide", {"Navy": "#13305B", "Silver": "#B9BEC8", "Teal": "#6DCCC6", "Foam": "#F4F8FA", "Gem": "#2C8FD8"}, b)
+        pc.tube([rc + V((0, RO * 0.6, RO * 0.6)), at(700, 112), at(1100, 106)], [P(0.9)] * 3, sides=3, tip=False, cap=False)
+    rod = model("rod-riptide", {"Navy": "#13305B", "Silver": "#B9BEC8", "Teal": "#79D3C6", "Foam": "#F4F8FA", "Gem": "#2C8FD8"}, b)
     for m in rod.data.materials:                 # the silver and the crystal a little glossy
         if m.name.endswith(("_Silver", "_Gem", "_Navy")):
             bs = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
@@ -289,14 +281,10 @@ def riptide():
             off = nrm * side * P(7)
             rings.append([p0 + off, p0.lerp(p1, 0.5) + off, p1 + off, p1.lerp(p2, 0.5) + off, p2 + off + (p2 - p1).normalized() * P(2)])
         cuts.append(len(rings) - 1)
-    for s in (-1, 1):                            # the wave's face: water running up from the hook, over, to the lip
-        for i in range(14):
-            u = 1 - i / 13
-            th = math.radians(160 - 285 * u)
-            rad = V((0, math.sin(th), math.cos(th)))
-            ro, ri = wave_r(u)
-            dpt = P(30) * math.sin(math.pi * min(1.0, u * 1.2)) ** 0.5 + P(6)
-            rings.append([WC + rad * (ri + (ro * 0.82 - ri) * j / 4) + V((s * dpt, 0, 0)) for j in range(5)])
+    for s in (-1, 1):                            # the breaker's face: water running up the curl to the lip
+        for i in range(15):
+            c, t, dp, rad = curl(i / 14 * 0.85)
+            rings.append([c + rad * t * (j / 2 - 1) * 1.05 + V((s * (dp + P(1.5)), 0, 0)) for j in range(5)])
         cuts.append(len(rings) - 1)
     current = water("Current", "#3CB7C9", rings, cut=tuple(cuts[:-1]))
     wrings, wcuts = [], []
@@ -314,9 +302,9 @@ def riptide():
     for n, xc in enumerate((565, 745, 925)):
         p0, p1, p2, nrm = rib_sec(xc + 10)
         blobs.append((p2 + (p2 - p1).normalized() * P(4), P(10), 0.7, n))
-    for n, th in enumerate((135, 95, 55, 15)):
-        rad = V((0, math.sin(math.radians(th)), math.cos(math.radians(th))))
-        blobs.append((WC + rad * P(104), P(15), 1.0, n + 3))
+    for n, u in enumerate((0.82, 0.93)):         # and on the breaker's lip
+        c, t, dp, rad = curl(u)
+        blobs.append((c + rad * t, P(10), 1.0, n + 3))
     for c, r, crown, n in blobs:
         for s in (-1, 1):
             k0 = len(fv)
@@ -402,15 +390,29 @@ def tempest():
         for y0, y1, y2 in ((70, 56, 60), (88, 102, 98)):    # the wings along the chain's root, one over and one under
             pts = [at(262, y0), at(300, (y0 + y1) / 2), at(345, y1), at(388, y2)]
             loft(pc, pts, [(P(11), P(8)), (P(12), P(9)), (P(8), P(6)), (P(1), P(1))], sides=4, tip=True, cap=True, ref=(1, 0, 0))
-        pc.mat = "Ice"                           # the chain: bars bent up and down into the bolt, side on, faceted
-        for j in range(4):
-            for s_ in (1, -1):
-                k = 1.0 if s_ > 0 else 0.86      # the falling bars a touch slimmer, inside the rising ones where they cross
-                rr = (P(19 - 1.0 * j) * k, P(22 - 1.2 * j) * k)
-                loft(pc, bar(j, s_), [rr] * 4, sides=4, tip=False, cap=True, ref=(1, 0, 0))
-        pc.mat = "Deep"                          # and the links lying flat between, on the axis
-        for j in range(6):
-            pc.tube(flat(318 + 112 * j, L=128, w=13 - j), [(P(10), P(11))] * 6, sides=4, closed_loop=True, up=V((0, 1, 0)))
+        # the chain: closed rectangular links of ice strung along the bolt, each through the last, turned a quarter
+        # from it (seen side on, one open and the next edge on), so the chain itself zigzags
+        path = [V((330, 79))] + [corner(j, k) for j in range(4) for k in range(4)] + [V((990, 80))]
+        cum = [0.0]
+        for p0, p1 in zip(path, path[1:]):
+            cum.append(cum[-1] + (p1 - p0).length)
+
+        def along(d):
+            i = max(k for k in range(len(cum) - 1) if cum[k] <= d) if d < cum[-1] else len(cum) - 2
+            return path[i].lerp(path[i + 1], min(1.0, (d - cum[i]) / max(cum[i + 1] - cum[i], 1e-6)))
+        n_links = 15
+        step = cum[-1] / n_links
+        pc.mat = "Ice"
+        for i in range(n_links):
+            a2, b2 = along(i * step), along(min(cum[-1], i * step + step * 1.32))
+            c0, c1 = at(a2.x, a2.y), at(b2.x, b2.y)
+            t = (c1 - c0).normalized()
+            w = t.cross(V((1, 0, 0))).normalized() if i % 2 == 0 else V((1, 0, 0))
+            hw, hl = P(19 - 0.3 * i), (c1 - c0).length / 2
+            m = (c0 + c1) / 2
+            loop = [m + t * hl * x + w * hw * y for x, y in ((-1, -0.45), (-1, 0.45), (-0.55, 1), (0.55, 1), (1, 0.45), (1, -0.45), (0.55, -1), (-0.55, -1))][::1]
+            loop = [loop[k] for k in (0, 1, 2, 3, 4, 5, 6, 7) if k not in (0, 4)]
+            pc.tube(loop, [(P(8.5 - 0.2 * i), P(7.5 - 0.2 * i))] * 6, sides=4, closed_loop=True, up=t.cross(w).normalized())
         pc.mat = "Ice"                           # icicles under the falling links
         for j in range(4):                       # two or three off each falling bar's bottom, and one off each diagonal
             for dx, ln, y0 in ((-38, 26, 100), (2, 44, 120 - 2 * j), (22, 34, 120 - 2 * j), (48, 30, 112 - 2 * j)):
@@ -437,28 +439,22 @@ def tempest():
             loft(pc, [root, root + d_ * P(14) + V((0, 0, -P(10))), root + d_ * P(24) + V((0, 0, -P(34)))],
                  [(P(5), P(5)), (P(4), P(4)), (P(0.5), P(0.5))], sides=4, tip=False, cap=True, ref=tuple(d_.cross(V((0, 0, 1)))))
         # the storm globe: a sphere a little flattened along its axle, a silver claw over it, a white cloud winding in
-        pc.mat = "Deep"
-        revolve(pc, rc, [(0.0, -RG * 0.62), (RG * 0.6, -RG * 0.5), (RG * 0.95, -RG * 0.2), (RG * 0.95, RG * 0.2), (RG * 0.6, RG * 0.5), (0.0, RG * 0.62)],
-                n=12, axis=(1, 0, 0))
+        pc.mat = "Deep"                          # the storm globe: a blue core in a ring of white cloud puffs
+        revolve(pc, rc, [(0.0, -RG * 0.55), (RG * 0.5, -RG * 0.45), (RG * 0.7, -RG * 0.15), (RG * 0.7, RG * 0.15), (RG * 0.5, RG * 0.45), (0.0, RG * 0.55)],
+                n=10, axis=(1, 0, 0))
+        pc.mat = "Ice"
+        for s_ in (-1, 1):
+            revolve(pc, rc + V((s_ * RG * 0.55, 0, 0)), [(P(13), 0), (P(8), s_ * P(3)), (0.0, s_ * P(4))], n=8, axis=(1, 0, 0))
+        pc.mat = "Cloud"
+        for k in range(10):
+            a = TAU * k / 10 + 0.2
+            rr = RG * (0.78 + 0.08 * (k % 2))
+            pc.blob(rc + V((P(4) * ((k % 3) - 1), math.sin(a) * rr, math.cos(a) * rr)), (RG * 0.42, RG * (0.36 + 0.05 * (k % 2)), RG * (0.36 + 0.05 * (k % 2))), segs=7, rings=4)
         pc.mat = "Silver"
         pc.tube([at(262, 92), at(268, 104), rc + V((0, RG * 0.8, -P(4)))], [P(7), P(6), P(7)], sides=5, tip=False, cap=False)
         for s_ in (-1, 1):                       # the wing guard: a broad silver wing arching over the globe's top and back
-            pts = [rc + V((s_ * RG * 0.5, math.sin(a) * RG * 1.08, math.cos(a) * RG * 1.08)) for a in (1.2, 0.5, -0.2, -0.9, -1.6, -2.3)]
+            pts = [rc + V((s_ * RG * 0.55, math.sin(a) * RG * 1.22, math.cos(a) * RG * 1.22)) for a in (1.2, 0.5, -0.2, -0.9, -1.6, -2.3)]
             loft(pc, pts, [(P(3), P(9)), (P(3.5), P(13)), (P(3.5), P(14)), (P(3), P(11)), (P(2.5), P(7)), (P(1), P(1))], sides=4, tip=True, cap=True, ref=(1, 0, 0))
-        pc.mat = "Ice"                           # the blue core on each face, and ice shards round the rim
-        for s_ in (-1, 1):
-            revolve(pc, rc + V((s_ * RG * 0.6, 0, 0)), [(P(16), 0), (P(10), s_ * P(4)), (0.0, s_ * P(5))], n=8, axis=(1, 0, 0))
-        for k in range(8):
-            a = TAU * k / 8 + 0.35
-            d_ = V((0, math.sin(a), math.cos(a)))
-            loft(pc, [rc + d_ * RG * 0.9, rc + d_ * (RG + P(14)), rc + d_ * (RG + P(30 + 8 * (k % 2)))], [(P(3), P(5)), (P(2.5), P(4)), (P(0.3), P(0.3))],
-                 sides=4, tip=False, cap=True, ref=(1, 0, 0))
-        pc.mat = "Cloud"                         # storm clouds: puffs crowding round each face, curling in toward the core
-        for s_ in (-1, 1):
-            for i in range(5):
-                a, rr = 1.6 + s_ * 1.15 * i, P(16) + P(20) * (i % 3) / 2
-                xo = RG * 0.62 * math.sqrt(max(0.0, 1 - (rr / RG) ** 2))
-                pc.blob(rc + V((s_ * xo, math.sin(a) * rr, math.cos(a) * rr)), (P(6), P(12 - (i % 3)), P(12 - (i % 3))), segs=6, rings=3)
         pc.mat = "Silver"                        # the crank, on the camera side, its crystal knob
         arm0 = rc + V((-RG * 0.62 - P(2), 0, 0))
         knob = at(210, 196) + V((-RG * 0.62 - P(8), 0, 0))
@@ -468,7 +464,21 @@ def tempest():
         revolve(pc, knob + V((-P(14), 0, 0)), [(P(6), 0), (0.0, -P(6))], n=6, axis=(1, 0, 0))
         pc.mat = "Cloud"                         # the line, the globe to the tip's ring
         pc.tube([rc + V((0, RG * 0.7, RG * 0.6)), at(700, 112), at(1010, 104)], [P(0.9)] * 3, sides=3, tip=False, cap=False)
-    rod = model("rod-tempest", {"Grip": "#3B3346", "Silver": "#D5DCE6", "Ice": "#4C8EDD", "Deep": "#2E62C6", "Cloud": "#F2F5FA"}, b)
+    rod = model("rod-tempest", {"Grip": "#3B3346", "Silver": "#D5DCE6", "Ice": "#FFFFFF", "Deep": "#2E62C6", "Cloud": "#F2F5FA"}, b)
+    me = rod.data                                # the ice lit from within: faces toward the light pale, their edges white
+    col = me.color_attributes["Color"]
+    names = [m.name.split("_")[-1] for m in me.materials]
+    pale, white = kit.lin("#BFE0FF"), kit.lin("#FFFFFF")
+    L = V((-0.5, 0.45, 0.75)).normalized()
+    for poly in me.polygons:
+        if names[poly.material_index] != "Ice":
+            continue
+        f = max(0.0, poly.normal.dot(L))
+        for li in poly.loop_indices:
+            g = col.data[li].color[0]
+            base = [x + (y - x) * f * 0.75 for x, y in zip(kit.lin("#4C8EDD"), pale)]
+            rgb = [x + (y - x) * f ** 6 * 0.7 for x, y in zip(base, white)]
+            col.data[li].color = (rgb[0] * g, rgb[1] * g, rgb[2] * g, 1.0)
     for m in rod.data.materials:                 # the ice and the silver glossy
         if m.name.endswith(("_Ice", "_Silver", "_Deep")):
             bs = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
@@ -560,10 +570,10 @@ def tidewarden():
             gem(pc, at(148) + V((s_ * (R + P(1)), 0, 0)), P(9), P(2), (s_, 0, 0))
         pc.mat = "Pearl"                         # the shaft
         loft(pc, [at(110), at(400), at(700), at(905)], [R * 1.05, R, R * 0.95, R * 0.9], sides=8, tip=False, cap=False)
-        pc.mat = "Gold"                          # the filigree, two strands against each other
-        for ph, sg in ((0.0, 1), (math.pi, -1)):
-            pts = [at(160 + (880 - 160) * i / 27) + V((math.cos(ph + sg * TAU * 3.5 * i / 27), math.sin(ph + sg * TAU * 3.5 * i / 27), 0)) * (R + P(0.8)) for i in range(28)]
-            strip(pc, pts, [P(4.5)] * 28, lambda q: V((q.x, q.y, 0)).normalized(), lambda q: V((0, 0, q.z)))
+        pc.mat = "Gold"                          # the filigree: a broad gold ribbon spiralling the shaft, two strands against it
+        for ph, sg, w_, lift in ((0.0, 1, 12, 1.4), (2.1, -1, 6.5, 2.2), (4.2, -1, 6.5, 2.2)):
+            pts = [at(160 + (880 - 160) * i / 25) + V((math.cos(ph + sg * TAU * 4.0 * i / 25), math.sin(ph + sg * TAU * 4.0 * i / 25), 0)) * (R + P(lift)) for i in range(26)]
+            strip(pc, pts, [P(w_)] * 26, lambda q: V((q.x, q.y, 0)).normalized(), lambda q: V((0, 0, q.z)))
         for x in (160, 270, 880):                # gold rings
             revolve(pc, at(x - 4), [(R + P(1), 0), (R + P(2.5), P(4)), (R + P(1), P(8))], n=8)
         path = [at(262 + 150 * u, 75 - 4 - 32 * math.sin(math.pi * u ** 0.75) * (1 - 0.2 * u)) for u in (i / 8 for i in range(9))]
@@ -579,22 +589,16 @@ def tidewarden():
         pc.mat = "Gold"
         for h in (0, P(27)):
             revolve(pc, rc + V((-P(4) + h, 0, P(18))), [(P(29.5), -P(1.5)), (P(29.5), P(1.5))], n=12, axis=(1, 0, 0))
-        pc.mat = "Pearl"                         # the nautilus: a pearl dome on the camera side, coiled
-        revolve(pc, rc, [(0.0, -P(26)), (P(14), -P(24)), (P(28), -P(16)), (P(35), -P(4)), (P(33), P(6)), (P(20), P(10)), (0.0, P(10))], n=12, axis=(1, 0, 0), phase=0.3)
-        pc.mat = "Gold"                          # its whorl: a gold ridge spiralling out over the dome, and the chambers' lines
-        pts, wid = [], []
-        for i in range(16):
-            th = 2.2 * math.pi * i / 15
-            rho = P(4) * math.exp(0.32 * th)
-            rho = min(rho, P(33))
-            prof_ = [(0, -26), (14, -24), (28, -16), (35, -4)]
-            rr_ = rho / P(1)
-            j_ = max(k for k in range(3) if prof_[k][0] <= rr_)
-            (r0_, h0_), (r1_, h1_) = prof_[j_], prof_[j_ + 1]
-            hx = P(h0_ + (h1_ - h0_) * (rr_ - r0_) / (r1_ - r0_)) - P(1.5)
-            pts.append(rc + V((hx, math.sin(th) * rho, math.cos(th) * rho)))
-            wid.append(P(3) + P(7) * i / 15)
-        strip(pc, pts, wid, lambda q: (q - rc - V((P(30), 0, 0))).normalized(), lambda q: rc)
+        # the nautilus: a shell coiled in a log spiral on the camera side, each whorl swelling round the last to its
+        # open mouth, banded pearl and gold
+        pts, rad = [], []
+        for i in range(20):
+            th = 2.6 * math.pi * i / 19
+            rho = P(4.5) * math.exp(0.235 * th)
+            pts.append(rc + V((-P(16), math.sin(th + 1.0) * rho, math.cos(th + 1.0) * rho)))
+            tr = rho * 0.55 + P(1.5)
+            rad.append((tr * 1.05, tr))
+        loft(pc, pts, rad, sides=7, tip=False, cap=True, ref=(1, 0, 0), mat=lambda i, k: "Gold" if i % 4 == 3 else "Pearl")
         pc.mat = "Gold"                          # the crank and its pearl knob
         knob = rc + V((-P(30), -P(36), P(78)))
         pc.tube([rc + V((-P(26), 0, P(16))), rc + V((-P(30), -P(14), P(48))), knob], [P(3.5)] * 3, sides=4, tip=False, cap=True)
@@ -622,29 +626,34 @@ def tidewarden():
         pc.mat = "Pearl"
         loft(pc, [at(895, 70), at(905, 50), at(920, 34), at(938, 26)], [(P(3), P(7)), (P(3), P(9)), (P(2.5), P(7)), (P(1), P(1))], sides=4, tip=True, cap=True, ref=(1, 0, 0))
         pc.mat = "Gold"                          # the setting, a gold diamond plate
-        loft(pc, [at(930), at(965), at(1000)], [(P(6), P(3)), (P(7), P(18)), (P(6), P(3))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
+        loft(pc, [at(922), at(965), at(1008)], [(P(7), P(4)), (P(9), P(26)), (P(7), P(4))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
+        for s_ in (-1, 1):                       # gold scrolls curling off the setting, over and under
+            leaf(pc, at(950, 75 - s_ * 18), V((0, s_ * 0.8, -0.6)), P(40), P(13), side=V((1, 0, 0)), curl=0.0, lobes=(0.6, 1.0, 0.8, 0.3), thick=P(5), sides=4)
+            leaf(pc, at(985, 75 - s_ * 16), V((0, s_ * 0.9, 0.45)), P(44), P(12), side=V((1, 0, 0)), curl=0.0, lobes=(0.6, 1.0, 0.7, 0.25), thick=P(5), sides=4)
         pc.mat = "Teal"
         for s_ in (-1, 1):
-            gem(pc, at(965) + V((s_ * P(7.2), 0, 0)), P(13), P(3.5), (s_, 0, 0))
+            gem(pc, at(965) + V((s_ * P(9.2), 0, 0)), P(18), P(4.5), (s_, 0, 0))
         pc.mat = "Gold"                          # the arms forking to the prongs' sockets, and the crescents
         for y1 in (50, 100):
-            loft(pc, [at(990), at(1020, (75 + y1) / 2), at(1050, y1), at(1066, y1)], [(P(5), P(5)), (P(5), P(5)), (P(6), P(7)), (P(6), P(8))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
-        loft(pc, [at(975, 60), at(990, 40), at(1010, 30), at(1022, 36)], [(P(4), P(6)), (P(4), P(6)), (P(3), P(4)), (P(1), P(1))], sides=4, tip=True, cap=True, ref=(1, 0, 0))
-        loft(pc, [at(985, 88), at(1005, 112), at(1030, 122), at(1040, 108)], [(P(4), P(6)), (P(4), P(7)), (P(3), P(4)), (P(1), P(1))], sides=4, tip=True, cap=True, ref=(1, 0, 0))
+            loft(pc, [at(990), at(1020, (75 + y1) / 2), at(1050, y1), at(1066, y1)], [(P(7), P(8)), (P(7), P(8)), (P(8), P(10)), (P(8), P(11))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
+        loft(pc, [at(975, 56), at(990, 30), at(1015, 16), at(1032, 24)], [(P(6), P(9)), (P(6), P(9)), (P(4), P(6)), (P(1), P(1))], sides=4, tip=True, cap=True, ref=(1, 0, 0))
+        loft(pc, [at(985, 94), at(1005, 124), at(1034, 136), at(1046, 118)], [(P(6), P(9)), (P(6), P(10)), (P(4), P(6)), (P(1), P(1))], sides=4, tip=True, cap=True, ref=(1, 0, 0))
         pc.mat = "Crystal"                       # the two crystal prongs
         for y1 in (50, 100):
             loft(pc, [at(1060, y1), at(1100, y1 - 1), at(1160, y1 - 2), at(1216, y1 - 3)], [(P(6), P(9)), (P(6), P(8.5)), (P(4.5), P(6)), (P(0.3), P(0.3))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
         pc.mat = "Coral"                         # pink coral, over, between and under the prongs
-        for root, tipp, twigs in ((at(950, 52), at(1125, 4), (0.3, 0.55, 0.8)), (at(1045, 75), at(1130, 72), (0.45, 0.75)), (at(995, 98), at(1120, 132), (0.35, 0.7))):
+        for root, tipp, twigs in ((at(950, 52), at(1125, 4), (0.25, 0.45, 0.65, 0.85)), (at(1045, 75), at(1130, 72), (0.4, 0.7)), (at(995, 98), at(1120, 132), (0.3, 0.55, 0.8))):
             mid = root.lerp(tipp, 0.5) + V((0, P(6), 0))
             pc.tube([root, mid, tipp], [P(8.5), P(7), P(2.8)], sides=4, tip=True, cap=True)
             for k, t_ in enumerate(twigs):
                 p0 = root.lerp(mid, t_ * 2) if t_ < 0.5 else mid.lerp(tipp, (t_ - 0.5) * 2)
                 up = V((0, 1 if k % 2 == 0 else -1, 0.7)).normalized()
                 pc.tube([p0, p0 + up * P(22), p0 + up * P(36) + V((0, 0, P(8)))], [P(5.5), P(4.2), P(1.8)], sides=4, tip=True, cap=False)
+                q0 = p0 + up * P(20)             # and each twig forks again
+                pc.tube([q0, q0 + V((0, up.y * P(4), P(16)))], [P(3.5), P(1.4)], sides=3, tip=True, cap=False)
         pc.mat = "Teal"                          # the line, the spool to the lower prong's socket
         pc.tube([rc + V((0, P(28), P(16))), at(700, 86), at(1060, 102)], [P(1)] * 3, sides=3, tip=False, cap=False)
-    rod = model("rod-5", {"Gold": "#C88B3C", "Pearl": "#F2ECF1", "Teal": "#10AFC4", "Crystal": "#FFFFFF", "Coral": "#F2B8AE"}, b, grad=(0.85, 1.0))
+    rod = model("rod-5", {"Gold": "#C88B3C", "Pearl": "#F2ECF1", "Teal": "#10AFC4", "Crystal": "#FFFFFF", "Coral": "#F6D0C8"}, b, grad=(0.85, 1.0))
     me = rod.data                                # the crystal teal into blue along the prongs; the pearl's pastel sheen
     col = me.color_attributes["Color"]
     names = [m.name.split("_")[-1] for m in me.materials]
@@ -662,7 +671,7 @@ def tidewarden():
             if n_ == "Crystal":
                 u = min(1.0, max(0.0, (p.z - z0) / (z1 - z0)))
                 rgb = [a_ + (b2 - a_) * u for a_, b2 in zip(teal, blue)]
-            elif (p - rc).length < P(44) and p.x < rc.x + P(6):   # the shell: pastel bands spiralling out
+            elif (p - rc).length < P(60) and p.x < rc.x - P(2):   # the shell: pastel bands spiralling out
                 q = p - rc
                 rho = max(math.hypot(q.y, q.z), P(2))
                 k = (math.atan2(q.y, q.z) / TAU - math.log(rho / P(4)) / (0.32 * TAU)) * 4 % 4
@@ -718,8 +727,8 @@ def titanium():
     def b(pc):
         # the fork: two faceted blades back from the hinge, the upper one deep, the lower one slim, a gap between
         pc.mat = "Body"
-        loft(pc, [at(252, 58), at(150, 54), at(80, 60), at(10, 70)], [(P(13), P(24)), (P(12), P(21)), (P(9), P(12)), (P(0.5), P(0.5))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
-        loft(pc, [at(248, 108), at(150, 112), at(80, 112), at(10, 108)], [(P(12), P(17)), (P(11), P(16)), (P(8), P(9)), (P(0.5), P(0.5))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
+        loft(pc, [at(252, 58), at(150, 54), at(80, 60), at(10, 70)], [(P(14), P(31)), (P(13), P(27)), (P(10), P(15)), (P(0.5), P(0.5))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
+        loft(pc, [at(248, 108), at(150, 112), at(80, 112), at(10, 108)], [(P(13), P(22)), (P(12), P(20)), (P(9), P(11)), (P(0.5), P(0.5))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
         pc.mat = "Dark"                          # the gap's dark web between them
         loft(pc, [at(250, 84), at(170, 86)], [(P(4), P(12)), (P(4), P(8))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
         pc.mat = "Body"                          # the fin rising off the hinge, swept toward the tip
@@ -730,8 +739,8 @@ def titanium():
             revolve(pc, at(236, 68) + V((s_ * P(17), 0, 0)), [(P(13), 0), (P(13), s_ * P(4)), (P(5), s_ * P(7)), (0.0, s_ * P(7))], n=8, axis=(1, 0, 0))
         pc.mat = "Cyan"                          # the cyan slits: on the fin, on the upper blade, on the receiver
         for s_ in (-1, 1):
-            for p0, p1, y_ in ((at(238, 32), at(276, 15), 0), (at(112, 58), at(158, 55), 0), (at(272, 62), at(318, 62), 0)):
-                strip(pc, [p0 + V((s_ * P(10.6), 0, 0)), p1 + V((s_ * P(10.6), 0, 0))] if p0.z < at(200).z or p0.y > at(0, 50).y else [p0 + V((s_ * P(26.3), 0, 0)), p1 + V((s_ * P(26.3), 0, 0))],
+            for p0, p1, y_ in ((at(238, 32), at(276, 15), 0), (at(100, 56), at(170, 53), 0), (at(100, 110), at(165, 111), 0), (at(272, 62), at(318, 62), 0)):
+                strip(pc, [p0 + V((s_ * P(14.6 if p0.z < at(200).z else 10.6), 0, 0)), p1 + V((s_ * P(14.6 if p0.z < at(200).z else 10.6), 0, 0))] if p0.z < at(200).z or p0.y > at(0, 50).y else [p0 + V((s_ * P(26.3), 0, 0)), p1 + V((s_ * P(26.3), 0, 0))],
                       [P(3.5)] * 2, lambda q, s_=s_: V((s_, 0, 0)), lambda q: V((0, q.y, q.z)))
         # the blank: octagonal sections between hex collars
         for x0, x1 in zip(COL, COL[1:] + [1155]):
@@ -756,20 +765,20 @@ def titanium():
         # the reel: a spinning reel hung off a solid foot under the receiver, its body and spool along the rod: a
         # rounded housing at the back, a cyan ring, the wound spool, a lipped front, two curved claws guarding it
         pc.mat = "Body"
-        loft(pc, [at(262, 84), at(266, 100), rc + V((0, Pr(26), -Pr(4)))], [(Pr(8), Pr(10)), (Pr(7), Pr(9)), (Pr(8), Pr(12))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
-        revolve(pc, rc, [(0.0, -Pr(50)), (Pr(12), -Pr(49)), (Pr(22), -Pr(42)), (Pr(27), -Pr(30)), (Pr(27), -Pr(20)), (Pr(24), -Pr(17))], n=10)
+        loft(pc, [at(258, 84), at(264, 100), rc + V((0, Pr(24), -Pr(8)))], [(Pr(10), Pr(16)), (Pr(9), Pr(14)), (Pr(10), Pr(18))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
+        revolve(pc, rc, [(0.0, -Pr(50)), (Pr(14), -Pr(49)), (Pr(25), -Pr(42)), (Pr(29), -Pr(30)), (Pr(29), -Pr(6)), (Pr(25), -Pr(3))], n=12)
         pc.mat = "Cyan"
-        revolve(pc, rc, [(Pr(27.4), -Pr(30)), (Pr(27.4), -Pr(23))], n=10)
+        revolve(pc, rc, [(Pr(29.4), -Pr(30)), (Pr(29.4), -Pr(22))], n=12)
         pc.mat = "Spool"
-        revolve(pc, rc, [(Pr(24), -Pr(17)), (Pr(23), -Pr(14)), (Pr(23), Pr(12)), (Pr(24), Pr(15))], n=10)
+        revolve(pc, rc, [(Pr(25), -Pr(3)), (Pr(24), 0), (Pr(24), Pr(12)), (Pr(25), Pr(15))], n=12)
         pc.mat = "Body"
-        revolve(pc, rc, [(Pr(24), Pr(15)), (Pr(29), Pr(17)), (Pr(29), Pr(24)), (Pr(16), Pr(28)), (Pr(8), Pr(34)), (0.0, Pr(36))], n=10)
+        revolve(pc, rc, [(Pr(25), Pr(15)), (Pr(30), Pr(17)), (Pr(30), Pr(24)), (Pr(16), Pr(28)), (Pr(8), Pr(34)), (0.0, Pr(36))], n=12)
         pc.mat = "Cyan"
         revolve(pc, rc + V((0, 0, Pr(29))), [(Pr(17), 0), (Pr(17), Pr(2))], n=10)
         pc.mat = "Body"
         for s_ in (1, -1):                       # the claw guard: two crescents curling out round the spool's front
-            pts = [rc + V((0, s_ * Pr(24), Pr(14))), rc + V((0, s_ * Pr(40), Pr(18))), rc + V((0, s_ * Pr(52), Pr(34))), rc + V((0, s_ * Pr(50), Pr(52))), rc + V((0, s_ * Pr(38), Pr(64))), rc + V((0, s_ * Pr(26), Pr(66)))]
-            loft(pc, pts, [(Pr(6), Pr(6)), (Pr(7), Pr(9)), (Pr(7.5), Pr(11)), (Pr(6), Pr(8)), (Pr(3.5), Pr(4)), (Pr(0.5), Pr(0.5))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
+            pts = [rc + V((0, s_ * Pr(28), -Pr(10))), rc + V((0, s_ * Pr(44), Pr(4))), rc + V((0, s_ * Pr(54), Pr(26))), rc + V((0, s_ * Pr(50), Pr(48))), rc + V((0, s_ * Pr(38), Pr(62))), rc + V((0, s_ * Pr(24), Pr(66)))]
+            loft(pc, pts, [(Pr(4), Pr(8)), (Pr(4.5), Pr(12)), (Pr(5), Pr(15)), (Pr(4), Pr(11)), (Pr(2.5), Pr(5)), (Pr(0.5), Pr(0.5))], sides=4, tip=False, cap=True, ref=(1, 0, 0))
         pc.mat = "Steel"                         # the crank: out of the housing's camera side, down and back to its knob
         hub = rc + V((-Pr(26), 0, -Pr(36)))
         revolve(pc, hub, [(Pr(9), 0), (Pr(9), -Pr(5)), (0.0, -Pr(5))], n=8, axis=(1, 0, 0))
@@ -785,7 +794,9 @@ def titanium():
         if part in ("Body", "Steel"):            # each flat a touch lighter or darker than the next: ground metal
             flat = math.cos(4 * math.atan2(n.y, n.x)) if abs(n.z) < 0.7 else 0.0
             k = 1.0 + 0.08 * flat + 0.06 * n.z
-            return tuple(min(1.0, x * k) for x in c)
+            import colorsys                      # a thin-film rainbow baked faintly into the flats, hue by facing
+            film = colorsys.hsv_to_rgb((math.atan2(n.y, n.z) / TAU + 0.35 * n.x) % 1.0, 0.45, 1.0)
+            return tuple(min(1.0, x * k * (0.78 + 0.3 * kit.lin('#%02X%02X%02X' % tuple(int(f * 255) for f in film))[i])) for i, x in enumerate(c))
         return c
     rod = metal(model("rod-titanium", {k: "#FFFFFF" for k in TI_A}, b), colour)
 
@@ -797,14 +808,8 @@ def titanium():
             revolve(pc, at(x - 3.8), [(r + P(0.8), 0), (r + P(0.8), P(7.6))], n=6)
         revolve(pc, rc, [(Pr(27.8), -Pr(30.5)), (Pr(27.8), -Pr(22.5))], n=10)
         for s_ in (-1, 1):
-            for p0, p1 in ((at(238, 32), at(276, 15)), (at(112, 58), at(158, 55))):
-                strip(pc, [p0 + V((s_ * P(11), 0, 0)), p1 + V((s_ * P(11), 0, 0))], [P(3)] * 2, lambda q, s_=s_: V((s_, 0, 0)), lambda q: V((0, q.y, q.z)))
-
-    def coil(pc):                                # the coil of line lit, in rings round the spool
-        pc.mat = "Glow"
-        for k in range(6):
-            z = -Pr(13) + Pr(24) * k / 5
-            pc.tube([rc + V((math.cos(TAU * j / 10) * Pr(23.6), math.sin(TAU * j / 10) * Pr(23.6), z)) for j in range(10)], [P(1.1)] * 10, sides=3, closed_loop=True)
+            for p0, p1, xo in ((at(238, 32), at(276, 15), 11), (at(100, 56), at(170, 53), 15), (at(100, 110), at(165, 111), 15)):
+                strip(pc, [p0 + V((s_ * P(xo), 0, 0)), p1 + V((s_ * P(xo), 0, 0))], [P(3)] * 2, lambda q, s_=s_: V((s_, 0, 0)), lambda q: V((0, q.y, q.z)))
 
     def sparks(pc):                              # sparks crackling off the reel and the fork's root
         pc.mat = "Glow"
@@ -814,7 +819,6 @@ def titanium():
             pts = [c0 + d * P(9 * i) + side * P(5 * (1 if i % 2 else -1)) for i in range(5)]
             pc.tube(pts, [P(1.1)] * 5, sides=3, tip=True, cap=True)
     fx = [glow("Bands", "#5FE4FF", bands, pulse=0.06),
-          glow("Coil", "#8FF0FF", coil, pivot=tuple(rc), spin=1.4),
           glow("Sparks", "#BFF6FF", sparks, flicker=1.0)]
     return rod, fx, {"rodFx": "titanium"}, particles("#7FE8FF", "sparkle", every=0.18, size=0.035, rise=0.15)
 
