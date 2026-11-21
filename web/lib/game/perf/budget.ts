@@ -230,4 +230,19 @@ export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: stri
   // Dump models David kept and we only retouched (row 314, art/props/derive_*.py): their own geometry and textures.
   "game/props/beach-parasol.glb": { triangles: 4740, why: "the dump's parasol and two loungers kept as they were, recoloured only (one draw)" },
   "game/props/hq-notice-board.glb": { texture: 768, why: "the dump's metal HQ board kept with its own 768 x 384 atlas, the notes made plain; one board, indoors" },
+  // The rods rebuilt to their concept sheets (2026-11-20): each held one per player, up to 2,500 triangles (coordinator).
+  "game/tools/rod-5.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-candy-cane.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-carrot.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-cedar.glb": { triangles: 2500, texture: 512, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-flimsy.glb": { triangles: 2500, texture: 512, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-glass.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-lighthouse.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-north-star.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-precision.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-riptide.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-tempest.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-titanium.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-training.glb": { triangles: 2500, texture: 512, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-training-2.glb": { triangles: 2500, texture: 512, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
 };

@@ -13,26 +13,25 @@ Rebuild the Glass, Lighthouse, Precision and Carrot rod models so each is identi
 - `art/pipeline/compare_turn_b.py`: renders a model as the turnaround sheet's rows (side from -X, bottom from -Y, three-quarter) beside the sheet.
 - Outputs: `rod-glass.glb`, `rod-lighthouse.glb`, `rod-precision.glb`, `rod-carrot.glb` and `rodfx-glass.glb`, `rodfx-lighthouse.glb`.
 
-## Mapping changes needed (for the coordinator, not done here)
-- Glass: `web/lib/game/tools.ts` LAUNCH_RODS sends `rod_glass` (tier 3) to `rod-3.glb`; the new model is `rod-glass.glb`.
-- Lighthouse: same, `rod_lighthouse` (tier 4) to `rod-4.glb`; new `rod-lighthouse.glb`. `LanternGlow.tsx` LANTERN_URL names rod-4; its GLASS for the new model is glTF (0, 0.888, 0).
-- Budget: `web/lib/game/perf/budget.ts` caps `game/tools/` at 600 triangles; these four are 1452 to 2465 (the coordinator's 2500), so budget.test.ts needs ASSET_EXCEPTIONS entries or a raised tool category.
-- Done here (coordinator's ask): build_rods.py no longer builds `carrot` and `precision` by default (only with `only`).
+## Mapping and budget (done in round 3)
+- `web/lib/game/tools.ts`: rod_glass and rod_lighthouse left LAUNCH_RODS, so they load `rod-glass.glb` and `rod-lighthouse.glb`. `rod-3.glb` and `rod-4.glb` are no longer loaded by the game (not deleted here).
+- `LanternGlow.tsx`: LANTERN_URL `rod-lighthouse.glb`, GLASS glTF (0, 0.898, 0).
+- `web/lib/game/perf/budget.ts` ASSET_EXCEPTIONS: every rebuilt rod GLB over the tool budget (all three rod lanes), triangles 2,500, texture 512 where a rod ships a 512 texture. budget.test passes.
+- build_rods.py no longer builds `carrot` and `precision` by default (round 2).
+- Open: `lib/game/character/heldMesh.test.ts` expects every tool to merge to one mesh; textured or translucent parts stay separate meshes by heldMesh's design, so it fails for every textured rod: candy-cane (already on the branch), the other lanes' rods, and here Glass (grip texture, translucent crystal) and Precision (ruler and knurl textures). Lighthouse and Carrot pass. The coordinator decides: loosen the test to one mesh per unmergeable group, or drop the textures and translucency.
 
 ## Status
-- Head 950654f34 (models), 30467d483 (concept refs). Round 2 (coordinator review 2026-11-20, budget 2500): rebuilt all four against the notes below, about six compare rounds. Not yet reviewed by David.
-  - Glass 2388 tris: two smooth crystal strands (3.25 turns, 6 stations a half turn, pentagon sections), thicker; a 192x256 swirl-inlay grip texture; a bigger faceted gem cap; a crown and a tip cluster of 3D crystal shards, a big gold scroll; a bigger float (r 0.034) in a 6 + 6 cord net with tassel and crystal drops.
-  - Lighthouse 2386 tris: tower 0.0345 across; a brass porthole reel (riveted bezel, glass window over the wound line, hinge lugs, crank with wood knob); a bigger lantern room (gallery with railing, glazing between mullions, red roof, gold ball); arched amber windows with glazing bars. Beam at rest points +Y and spins about the rod's axis.
-  - Precision 1452 tris: black knurled grip, silver end cap, silver reel with a gold face ring, gauge, silver side crank and black knob; ruler marks; white ferrules. The concept itself shows thin gold rings at both ends of the grip, so those stay.
-  - Carrot 2465 tris: body 0.0575 across at its fattest, crisp grooves, a glossy streak; nine two-tone fronds with cupped lobes, a dark hook curling under; cream grip bound by a green vine with leaves; a carrot-slice reel (paler core, sunburst) with a leaf crank.
-  - Extra colours without extra materials: `recolor()` moves a virtual part's faces onto a lighter real material and tints their COLOR_0 (the game multiplies it in). Every rod stays at 5 materials.
-- Compares: `specs/evidence/rod-rebuild-b/<rod>-compare.webp`, all from compare_turn_b.py now (top: concept hero | model hero; bottom: turnaround | side, top, three-quarter). Light parts draw as light there.
+- Round 3 (coordinator 2026-11-20): Precision and Carrot passed round 2 (gold rings kept). Glass and Lighthouse made bigger in the hero view:
+  - Glass 2472 tris: blank about 1.8x thicker, its strands translucent (alpha 0.84, glTF BLEND) and shaded per vertex from light on the lit side to teal; grip thicker (0.046) and longer (from station 0.021, the gem behind it); float r 0.047 with a bigger net, tassel and drops; crown, tip shards, scroll and point scaled up.
+  - Lighthouse 2386 tris: tower 1.6x thicker, grip end 1.5x, lantern 1.4x, reel 1.45x; red bands 0.05 long; the beam points out along the rod's line (+Z) at rest and breathes (pulse) instead of spinning. Lamp at Blender (0, 0, 0.898).
+  - Carrot rebuilt only to drop a Blender-only roughness tweak that split its held mesh (same geometry and colours).
+- Round 2 summary: recolor() and gradient() give extra colours on 5 materials; compares from compare_turn_b.py.
 
 ## David's review round 1 notes (via coordinator, 2026-11-20)
 Glass: blank too thin and saw-toothed; grip cream with a teal swirl inlay and a faceted teal end cap; tip a cluster of shards plus a gold scroll; float bigger with its net and tassel crystal. Lighthouse: blank thicker; porthole reel with glass and crank; bigger lantern with red roof, glazed room, gold rail; arched windows; beam not grey in compares. Precision: black knurled grip, silver cap and ferrule; silver reel with side crank and knob; ruler ticks, white ferrules. Carrot: thicker at the grip end, ridged, glossy; lush curled two-tone fronds; cream grip bound with green leaves; carrot-slice reel with leaf crank.
 
 ## Next
-1. Coordinator: the mapping and budget changes above, then a review page for David.
+1. Coordinator: decide the heldMesh test (above), then a review page for David.
 2. David's notes come back here; rebuild with `only <rod>`, recompare, pack, commit.
 
 ## Tools and gotchas

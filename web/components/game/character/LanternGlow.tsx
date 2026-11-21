@@ -11,10 +11,10 @@ import * as THREE from "three";
 import { breath, glowTexture, nightLit } from "@/lib/game/glow";
 import type { ClipName } from "@/lib/game/character/clips";
 
-/** The rod with the lamp (art/props-enemies/build_tools.py ROD[4]). */
-export const LANTERN_URL = "/assets/game/tools/rod-4.glb";
-/** The glass's middle in the GLB (its Lamp part's bounds). */
-const GLASS = new THREE.Vector3(0, 0.846, -0.039);
+/** The rod with the lamp (art/pipeline/build_rods_b.py lighthouse: the lantern stands on the rod's axis at its tip). */
+export const LANTERN_URL = "/assets/game/tools/rod-lighthouse.glb";
+/** The glass's middle in the GLB (the lantern room's centre, its effect's lamp). */
+const GLASS = new THREE.Vector3(0, 0.898, 0);
 /** Clips off the ground: no pool under a jump. */
 const AIRBORNE = new Set<ClipName>(["Jump", "Air", "Fall"]);
 // The sprite's alpha: a clear core (the glass alight) in a short soft falloff.
