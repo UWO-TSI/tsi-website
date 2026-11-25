@@ -298,7 +298,16 @@ What each stat does now, with the tasks: Luck lifts rarer fish (section 7); Bite
 
 ## 9. Modelling
 
-Unchanged from round 1 (approved, fl-models): concept views (front, side, top) from the ElevenLabs image tool, from a text prompt or David's reference, then headless Blender matching the remodel's finish (`art/remodel/build_fish.py`: 600 to 2,000 triangles, one material, one texture, the soft wet sheen), then `node scripts/pack-glbs.mjs` and the icon. No Meshy (paused).
+**The pipeline (David, 2026-11-25; replaces round 1's "no Meshy, Blender only"):** concept views (ElevenLabs image, from a text prompt or David's reference) -> one Meshy `multi_image_to_3d` from those views -> David approves the **raw** Meshy model -> Blender hand edit to the remodel's finish (`art/meshy/clean.py`, then the lane's script, matching `art/remodel/build_fish.py`: 600 to 2,000 triangles, one material, one texture, the soft wet sheen), then `node scripts/pack-glbs.mjs` and the icon. Lane: `fish-models` (`specs/lanes/fish-models.md`).
+
+**Fish style: stylised realistic** (David, 2026-11-25). The fixed prompt block is `art/pipeline/fish-style-prompt.md`; every fish view and every legendary hero carries it word for word.
+- **Real anatomy:** each fish is its true species: proportions, head and mouth, eye position, fin count and placement, markings. A player who knows the fish knows it at a glance.
+- **Clean, painted:** scales as a neat painted pattern (never one by one, never a photo), fins as thin membranes with a few clear rays, a soft counter-shade from back to belly, crisp simple markings, a satin finish.
+- **Readable silhouettes:** smooth bodies with soft volume and crisp fin edges; the species reads from its outline alone.
+- **Not** cartoon-cute (no big eyes, smiles or toy proportions), **not** bevelled hard-surface, **not** photo-real.
+- **Views for Meshy:** square 1:1 images, one view per image filling the frame, flat even shadowless light on plain grey, nose left, back up, body level. Side first from text; top and front as edits of the side; the far side is the side mirrored. No aura, glow, water or effects in any model view.
+- **House scale:** the remodel fish (`web/public/assets/game/remodel/fish/`) are the reference; a new fish sits beside its nearest house fish (Common Shiner by the Pale Chub, Brown Trout by the Golden Trout, Paddlefish by the Sturgeon, Muskellunge by the Pike).
+- **Legendaries and Divine:** a text hero concept first (from section 4, no references), with the aura shown only there: gold for legendaries, the holo shimmer for Divine, electric arcs over the gold for Megabyte. David marks the hero up before any views or Meshy. Bosses are rigged and animated in Roblox Studio later.
 
 **Route A, from an existing fish** (reshaped and repainted; the family look for free), 48:
 - Small fish: Common Shiner, Fathead Minnow, Golden Shiner and Sardine (from the Pale Chub or the Anchovy), Brook Stickleback and Medaka (Killifish), Pearl Dace (Dace), Weather Loach and Stone Loach (Loach).
@@ -308,9 +317,9 @@ Unchanged from round 1 (approved, fl-models): concept views (front, side, top) f
 - Sea and deep: Yellowtail (Horse Mackerel), Cuttlefish (Squid), Halibut (Olive Flounder), Glass Squid (Firefly Squid), Fangtooth (Football Fish).
 - Once their route B parent exists: Eastern Newt and Olm (from the Axolotl), Bristlemouth (from the Lanternfish).
 
-**Route B, new shapes** (modelled from the views): Paddlefish, Alpine Newt, Black Ghost Knifefish, Hillstream Loach, Pond Snail, Giant Gourami, Octopus, Spiny Lobster, Sea Urchin, Sea Pig, Chimaera, Blobfish, Viperfish, Dragonfish (14), plus round 1's 9.
+**Route B, new shapes** (Meshy from the views): Paddlefish, Alpine Newt, Black Ghost Knifefish, Hillstream Loach, Pond Snail, Giant Gourami, Octopus, Spiny Lobster, Sea Urchin, Sea Pig, Chimaera, Blobfish, Viperfish, Dragonfish (14), plus round 1's 9.
 
-**Route C, David's references:** the 12 legendaries, the 2 Divine and their 14 cores. Each creature is a building-size fight model with its own budget row and the aura material (aura-gold, aura-holo; Megabyte adds its electric arcs).
+**Route C, hero concept first, then David's references or marks:** the 12 legendaries, the 2 Divine and their 14 cores. Each creature is a building-size fight model with its own budget row and the aura material (aura-gold, aura-holo; Megabyte adds its electric arcs).
 
 **Image credits:** about 62 new concept sheets this round on top of round 1's 24; the coordinator OKs anything past 10 in a round, so the fish go in batches by water.
 
