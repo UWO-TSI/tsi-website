@@ -138,11 +138,11 @@ def wave_ribbon(rb, z0, z1, crest_z, pitch, hand, name="Wave"):
     V = []; UV = []
     dphi = hand*2*np.pi/pitch                                            # turn per unit length
     for i in range(N):
-        rc = rb(zc[i]) + 0.0022 + 0.026*crest[i]*taper[i]
+        rc = rb(zc[i]) + 0.0022 + 0.004*crest[i]*taper[i]
         na, nz = 1.0, -dphi*rc; nn = math.hypot(na, nz); na, nz = na/nn, nz/nn     # across the band, in the surface
         for j in range(M):
             sj = s[j]; e = (sj+1)/2
-            lift = (0.002 + 0.010*crest[i])*e**2 - 0.001*(1-e)**2             # the lip stands up, the foot hugs
+            lift = (0.0015 + 0.003*crest[i])*e**2 - 0.001*(1-e)**2             # the lip stands up, the foot hugs
             foam = 0.0015*crest[i]*e**3*(0.6+0.4*math.sin(zc[i]*900))
             rr = rc + (lift + foam)*taper[i]
             a_ = sj*w[i]/2*na; z = zc[i] + sj*w[i]/2*nz; ph = phi[i] + a_/rc
@@ -162,7 +162,7 @@ def wave_ribbon(rb, z0, z1, crest_z, pitch, hand, name="Wave"):
     zv = z0 + (z1-z0)*v; cv = (0.5 + 0.5*np.sin(np.pi/2 + hand*2*np.pi*(zv - crest_z)/pitch))**2.2
     deep, mid, light, white = [np.array(c) for c in ((0.16, 0.56, 0.66), (0.33, 0.78, 0.78), (0.62, 0.93, 0.90), (0.97, 0.99, 1.0))]
     U, Cv = np.meshgrid(u, cv); Vv = np.meshgrid(u, v)[1]
-    foam_line = 1 - (0.24 + 0.36*Cv) + 0.05*np.sin(Vv*2*np.pi*140) + 0.03*np.sin(Vv*2*np.pi*57)
+    foam_line = 1 - (0.26 + 0.24*Cv) + 0.05*np.sin(Vv*2*np.pi*140) + 0.03*np.sin(Vv*2*np.pi*57)
     g = np.clip(U/np.maximum(foam_line, 0.1), 0, 1)[..., None]
     col = np.where(g < 0.5, deep + (mid-deep)*(g/0.5), mid + (light-mid)*((g-0.5)/0.5))
     f = np.clip((U - foam_line)/0.04, 0, 1)[..., None]; col = col*(1-f) + white*f
@@ -192,10 +192,68 @@ def tube(z0, z1, c0, c1, r0, r1, name, mat, seg=48, rings=240):
     for p_ in me_.polygons: p_.use_smooth = True
     ob = bpy.data.objects.new(name, me_); sc.collection.objects.link(ob); me_.materials.append(mat); return ob
 
+CREST_KEYS = [(0, 0), (0.25, 0.12), (0.48, 0.38), (0.62, 0.72), (0.72, 0.95), (0.83, 1.02), (0.93, 0.94), (1.0, 0.76),
+              (1.0, 0.56), (0.95, 0.44), (0.89, 0.45), (0.86, 0.55), (0.83, 0.64), (0.78, 0.66), (0.73, 0.56), (0.71, 0.38),
+              (0.74, 0.17), (0.80, 0.0)]
+def catmull(K, n=10):
+    K = np.array(K, float); G = np.vstack([K[0], K, K[-1]]); P = []
+    for i in range(1, len(G)-2):
+        p0, p1, p2, p3 = G[i-1], G[i], G[i+1], G[i+2]
+        for t in np.linspace(0, 1, n, endpoint=False):
+            P.append(0.5*((2*p1) + (-p0+p2)*t + (2*p0-5*p1+4*p2-p3)*t*t + (-p0+3*p1-3*p2+p3)*t**3))
+    P.append(K[-1]); return np.array(P)
+
+def crest_tex(name):
+    """the breaking crest's paint: deep teal at the blank, teal up the face, white foam over the top and the lip."""
+    TW = TH = 256; img = bpy.data.images.new(name, TW, TH)
+    u = (np.arange(TW)+0.5)/TW; v = (np.arange(TH)+0.5)/TH; U, V = np.meshgrid(u, v)
+    deep, mid, light, white = [np.array(c) for c in ((0.10, 0.45, 0.60), (0.28, 0.72, 0.76), (0.55, 0.90, 0.88), (0.97, 0.99, 1.0))]
+    g = np.clip(V/0.8, 0, 1)[..., None]
+    col = np.where(g < 0.5, deep + (mid-deep)*(g/0.5), mid + (light-mid)*((g-0.5)/0.5))
+    foam = np.clip((V - (0.80 - 0.05*np.sin(U*40)))/0.06, 0, 1) + np.clip((U - 0.9)/0.04, 0, 1)*(V > 0.35)
+    f = np.clip(foam, 0, 1)[..., None]; col = col*(1-f) + white*f
+    img.pixels.foreach_set(np.concatenate([col, np.ones((TH, TW, 1))], -1).astype(np.float32).ravel()); img.pack()
+    return img
+
+def crest_body(z_top, rb, H, L, tex_mat, name, alpha):
+    """one breaking crest rising out of the band where it passes over the top (+y): the sheet's wave profile (long
+    back, curling lip over a hollow front) in the band's own direction (turned alpha about y), as wide as the band
+    at its foot and thinning to the lip; UVs planar (u along, v up). Returns it and its foam lumps."""
+    P = catmull(CREST_KEYS); x0 = -0.83*L
+    d = np.array([-math.sin(alpha), 0, math.cos(alpha)]); nrm = np.array([math.cos(alpha), 0, math.sin(alpha)])
+    def at(px, py, w):                                     # wrapped on the band's own spiral
+        z = z_top + x0 + px*L; ph = math.pi/2 + HAND*2*math.pi*(z - CREST)/PITCH
+        r = rb(z) - 0.002 + py*H; ph += w/max(r, 1e-4)
+        return np.array([r*math.cos(ph), r*math.sin(ph), z])
+    n = len(P); V = []; UV = []
+    for side in (1, -1):
+        for (px, py) in P:
+            t = 0.0045 + 0.0095*max(0, 1 - py)**2
+            V.append(tuple(at(px, py, side*t/2))); UV.append((px, py))
+    bm = bmesh.new(); vs = [bm.verts.new(v) for v in V]; bm.verts.ensure_lookup_table()
+    f1 = bm.faces.new(vs[:n]); f2 = bm.faces.new(vs[n:][::-1])
+    for i in range(n):
+        j = (i+1) % n; bm.faces.new((vs[i], vs[n+i], vs[n+j], vs[j]))
+    bmesh.ops.triangulate(bm, faces=[f1, f2], quad_method="BEAUTY", ngon_method="BEAUTY")
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me_ = bpy.data.meshes.new(name); bm.to_mesh(me_); bm.free()
+    l = me_.uv_layers.new(name="UVMap")
+    for poly in me_.polygons:
+        for li, vi in zip(poly.loop_indices, poly.vertices): l.data[li].uv = UV[vi]
+    ob = bpy.data.objects.new(name, me_); sc.collection.objects.link(ob); me_.materials.append(tex_mat)
+    for p_ in me_.polygons: p_.use_smooth = True
+    rng = np.random.default_rng(int(z_top*1000)); foam = []
+    top = [(px, py) for px, py in P if (py > 0.7 and px > 0.45) or (px > 0.88 and py > 0.42)]
+    for k in range(30):
+        px, py = top[rng.integers(len(top))]
+        c = at(px, py + rng.uniform(0.0, 0.08), rng.uniform(-0.003, 0.003))
+        foam.append((tuple(c), rng.uniform(0.0038, 0.0078)))
+    return ob, foam
+
 def riptide():
-    """the wrapping wave remodelled: between the reel seat and the breaker, Meshy's lumpy blank with its thin
-    broken ribbon and loose foam is cut away; a clean navy blank and a continuous wave band with a foaming
-    lip go in its place (Meshy's crests kept)."""
+    """the wrapping wave rebuilt to the sheet (round 2): the blank between the reel seat and the breaker is a clean
+    navy tube; a teal band spirals round it, and where it passes over the top three breaking crests stand up off it,
+    each with the sheet's curling lip over a hollow front and white foam lumps along the top."""
     weld(); col, cen = faces()
     h = hsv(col); crescent = (h[:, 0] > 150) & (h[:, 0] < 190) & (h[:, 1] > 0.25)
     zone = ((cen[:, 2] > Z0) & (cen[:, 2] < Z1)) | ((cen[:, 2] > 0.095) & (cen[:, 2] <= Z0) & ~crescent)
@@ -203,18 +261,22 @@ def riptide():
     co = np.zeros(len(me.vertices)*3); me.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
     bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table()
     bnd = np.array([v.index for v in bm.verts if v.is_boundary]); bm.free()
-    ends = []
-    for z in (Z0, Z1):
-        p = co[bnd[np.abs(co[bnd, 2] - z) < 0.004]]
-        if len(p) == 0: ends.append((np.zeros(2), 0.01)); continue
-        c = np.median(p[:, :2], 0); r = np.percentile(np.linalg.norm(p[:, :2]-c, axis=1), 60); ends.append((c, r))
-        print("CUT", z, "centre", c.round(4), "r", round(float(r), 4), "verts", len(p))
-    (c0, r0), (c1, r1) = ends
-    r0, r1 = 0.0138, max(min(r1, 0.0095), 0.0075); c0 = c1                 # the seat end is cut through the crescent
-    blank = tube(Z0 - 0.05, Z1 + 0.006, c0, c1, r0, r1 + 0.0002, "Blank", flat_mat("P_Paint", (0.09, 0.20, 0.38), 0.35))
-    EXTRA.append(blank)
+    p = co[bnd[np.abs(co[bnd, 2] - Z1) < 0.004]]; c1 = np.median(p[:, :2], 0)
+    r1 = max(min(np.percentile(np.linalg.norm(p[:, :2]-c1, axis=1), 60), 0.0095), 0.0075); r0 = 0.0138
+    EXTRA.append(tube(Z0 - 0.05, Z1 + 0.006, c1, c1, r0, r1 + 0.0002, "Blank", flat_mat("P_Paint", (0.09, 0.20, 0.38), 0.35)))
     rb = lambda z: np.interp(z, [Z0, Z1], [r0, r1])
     EXTRA.append(wave_ribbon(rb, Z0 - 0.002, Z1 + 0.002, CREST, PITCH, HAND))
+    m = bpy.data.materials.new("P_Paint"); m.use_nodes = True; nt = m.node_tree
+    bs = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"); tn = nt.nodes.new("ShaderNodeTexImage"); tn.image = crest_tex("Crest-tex")
+    nt.links.new(tn.outputs[0], bs.inputs["Base Color"]); bs.inputs["Roughness"].default_value = 0.4
+    white = flat_mat("P_Paint", (0.97, 0.98, 1.0), 0.6); lumps = []
+    for k, zt in enumerate(CRESTS):
+        ob, foam = crest_body(zt, rb, CREST_H[k], CREST_L[k], m, f"Crest{k}", math.atan(rb(zt)*2*math.pi/PITCH)*HAND)
+        EXTRA.append(ob); lumps += foam
+    for k, (c, r) in enumerate(lumps):
+        EXTRA.append(sphere(f"Foam{k}", c, r, white, seg=12, scale=(1.0, 0.8, 1.15)))
+    print("CRESTS", len(CRESTS), "FOAM", len(lumps))
+CRESTS, CREST_H, CREST_L = [0.315, 0.525, 0.735], [0.042, 0.047, 0.043], [0.15, 0.16, 0.15]
 Z0, Z1, CREST, PITCH, HAND = 0.135, 0.83, 0.30, 0.21, 1
 
 def arc(c, R_, r_, a0, a1, axis_u, axis_v, name, mat, seg=64, ring=16):
@@ -270,9 +332,9 @@ def cyl(name, a, b, r, mat, seg=24, caps=True):
     if caps: V += [a, b]; F += [(2*seg, (j+1) % seg, j) for j in range(seg)] + [(2*seg+1, seg+j, seg+(j+1) % seg) for j in range(seg)]
     return mesh_obj(name, V, F, mat)
 
-def sphere(name, c, r, mat, seg=24):
+def sphere(name, c, r, mat, seg=24, scale=(1, 1, 1)):
     bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=seg, v_segments=seg//2, radius=r)
-    for v in bm.verts: v.co += Vector(c)
+    for v in bm.verts: v.co = Vector([v.co[i]*scale[i] for i in range(3)]) + Vector(c)
     me_ = bpy.data.meshes.new(name); bm.to_mesh(me_); bm.free()
     for p_ in me_.polygons: p_.use_smooth = True
     ob = bpy.data.objects.new(name, me_); sc.collection.objects.link(ob); me_.materials.append(mat); return ob
@@ -319,7 +381,7 @@ def tidewarden():
     """Meshy's flat disc reel cut off; a nautilus-shell reel modelled in its place as in the sheet: pearl shell with
     gold septa and rim facing out, a teal line spool behind it between gold flanges, a gold neck to the rod and a
     gold crank with a pearl knob."""
-    weld(); col, cen = faces()
+    weld(); tidewarden_tip(); col, cen = faces()
     h = hsv(col); goldf = (h[:, 0] > 25) & (h[:, 0] < 60) & (h[:, 1] > 0.35)
     reel = ((cen[:, 1] < -0.027) | (goldf & (cen[:, 1] < -0.014))) & (cen[:, 2] > 0.004) & (cen[:, 2] < 0.168)
     delete(reel); delete(drop_small(np.ones(len(me.polygons), bool), 300))
@@ -356,6 +418,68 @@ def lighthouse():
     print("PORTHOLE flattened", int(m.sum()))
     sel = np.zeros(len(me.vertices), bool); sel[m] = True
     smooth(sel, factor=0.4, iters=2)
+
+def crystal_prong(base, direction, length, half_w, name, mat, up):
+    """a long hard-edged crystal spike: a diamond section (blade width in the side view's plane, thinner across),
+    full near the base and running straight to a needle point; flat shaded; u per facet, v along."""
+    d = np.array(direction, float); d /= np.linalg.norm(d)
+    wv = np.array(up, float); wv -= d*(wv @ d); wv /= np.linalg.norm(wv); tv = np.cross(d, wv)
+    N = 24; V = []; UV = []
+    for i in range(N+1):
+        t = i/N; a = half_w*(0.55 + 0.45*min(t/0.12, 1))*(1 - t)**0.62 if t < 1 else 0.0
+        c = np.array(base, float) + d*length*t
+        for k, (cw, ct) in enumerate(((1, 0), (0, 1), (-1, 0), (0, -1))):
+            V.append(c + wv*cw*a + tv*ct*a*0.5); UV.append((k/4 + 0.125, t))
+    F = [(i*4+k, i*4+(k+1) % 4, (i+1)*4+(k+1) % 4, (i+1)*4+k) for i in range(N) for k in range(4)]
+    V.append(np.array(base, float) - d*0.004); UV.append((0.5, 0.0)); F += [(len(V)-1, (k+1) % 4, k) for k in range(4)]
+    return mesh_obj(name, V, F, mat, uv=UV, smooth_=False)
+
+def prong_tex(name):
+    TW, TH = 64, 256; img = bpy.data.images.new(name, TW, TH)
+    u = (np.arange(TW)+0.5)/TW; v = (np.arange(TH)+0.5)/TH; U, V = np.meshgrid(u, v)
+    base, tip = np.array([0.50, 0.94, 0.88]), np.array([0.12, 0.40, 0.95])
+    t = np.clip(V, 0, 1)[..., None]**0.8; col = base*(1-t) + tip*t
+    facet = np.floor(U*4) % 2; col = col*(0.9 + 0.12*facet[..., None])
+    edge = np.clip(1 - np.abs((U*4) % 1 - 0.5)*2/0.12, 0, 1)[..., None]*0.0
+    img.pixels.foreach_set(np.concatenate([np.clip(col, 0, 1), np.ones((TH, TW, 1))], -1).astype(np.float32).ravel()); img.pack()
+    return img
+
+ROOTS = []
+def tidewarden_tip():
+    """round 2 (David: "make the tip sharper and more aggressive"): Meshy's soft rounded prongs replaced by two longer,
+    thinner hard-edged crystal spikes splaying a little apart, and a crown of gold thorns round the head."""
+    col, cen = faces(); h = hsv(col)
+    teal = (h[:, 0] > 160) & (h[:, 0] < 215) & (h[:, 1] > 0.25) & (cen[:, 2] > 0.815)
+    ROOTS.clear(); lab = components(teal); u_, cnt = np.unique(lab[teal], return_counts=True)
+    big = u_[np.argsort(-cnt)[:2]]
+    print("PRONG parts", len(u_), sorted(cnt)[-3:])
+    m = bpy.data.materials.new("P_Paint"); m.use_nodes = True; nt = m.node_tree
+    bs = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED"); tn = nt.nodes.new("ShaderNodeTexImage"); tn.image = prong_tex("Prong-tex")
+    nt.links.new(tn.outputs[0], bs.inputs["Base Color"]); bs.inputs["Roughness"].default_value = 0.25
+    zmax = cen[:, 2].max()
+    for k, part in enumerate(big):
+        q = cen[lab == part]
+        z0 = np.percentile(q[:, 2], 3); base = q[q[:, 2] < z0 + 0.006].mean(0); tip = q[np.argmax(q[:, 2])]
+        sgn = 1 if base[1] > -0.009 else -1
+        d = tip - base; d /= np.linalg.norm(d); d[1] += sgn*0.07; d /= np.linalg.norm(d)   # splay a little apart
+        L = min(np.linalg.norm(tip - base)*1.12, (zmax + 0.012 - base[2] + 0.004)/d[2])
+        EXTRA.append(crystal_prong(base - d*0.004, d, L, 0.0075, f"Prong{k}", m, (0, 1, 0))); ROOTS.append((base, d))
+        print("PRONG", k, "base", base.round(3), "len", round(float(L), 3))
+    pale = (h[:, 0] > 150) & (h[:, 0] < 235) & (h[:, 1] > 0.1) & (cen[:, 2] > 0.835)
+    delete(teal | pale); delete(drop_small(np.ones(len(me.polygons), bool), 200))
+    gold = flat_mat("P_Metal", (0.88, 0.68, 0.33), 0.32, 0.8)               # a gold crown of thorns round each prong's root
+    for k, (b0, d) in enumerate(ROOTS):
+        u = np.cross(d, [1, 0, 0]); u /= np.linalg.norm(u); v = np.cross(d, u)
+        for j in range(5):
+            a_ = 2*math.pi*j/5 + 0.3; r_ = math.cos(a_)*u + math.sin(a_)*v
+            dd = d*math.cos(math.radians(24)) + r_*math.sin(math.radians(24))
+            EXTRA.append(cone(f"Thorn{k}{j}", b0 + d*0.002 + r_*0.0062, dd, 0.017, 0.0026, gold))
+
+def cone(name, base, d, L, r, mat, seg=8):
+    d = np.array(d, float); d /= np.linalg.norm(d); u = np.cross(d, [0, 0, 1] if abs(d[2]) < 0.9 else [1, 0, 0]); u /= np.linalg.norm(u); v = np.cross(d, u)
+    V = [np.array(base) + r*(math.cos(2*math.pi*j/seg)*u + math.sin(2*math.pi*j/seg)*v) for j in range(seg)] + [np.array(base) + d*L, np.array(base) - d*0.002]
+    F = [(j, (j+1) % seg, seg) for j in range(seg)] + [((j+1) % seg, j, seg+1) for j in range(seg)]
+    return mesh_obj(name, V, F, mat, smooth_=False)
 
 SHELL_R, SHELL_ANG, SHELL_SHIFT = 0.043, -2.4, 0.33
 SM = {}

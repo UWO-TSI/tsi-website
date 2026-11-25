@@ -5,10 +5,11 @@ r=$1; out=$2; shift 2; W=${CW:-1000}; rows=()
 sheet(){ if [ -f $r/sheet-$1.png ]; then echo $r/sheet-$1.png; elif [ $r = training-2 ]; then case $1 in side) echo ../meshy/training-2/w-a.png;; threequarter) echo ../meshy/training-2/w-b.png;; *) echo none;; esac; else echo ../meshy/$r/$1.png; fi; }
 rot(){ if [ $r = training-2 ] && [ $1 != top ]; then echo 63; else echo 90; fi; }
 for v in side top threequarter; do
-  cells=(); s=$(sheet $v)
-  if [ $s = none ]; then magick -size ${W}x200 xc:white -gravity center -font /System/Library/Fonts/Helvetica.ttc -pointsize 28 -annotate 0 "no top view in the refs" c-0.png
+  cells=(); s=$(sheet $v); [ -n "$NOSHEET" ] && s=skip
+  if [ $s = skip ]; then :
+  elif [ $s = none ]; then magick -size ${W}x200 xc:white -gravity center -font /System/Library/Fonts/Helvetica.ttc -pointsize 28 -annotate 0 "no top view in the refs" c-0.png
   else magick $s -background white -flatten -trim +repage -resize ${W}x${W} c-0.png; fi
-  cells+=(c-0.png); i=1
+  [ $s != skip ] && cells+=(c-0.png); i=1
   for p in "$@"; do magick $p-$v.png -background white -flatten -rotate $(rot $v) -trim +repage -resize ${W}x${W} c-$i.png; cells+=(c-$i.png); i=$((i+1)); done
   H=$(magick "${cells[@]}" -format "%h\n" info: | sort -n | tail -1); H=$((H+30))
   for c in "${cells[@]}"; do magick $c -background white -gravity center -extent $((W+30))x$H $c; done

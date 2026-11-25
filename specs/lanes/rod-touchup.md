@@ -8,24 +8,33 @@ Pipeline step 3 for the 7 raw Meshy rods David approved: Blender hand-edits from
 
 ## Status
 
-Done, waiting for review. One `[build]` commit on `game/rod-touchup` (head SHA in the report). Review page (not published): scratchpad `touch/review/rod-touchup.html`. Evidence: `specs/evidence/rod-touchup/<rod>.jpg` (columns sheet, raw Meshy as approved, touched-up; rows side, top, three-quarter).
+Round 2 done, waiting for review (`[build]` commit on `game/rod-touchup`, head SHA in the report). Review page (not published): `specs/evidence/rod-touchup/page-2/index.html`. Evidence: `specs/evidence/rod-touchup/r2-<rod>.jpg` (sheet | round 1 | round 2) for Riptide and Tidewarden, `low-<rod>.jpg` (high | game copy) for all 8. Round 1 page and compares: `specs/evidence/rod-touchup/<rod>.jpg`; round-1 high GLBs are in commit 86eb8104c.
 
-| Rod | File | What changed | Tris | Texture | Packed size |
-|---|---|---|---|---|---|
-| Cedar | tools/rod-cedar.glb + props/rodfx-cedar-boughs.glb | leaves recoloured to the sheet (deep green at the twig, light at the tips); leaves re-cut into the swaying boughs effect | 287k + 482k | 2048 | 6.8 + 10.7 MB |
-| Crystal | tools/rod-glass.glb | grip pearl white, teal swirls, gold rings; crystal repainted as two twisting ribbons with white glints; shaft lumps tamed | 165k | 2048 | 4.1 MB |
-| Riptide | tools/rod-riptide.glb | mid blank and wrapping wave remodelled (navy tube + spiral wave band with foam texture, Meshy's crests); mint, reel ring, breaker recoloured | 222k | 2048 + 128x1024 | 4.8 MB |
-| Tempest | tools/rod-tempest.glb | globe rounded to a sphere, storm swirl and clouds, silver frame arc; silver bands, charcoal grip, ice matched | 205k | 2048 | 5.1 MB |
-| Tidewarden | tools/rod-5.glb | whites to pearl with sheen, gold, gems, coral pink, prongs aqua to blue; Meshy reel replaced by a modelled nautilus reel (shell, spool, flange, neck, crank, pearl knob) | 251k | 2048 + 256x2048 | 5.8 MB |
-| Titanium | tools/rod-titanium.glb | anodised violet of 744ce9008, bluer at the fork, lilac to the tip; cyan collars; iridescence patched | 180k | 2048 | 4.1 MB |
-| Training 2 | tools/rod-training-2.glb | fitted as is (mirrored back) | 331k | 2048 | 7.1 MB |
-| Lighthouse | tools/rod-lighthouse.glb + props/rodfx-lighthouse.glb | colours to the approved colour views; front windows copied onto both side faces (3x3 median); far-side seat porthole pressed flush and painted brass; light anchor y 1.05 to 1.03 (LanternGlow GLASS, effect Lamp, Halo, FX_Lamp, Beam) | 249k | 2048 | 6.5 MB |
+The game now loads the cut-down copies (touch_low.py: the touched-up high model decimated, one 1024 texture baked from it, P_Metal parts kept as flat metal):
 
-Icons re-rendered (`touch/icon.py`, rod-meshy's icon_fx.py with paths as env). budget.ts exceptions set to the new counts, texture 2048. Gates: tsc clean; vitest lib/game all pass; components RodAura.test's 3 failures are the pre-existing ones rod-meshy listed (titanium names its effect, tidewarden library checks, tempest 6 draws).
+| Rod | High tris / packed MB | Game tris / packed MB |
+|---|---|---|
+| Cedar rod + leaves effect | 287k + 482k / 6.8 + 10.7 | 7.0k + 10.0k / 0.65 + 0.83 |
+| Crystal | 165k / 4.1 | 8.0k / 0.48 |
+| Riptide | 235k / 5.0 | 10.0k / 0.68 |
+| Tempest | 205k / 5.1 | 8.0k / 0.54 |
+| Tidewarden | 245k / 5.6 | 10.0k / 0.53 |
+| Titanium | 180k / 4.1 | 8.0k / 0.49 |
+| Training 2 | 331k / 7.1 | 8.0k / 0.53 |
+| Lighthouse | 249k / 6.5 | 9.0k / 0.64 |
 
-Not fixed: Lighthouse window reliefs still show at the tower's silhouette edges (flattening them crumpled the mesh, reverted). Training 2 has no top-view reference. Cedar's leaves effect is 10.7 MB (482k tris).
+Round 2 changes: Riptide's wrap modelled (wider spiral band with foam edge; three breaking crests rising off it along its spiral, the sheet's wave profile with a curling lip over a hollow front, 30 foam lumps each). Tidewarden's prongs replaced by two longer, thinner hard-edged crystal spikes (diamond section, needle points, splayed a little) with a crown of five gold thorns at each root; tip now at 0.971 (was 0.955), butt and grip unchanged. Icons for Riptide and Tidewarden re-rendered from the round-2 highs. budget.ts at the game copies' counts, texture 1024.
+
+Round 1 (approved by David for cedar, glass, lighthouse, tempest, titanium, training-2): see the table in git history of this file and `specs/evidence/rod-touchup/<rod>.jpg`.
 
 ## David's decisions (verbatim, via coordinator 2026-11-25)
+
+Round 1 marks: approved cedar, glass (Crystal), lighthouse, tempest, titanium, training-2.
+- riptide (redo): "the waves wrapping the r od needs to be redone"
+- tidewarden (redo): "make the tip sharker [sharper] and more aggressive"
+Then (coordinator): a cut-down pass on all 8 for the game, about 6,000 to 10,000 tris, 1024 textures baked from the 2048 highs, about 0.5 MB packed.
+
+Round 1 notes:
 
 - cedar: "looks good, sligth tough up on the leaves in blender"
 - glass (now Crystal rod): "the model needs slight clean up from blender, colors more matching the whites and stuff, the crystal redo texture"
@@ -41,14 +50,16 @@ Raw GLB `/Users/DavidLiu/Developer/uwotsi/.claude/worktrees/fishing/art/pipeline
 
 ## Next
 
-1. Coordinator review; David's marks per card. Open calls: file sizes and tris (no limit asked; a decimate pass is the next lever), Lighthouse silhouette window reliefs.
+1. Coordinator review of page-2. The high (2048) versions are not in the game; if close-ups need them (design bible: high-def for the shop and previews), wire them through the existing view switch in a later lane. Round-2 highs are rebuilt by the scripts (prepall.sh, then run.sh <rod>).
 
 ## Tools and gotchas
 
-- Scripts: `art/pipeline/meshy_rods/touch_prep.py` (fit raw + bake texel positions), `touch_paint.py` (per-rod colour passes on the 2048 texture), `touch_build.py` (per-rod geometry edits and modelled parts, export), `touch_view.py` (renders in raw.py light). Helpers in `art/pipeline/meshy_rods/touch/` (prepall.sh: prep every rod; run.sh <rod>: paint, build, views, compose; hz.sh: 3x grip-end crops; icon.py; budget.py). They use the scratchpad `touch/` dir as work area: `touch/<rod>/{fit.blend,base.npy,pos.npy,tex.png,out.glb}`. Order to ship: run.sh, copy out.glb to web/public/assets/game/tools, icon.py, then `node scripts/pack-glbs.mjs` (Blender can't read packed GLBs).
+- Scripts: `art/pipeline/meshy_rods/touch_prep.py` (fit raw + bake texel positions), `touch_paint.py` (per-rod colour passes on the 2048 texture), `touch_build.py` (per-rod geometry edits and modelled parts, export), `touch_view.py` (renders in raw.py light). Helpers in `art/pipeline/meshy_rods/touch/` (prepall.sh: prep every rod; run.sh <rod>: paint, build, views, compose; hz.sh: 3x grip-end crops; icon.py; budget.py). They use the scratchpad `touch/` dir as work area: `touch/<rod>/{fit.blend,base.npy,pos.npy,tex.png,out.glb}`. Order to ship: run.sh <rod> (high out.glb), icon.py on the highs (ASSETS pointing at a folder holding them), lowall.sh <rod>:<tris> (low.glb, renders, compose), copy low.glb into web/public/assets/game/tools, then `node scripts/pack-glbs.mjs` (Blender can't read packed GLBs).
 - Meshy GLBs split vertices at UV seams: weld before any connectivity work. The raw mesh is one connected surface (leaves, ribbons fused to the blank), so cut-and-replace beats in-place repair.
 - Material names must be P_<Preset>(.NNN) for the game's presets (modelMaterials.ts); extra parts carry their own materials.
 - The old Titanium's purple: `744ce9008` rod-titanium.glb (anodised vertex colours blue-violet to gold, P_Polished metal 0.6 rough 0.16, iridescence 0.5 / IOR 1.8 / 180 nm) and `866c3dbce` (grey with Lilac prongs 0.61 0.47 0.85 linear).
 - Lighthouse is not mirrored (its raw front matches the colour front); the other seven are. Its light anchor is the glass centre from the texture bake (y 1.03).
 - The bake's gutter texels carry odd colours: take medians, not means, when copying texels by position.
 - Added parts are joined per material before export (the tool category allows 5 primitives).
+- Blender 5's glTF exporter takes `export_image_quality` for JPEG (export_jpeg_quality alone did nothing); the game copies use 70.
+- Bake materials take the plain preset name only if the high materials are renamed first (RodAura.test wants `P_Polished` exactly).
