@@ -1,10 +1,10 @@
 """Render a fish GLB in three orthographic views (side, top, three-quarter) for review sheets (fish-models lane).
 
-  Blender -b --factory-startup -P art/fish/render_views.py -- <glb> <out_prefix> [house|auto] [rotz=<deg>] [flipz]
+  Blender -b --factory-startup -P art/fish/render_views.py -- <glb> <out_prefix> [house|auto] [rotz=<deg>] [flipz] [res=<px>]
 
 house: the remodel frame (Blender head +Z, back +Y) turned to nose -X, back +Z.
 auto (Meshy raw): Z up as imported; the long horizontal axis is turned onto X. rotz turns it further (180 puts the nose left).
-Writes <out_prefix>-side.png, -top.png, -34.png (768 px, flat grey, Workbench studio light, texture colour) and prints
+Writes <out_prefix>-side.png, -top.png, -34.png (768 px or res, flat grey, Workbench studio light, texture colour) and prints
 the triangle count and the bounding box.
 """
 import math, sys
@@ -16,6 +16,7 @@ glb, out = a[0], a[1]
 mode = a[2] if len(a) > 2 else "auto"
 rotz = next((float(x[5:]) for x in a if x.startswith("rotz=")), 0.0)
 flipz = "flipz" in a
+res = next((int(x[4:]) for x in a if x.startswith("res=")), 768)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=glb)
@@ -57,7 +58,7 @@ sc.render.engine = "BLENDER_WORKBENCH"
 sh = sc.display.shading
 sh.light = "STUDIO"; sh.color_type = "TEXTURE"; sh.show_cavity = False; sh.show_shadows = False
 sh.background_type = "VIEWPORT"; sh.background_color = (0.32, 0.33, 0.35)
-sc.render.resolution_x = sc.render.resolution_y = 768
+sc.render.resolution_x = sc.render.resolution_y = res
 sc.render.film_transparent = False
 sc.view_settings.view_transform = "Standard"
 cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam")); sc.collection.objects.link(cam); sc.camera = cam

@@ -13,7 +13,10 @@ DECLARE
   T uuid := (SELECT id FROM club_goals WHERE slug = 'fall-fishing-tourney');
   r record; rid uuid;
 BEGIN
-  ASSERT (SELECT count(*) FROM collection_species WHERE category = 'fish' AND donatable AND wing = 'aquarium') = 81, '81 fish in the journal and aquarium';
+  -- 85 since 20261125191541 (the fish list's first four Meshy fish).
+  ASSERT (SELECT count(*) FROM collection_species WHERE category = 'fish' AND donatable AND wing = 'aquarium') = 85, '85 fish in the journal and aquarium';
+  ASSERT (SELECT count(*) FROM collection_species WHERE key IN ('fish_common_shiner', 'fish_brown_trout', 'fish_paddlefish', 'fish_muskellunge') AND biome = 'river' AND asset_ready) = 4, 'the four new river fish';
+  ASSERT (SELECT rarity FROM collection_species WHERE key = 'fish_muskellunge') = 'epic' AND (SELECT start_hour FROM collection_species WHERE key = 'fish_brown_trout') = 18, 'new fish rows as the list';
   -- A former filler fish (rare) lands with its size, weekly trophy, tourney entry and a recipe.
   UPDATE recipe_drop_chances SET chance = 1;
   rid := collections_cast(M, 'fish_piranha', 31.5, true);

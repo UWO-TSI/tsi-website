@@ -9,6 +9,17 @@ Worktree `.claude/worktrees/fish-list`, branch `game/fish-list` (shared with the
 3. Legendary heroes: one hero concept for L1 to L12, D1, D2, from section 4's text (no references). Aura only in the hero. David marks them up before any views or Meshy.
 4. Two review pages (not published; the coordinator publishes): `specs/evidence/fish-models/page-pilot/index.html`, `page-legendary/index.html`.
 
+## Round 3 (2026-11-25): the 4 fish in the game, the Imugi raw model
+
+David's marks on "Fish pilot 2" (via the coordinator): all four game models approved, the fierce Imugi hero approved; the legendary page still unmarked (the other 13 untouched). 1024 textures kept (approved as shown).
+
+Done:
+- **Wiring:** `FISH_LIST_FISH` in `web/lib/collections/roster.ts` (after the buried finds, so no earlier position moves; in `ROSTER`, the roster seed and the icon manifest): river; Common Shiner common, all year, 06-18; Brown Trout rare, spring and autumn, 18-06; Paddlefish rare, spring, any hour; Muskellunge epic, spring, autumn and winter, 06-18. Sizes are the species' real ranges (the list sets none): 8-15, 30-60, 90-180, 70-140 cm. Sell prices are the rarity defaults the list keeps (8, 60, 60, 180). Reel rows in `web/lib/game/fishCatalog.ts` pointing at `/assets/game/remodel/fish/<slug>.glb`, not raw. The Collection Book and the HQ tank read `FISH`, so they list them with no change. The fish list's let-it-go materials and reel tasks aren't in the code yet, so nothing to wire there.
+- **Migration** `web/supabase/migrations/20261125191541_catalogue_seed.sql` (gen-seeds.mjs: the roster block plus an upsert of the 4 rows), added to `specs/evidence/launch-fixes/sql-smoke.sh`'s chain. Smokes updated: `029-031_smoke.sql` (78 -> 82), `catalogue_seed_smoke.sql` (81 -> 85, the 4 rows); tests `collections.test.ts` (81 -> 85, aquarium 93 -> 97), `world/active.test.ts` (81 -> 85 remodelled fish).
+- **Imugi model:** views from the approved hero (side as an edit of the hero, top and front as edits of the side; far side mirrored), pose laid out level in three vertical sea-serpent humps, head raised, jaws on the pearl: left-right symmetric (so the mirror and a straight top view hold) and a clean rig pose. All four views went to Meshy (the top view is right here: no paired fins to invent). One run, meshy-7.1 + meshy-7, Ultra geometry: 35 credits, task `01a2142e-02d1-72bb-940a-ae8256a8502b`, 1,390,306 triangles, 48.5 MB at `art/fish/meshy/imugi-raw.glb` (not in git). No Blender yet. ElevenLabs nodes `imugi-side` `8yaVyx0cv2wOcCp8Ril6`, `imugi-top` `Ev40hRnS34ENUL1T1Elv`, `imugi-front` `zpTLvzqTNFGYGVzSjclk`: 3 generations.
+- **Evidence:** `pilot/<fish>-ingame.png` (the running game's fishing bench: list, 3D preview, member catch card), `pilot/reel-list.png`, `pilot/imugi-views.png`, `pilot/imugi-raw.png`; page `specs/evidence/fish-models/page-pilot-3/index.html` (render-checked, not published).
+- **Gates:** tsc clean; vitest `lib/game lib/collections lib/seedMigrations.test.ts lib/icons` 241 files passed, 1 skipped; eslint clean on the touched files; the SQL smoke chain passes the new counts (its only error, world chat's "the rest", fails the same without this migration). The chain also flags tasting-book and genesis migrations missing from its GAME list: other lanes', not touched.
+
 ## Round 2 (2026-11-25): game models for the approved 4, the fiercer Imugi
 
 David's marks on the pilot page (verbatim, via the coordinator): Common Shiner, Brown Trout, Paddlefish, Muskellunge approve, "looks good, now time to model and convert into triangles". Imugi hero redo: "make it more fearsome looking with fangs, look scarier like a seaserpant." Legendary page not marked yet (the other 13 untouched).
@@ -25,7 +36,7 @@ Done:
 
 ## Status
 
-Round 2 done (2026-11-25; above); round 1 below. Head SHA: `git log -1` on `game/fish-list`.
+Round 3 done (2026-11-25; above), rounds 2 and 1 below. Head SHA: `git log -1` on `game/fish-list`.
 
 - **ElevenLabs:** 26 generations (budget about 30): 12 pilot views (side 338 credits each, top and front edits 412 each) and 14 heroes (338 each). About 9,800 ElevenLabs credits.
 - **Meshy:** 4 runs, 120 credits (balance was 725, now 605), meshy-7.1 + meshy-7, standard, 2K, image_enhancement false:
@@ -39,16 +50,16 @@ Round 2 done (2026-11-25; above); round 1 below. Head SHA: `git log -1` on `game
 
 ## David's decisions
 
+- 2026-11-25, "Fish pilot 2" marks (via the coordinator): the four game models approved, the fierce Imugi hero approved; keep the 1024 textures.
 - 2026-11-25, pilot page marks (via the coordinator): the 4 raw Meshy fish approved, "looks good, now time to model and convert into triangles". Imugi hero redo: "make it more fearsome looking with fangs, look scarier like a seaserpant."
 - 2026-11-25 (via the coordinator): every model goes concept views (ElevenLabs image) -> Meshy multi_image_to_3d -> David approves the RAW Meshy model -> Blender hand edit (replaces section 9's "no Meshy, Blender only"). Fish style: stylised realistic (real anatomy, clean painted scales and fins, readable silhouettes; not cartoon-cute, not bevelled hard-surface). Pilot 5 as above, the remodel fish as house scale. Legendaries: text concepts first, never web references; gold aura for legendaries, holo shimmer for Divine, electric arcs for Megabyte, in the hero concept only. Bosses are rigged and animated in Roblox Studio later (not this lane).
 
 ## Next
 
-1. The coordinator publishes `page-pilot-2` (and the refreshed round 1 pages); wait for David's marks on the game models, the new Imugi and the legendary page.
-2. Game model fixes from his notes: edit `FISH` in `art/fish/build_meshy_fish.py` (fin windows, angles, nudge, tris, length) and rerun (`FISH_CONCEPTS=<dir with meshy/<short>-side.png>` for the nudge; the registered views were in the round's scratchpad: if gone, download the views again from the ElevenLabs flow's nodes labelled `<short>-side`, `-top`, `-front` (free) and rerun `register_views.py`), then pack and re-render the icons.
-3. Redone raw fish: fix the views first (an edit of the side view), then one new Meshy run only with the coordinator's OK.
-4. Legendaries: from David's marks, views per creature (fish blocks, no aura), then Meshy. Charybdis is a scene (funnel plus turbine), not one mesh: plan it with him.
-5. Open: section 9's route A ("reshaped from an existing fish") predates Meshy; ask whether route A fish also go through Meshy.
+1. The coordinator publishes `page-pilot-3`, merges, and applies `20261125191541_catalogue_seed.sql` to production with the code.
+2. David's marks on the Imugi raw model; on approval, the boss edit in Blender (a lane script like `build_meshy_fish.py`: reduce, bake, the gold aura added in the game) for rigging in Roblox Studio later.
+3. The legendary page's marks (13 creatures), then views and Meshy per creature the same way.
+4. The next fish from the list through the same pipeline (views -> Meshy -> raw approval -> `build_meshy_fish.py` -> wiring as round 3).
 
 ## Tools and gotchas
 
@@ -57,4 +68,6 @@ Round 2 done (2026-11-25; above); round 1 below. Head SHA: `git log -1` on `game
 - `art/fish/register_views.py <dir> <fish>`: cuts the grey, registers the views, mirrors the far side, writes `<dir>/meshy/` and the review strip.
 - `art/fish/render_views.py`: headless Blender render of a GLB in side, top and three-quarter (`house` for the remodel fish, `auto rotz=180` for Meshy raw, nose left). Run under `LANE=fish-models withlock.sh blender`.
 - Pages: `python3 ~/Developer/claudebrain-tools/review-page/mkpage.py <spec.json>` (specs were in the session scratchpad; the page embeds the images, so delete the `.webp` copies and `files.json` it leaves next to `index.html`). Render check: `~/.claude/skills/gstack/browse/dist/browse goto file://...` then `screenshot`, under `withlock.sh devserver`.
-- The top views are not fed to Meshy (the image model draws median fins as side pairs from above).
+- The top views are not fed to Meshy for fish (the image model draws median fins as side pairs from above); for a finless serpent the top view is fine.
+- In-game shots: gstack browse runs SwiftShader and can't make the WebGL context the 3D preview needs; use Playwright from `/opt/homebrew/lib/node_modules` with `--use-angle=metal` (as `scripts/render-icons.mjs`), headless, dev server on port 3192 under the devserver lock. The member catch card is up about 1.6 s after "Preview the catch card".
+- `node scripts/gen-seeds.mjs` writes the seed migration; add it to `specs/evidence/launch-fixes/sql-smoke.sh` and fix the smokes' species counts.
