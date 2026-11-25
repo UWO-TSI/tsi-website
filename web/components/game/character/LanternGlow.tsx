@@ -13,8 +13,8 @@ import type { ClipName } from "@/lib/game/character/clips";
 
 /** The rod with the lamp (art/pipeline/build_rods_b.py lighthouse: the lantern stands on the rod's axis at its tip). */
 export const LANTERN_URL = "/assets/game/tools/rod-lighthouse.glb";
-/** The glass's middle in the GLB (the lantern room's centre on the lighthouse body, its effect's lamp; rod-meshy 2026-11-21). */
-const GLASS = new THREE.Vector3(0, 1.05, 0);
+/** The glass's middle in the GLB (the lantern room at the tip, its effect's lamp; rod-touchup 2026-11-25). */
+const GLASS = new THREE.Vector3(0, 1.03, 0);
 /** Clips off the ground: no pool under a jump. */
 const AIRBORNE = new Set<ClipName>(["Jump", "Air", "Fall"]);
 // The sprite's alpha: a clear core (the glass alight) in a short soft falloff.
