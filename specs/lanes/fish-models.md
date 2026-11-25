@@ -9,9 +9,23 @@ Worktree `.claude/worktrees/fish-list`, branch `game/fish-list` (shared with the
 3. Legendary heroes: one hero concept for L1 to L12, D1, D2, from section 4's text (no references). Aura only in the hero. David marks them up before any views or Meshy.
 4. Two review pages (not published; the coordinator publishes): `specs/evidence/fish-models/page-pilot/index.html`, `page-legendary/index.html`.
 
+## Round 2 (2026-11-25): game models for the approved 4, the fiercer Imugi
+
+David's marks on the pilot page (verbatim, via the coordinator): Common Shiner, Brown Trout, Paddlefish, Muskellunge approve, "looks good, now time to model and convert into triangles". Imugi hero redo: "make it more fearsome looking with fangs, look scarier like a seaserpant." Legendary page not marked yet (the other 13 untouched).
+
+Done:
+- `art/fish/build_meshy_fish.py` (headless Blender, reuses `art/remodel/build_fish.py`'s finish): raw Meshy -> game frame (head +y, back -z, centred) at the house size class -> fins that stuck out flat swung back 58 and down 18 degrees about a hinge on the body (muskie's pelvics too) -> paddlefish jaw slimmed -> mirror-symmetric collapse decimate (60k, then the target) -> smart UV -> Cycles diffuse-colour bake from the raw at 1024 px -> house blur and grade -> colour nudged toward the concept after the grade (Brown Trout 0.85, Paddlefish 0.6) -> smooth shading with normals split past 70 degrees (thin fins went dark otherwise) -> COLOR_0 counter-shade -> export -> `pack-glbs.mjs`.
+- `web/public/assets/game/remodel/fish/{common-shiner,brown-trout,paddlefish,muskellunge}.glb`: 900 / 1,200 / 1,600 / 1,400 triangles, 0.62 / 0.95 / 2.3 / 1.7 units long, 721 / 647 / 484 / 630 KB packed (1024 px lossless WebP; the house fish are 25 to 185 KB at 128 to 512 px: a 512 px texture would bring these near 200 KB if wanted).
+- Icons `web/public/assets/icons/fish_{common_shiner,brown_trout,paddlefish,muskellunge}.webp`, rendered by `/lab/icons` (render-icons.mjs) with a temporary, reverted manifest line (the species have no rows yet); they come out nose left, back up like the house icons, which also checks the frame.
+- Imugi redo 1: new node `x6xiRLKdZVZv7D9HJ02q` on the flow, 1 generation (338 credits); replaces `legendary/L1-imugi.png` on both round 1 pages.
+- Evidence `pilot/<fish>-game.png` (raw vs game, side, top, three-quarter, the icon, the house fish); page `specs/evidence/fish-models/page-pilot-2/index.html` (render-checked, not published).
+- Gates: `tsc --noEmit` clean; `vitest run lib/game` 234 files passed, 1 skipped (2,086 tests), including `perf/budget.test.ts` and `world/active.test.ts`.
+
+**Wiring still missing (not done: no species rows on this branch):** roster rows in `web/lib/collections/roster.ts` (keys `fish_common_shiner`, `fish_brown_trout`, `fish_paddlefish`, `fish_muskellunge`: river, rarity, size, hours, months from `specs/fish-list.md` section 3); a `FishRow` each in `web/lib/game/fishing.ts` or `fishCatalog.ts` with `model: "/assets/game/remodel/fish/<slug>.glb"` and no `raw` (there is no dump file under `/assets/acnh/fish/`, so the usual acnh path plus `worldModel` swap would 404 in the old frame); the `collection_species` seed (a new migration) and the Collection Book. The icons resolve by key through `iconFor` once the rows exist.
+
 ## Status
 
-Round 1 done (2026-11-25); head SHA: `git log -1` on `game/fish-list`. Waiting for David's marks on both pages.
+Round 2 done (2026-11-25; above); round 1 below. Head SHA: `git log -1` on `game/fish-list`.
 
 - **ElevenLabs:** 26 generations (budget about 30): 12 pilot views (side 338 credits each, top and front edits 412 each) and 14 heroes (338 each). About 9,800 ElevenLabs credits.
 - **Meshy:** 4 runs, 120 credits (balance was 725, now 605), meshy-7.1 + meshy-7, standard, 2K, image_enhancement false:
@@ -25,12 +39,13 @@ Round 1 done (2026-11-25); head SHA: `git log -1` on `game/fish-list`. Waiting f
 
 ## David's decisions
 
+- 2026-11-25, pilot page marks (via the coordinator): the 4 raw Meshy fish approved, "looks good, now time to model and convert into triangles". Imugi hero redo: "make it more fearsome looking with fangs, look scarier like a seaserpant."
 - 2026-11-25 (via the coordinator): every model goes concept views (ElevenLabs image) -> Meshy multi_image_to_3d -> David approves the RAW Meshy model -> Blender hand edit (replaces section 9's "no Meshy, Blender only"). Fish style: stylised realistic (real anatomy, clean painted scales and fins, readable silhouettes; not cartoon-cute, not bevelled hard-surface). Pilot 5 as above, the remodel fish as house scale. Legendaries: text concepts first, never web references; gold aura for legendaries, holo shimmer for Divine, electric arcs for Megabyte, in the hero concept only. Bosses are rigged and animated in Roblox Studio later (not this lane).
 
 ## Next
 
-1. The coordinator publishes the two pages; wait for David's marks.
-2. Approved raw fish: Blender hand edit per section 9 (`art/meshy/clean.py`, then a lane script matching `art/remodel/build_fish.py`: 600 to 2,000 triangles, one texture at 256 to 512, the soft wet sheen, the game's fish frame head +y back -z at 0.1), export into `web/public/assets/game/remodel/fish/`, `cd web && node scripts/pack-glbs.mjs`, icon. Fix the pectoral fins (Meshy made them flat blades straight out sideways).
+1. The coordinator publishes `page-pilot-2` (and the refreshed round 1 pages); wait for David's marks on the game models, the new Imugi and the legendary page.
+2. Game model fixes from his notes: edit `FISH` in `art/fish/build_meshy_fish.py` (fin windows, angles, nudge, tris, length) and rerun (`FISH_CONCEPTS=<dir with meshy/<short>-side.png>` for the nudge; the registered views were in the round's scratchpad: if gone, download the views again from the ElevenLabs flow's nodes labelled `<short>-side`, `-top`, `-front` (free) and rerun `register_views.py`), then pack and re-render the icons.
 3. Redone raw fish: fix the views first (an edit of the side view), then one new Meshy run only with the coordinator's OK.
 4. Legendaries: from David's marks, views per creature (fish blocks, no aura), then Meshy. Charybdis is a scene (funnel plus turbine), not one mesh: plan it with him.
 5. Open: section 9's route A ("reshaped from an existing fish") predates Meshy; ask whether route A fish also go through Meshy.
