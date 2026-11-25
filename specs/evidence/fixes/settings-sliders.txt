@@ -1,0 +1,4 @@
+Settings > Sound on the member island (/student/dashboard?sheet=settings, headless, sliders.mjs).
+SettingsSheet is member-only (DefaultIslandWorld, companion MeTab); the applicant island has its own sound button.
+before  Master, Music, Ambience, Sound effects  (Ambience did nothing: the member island's ambient channel is silent)
+after   Sound | Mute | Master 70% | Music 55% | Sound effects 80%

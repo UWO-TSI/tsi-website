@@ -2,47 +2,50 @@ import { act, createElement as h } from "react";
 import { reconciler } from "@react-three/fiber";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
-import { GuiVariantContext } from "@/components/gui/variant";
 import { CATEGORIES } from "@/lib/game/character/creatorCategories";
 import { CategoryRail, NAME_NEEDED, useNameCheck } from "./CreatorControls";
 import CharacterCreator from "./CharacterCreator";
+import { StudioContext, type ApplicantStudio } from "./creatorStudio";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
 
-const rail = (variant: "flat" | "cream") => renderToStaticMarkup(h(GuiVariantContext.Provider, { value: variant },
+/** A stand-in for the applicant island's studio (components/recruit/applicantStudio.ts): its own classes and button. */
+const STUDIO: ApplicantStudio = { styles: {}, Button: ({ variant, ...props }) => h("button", { ...props, "data-studio": variant ?? "primary" }) };
+const rail = (studio: ApplicantStudio | null) => renderToStaticMarkup(h(StudioContext.Provider, { value: studio },
   h(CategoryRail, { cats: CATEGORIES, cat: CATEGORIES[1], onOpen: () => {} })));
 
-describe("the creator's rail (round 3: the flat creator wears the kit's icon rail)", () => {
-  it("is the kit's rail in the flat look, keeping the tabs' ids, their panel and data-cat", () => {
-    const out = rail("flat");
+describe("the creator's rail (round 3: the game's creator wears the kit's icon rail)", () => {
+  it("is the kit's rail in the game, keeping the tabs' ids, their panel and data-cat", () => {
+    const out = rail(null);
     expect(out).toMatch(/<div[^>]*aria-label="Categories" role="tablist"/);
     expect(out.match(/role="tab"/g)).toHaveLength(CATEGORIES.length);
     expect(out.match(/aria-selected="true"/g)).toHaveLength(1);
     expect(out).toMatch(/aria-label="Hair"[^>]*role="tab" aria-selected="true" tabindex="0" data-tab="hair" data-cat="hair" id="creator-tab-hair" aria-controls="creator-panel"/);
   });
-  it("stays the cream tiles everywhere else (the applicant island, the reflection)", () => {
-    const out = rail("cream");
+  it("keeps its tiles in the applicant island's studio", () => {
+    const out = rail(STUDIO);
     expect(out).toMatch(/<nav[^>]*role="tablist"/);
     expect(out).not.toContain("data-tab");
     expect(out).toMatch(/data-cat="hair" id="creator-tab-hair" aria-selected="true"/);
   });
 });
 
-describe("the creator's two looks", () => {
-  const creator = (flat: boolean) => renderToStaticMarkup(h(CharacterCreator, { initial: DEFAULT_LOOK, mode: "wardrobe", title: "Your closet", onDone: () => {}, onClose: () => {}, flat }));
-  it("flat: the title and the close across the top, the main action first, no cream heading", () => {
-    const out = creator(true);
-    expect(out).toMatch(/data-flat="true" data-gui-flat=""/);
+describe("the creator: flat in the game, the applicant island's own studio there (row 334)", () => {
+  const creator = (applicant?: ApplicantStudio) => renderToStaticMarkup(h(CharacterCreator, { initial: DEFAULT_LOOK, mode: "wardrobe", title: "Your closet", onDone: () => {}, onClose: () => {}, applicant }));
+  it("game: the title and the close across the top, the main action first", () => {
+    const out = creator();
     expect(out).toMatch(/<header[^>]*><span><\/span><h1 id="creator-title"[^>]*>Your closet<\/h1><button[^>]*aria-label="Close"/);
     expect(out.match(/aria-label="Close"/g)).toHaveLength(1);
     expect(out).toMatch(/data-swap="a"/);
     expect(out).toMatch(/aria-label="Turn left"/);
     expect(out).toContain(">Wear this</button>");
+    expect(out).not.toContain("data-studio");
   });
-  it("cream (no flag): as before, the heading on the portrait and the close on the panel", () => {
-    const out = creator(false);
-    expect(out).not.toMatch(/data-flat|data-gui-flat|data-swap|data-tab/);
+  it("applicant: the heading on the portrait, the close on the panel, and the studio's own button", () => {
+    const out = creator(STUDIO);
+    expect(out).not.toMatch(/data-swap|data-tab/);
     expect(out).toMatch(/<h1 id="creator-title"[^>]*>Your closet<\/h1><div/);
     expect(out.match(/aria-label="Close"/g)).toHaveLength(1);
+    expect(out).toMatch(/<button[^>]*data-studio="primary"[^>]*>Wear this<\/button>/);
   });
 });
 

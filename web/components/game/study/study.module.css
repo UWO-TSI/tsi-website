@@ -1,5 +1,5 @@
 /* Study in the world, in the GUI sheet: overhead timers, the timer card column, the start sheet. */
-.overhead { display: grid; justify-items: center; gap: 1px; padding: 3px 10px; border-radius: 999px; background: rgb(255 251 231 / 0.95); color: var(--gui-ink-strong); box-shadow: 0 2px 0 rgb(114 92 78 / 0.16); font: 800 var(--gui-text-xs)/1.25 var(--gui-font); white-space: nowrap; font-variant-numeric: tabular-nums; zoom: var(--tsi-text-scale, 1); }
+.overhead { display: grid; justify-items: center; gap: 1px; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--ui-hud-pill) 95%, transparent); color: var(--gui-ink-strong); box-shadow: 0 2px 0 color-mix(in srgb, var(--ui-shadow-paper) 16%, transparent); font: 800 var(--gui-text-xs)/1.25 var(--gui-font); white-space: nowrap; font-variant-numeric: tabular-nums; zoom: var(--tsi-text-scale, 1); }
 .overhead b { font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
 .overhead[data-phase="focus"] { background: var(--gui-warn-soft); color: var(--gui-warn); }
 .overhead[data-phase="break"] { background: var(--gui-success-soft); color: var(--gui-success); animation: stretch 1.4s ease-in-out infinite; }
@@ -40,9 +40,9 @@
 @media (prefers-reduced-motion: reduce) { .overhead[data-phase="break"] { animation: none; } }
 
 /* The café owner's greeting bubble and nameplate (cafe-polish §6): the residents' paper bubble with a tail, a paper name tag. */
-.bubble { position: relative; max-width: 230px; width: max-content; padding: 8px 14px 9px; border-radius: 18px 20px 17px 19px; background: var(--gui-paper); color: var(--gui-ink); box-shadow: 0 3px 0 rgb(114 92 78 / 0.16), 0 6px 14px rgb(60 45 20 / 0.15); font: 700 var(--gui-text-sm)/1.35 var(--gui-font); text-align: center; animation: pop 0.25s ease-out; zoom: var(--tsi-text-scale, 1); }
+.bubble { position: relative; max-width: 230px; width: max-content; padding: 8px 14px 9px; border-radius: 18px 20px 17px 19px; background: var(--gui-paper); color: var(--gui-ink); box-shadow: 0 3px 0 color-mix(in srgb, var(--ui-shadow-paper) 16%, transparent), 0 6px 14px color-mix(in srgb, var(--ui-shadow-bubble) 15%, transparent); font: 700 var(--gui-text-sm)/1.35 var(--gui-font); text-align: center; animation: pop 0.25s ease-out; zoom: var(--tsi-text-scale, 1); }
 .bubble::after { content: ""; position: absolute; left: 50%; bottom: -8px; width: 14px; height: 9px; background: var(--gui-paper); transform: translateX(-50%); clip-path: polygon(0 0, 100% 0, 50% 100%); }
-.nameplate { display: grid; justify-items: center; padding: 2px 11px 3px; border-radius: 999px; background: rgb(255 251 231 / 0.94); color: var(--gui-ink-strong); box-shadow: 0 2px 0 rgb(114 92 78 / 0.16); font: 800 var(--gui-text-xs)/1.25 var(--gui-font); white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
+.nameplate { display: grid; justify-items: center; padding: 2px 11px 3px; border-radius: 999px; background: color-mix(in srgb, var(--ui-hud-pill) 94%, transparent); color: var(--gui-ink-strong); box-shadow: 0 2px 0 color-mix(in srgb, var(--ui-shadow-paper) 16%, transparent); font: 800 var(--gui-text-xs)/1.25 var(--gui-font); white-space: nowrap; zoom: var(--tsi-text-scale, 1); }
 .nameplate small { font-size: var(--gui-text-xs); font-weight: 700; color: var(--gui-muted); }
 @keyframes pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .bubble { animation: none; } }

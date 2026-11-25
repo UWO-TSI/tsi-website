@@ -68,7 +68,7 @@ describe("the reflection creator's passes", () => {
     expect(gl.clippingPlanes).toEqual([]);
   });
 
-  it("while a wave sweeps the new look in, draw the old look's reflection too, and both yous over the side for the dissolve", () => {
+  it("while a wave sweeps the new look in, draw the old look's reflection too, and both yous over the side for the fade", () => {
     const { scene, you, body, water } = set();
     const old = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.3, 0.3));
     old.userData.look = parseLook(DEFAULT_LOOK);
@@ -79,7 +79,7 @@ describe("the reflection creator's passes", () => {
     mirrorCamera(cam, mirror, new THREE.Matrix4());
     renderReflection(gl, scene, water, cam, mirror, { refl, reflOld, frame, frameNew }, new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.002), { now: body, old });
     // The old look's reflection (ahead of the crest), the new one's (behind it), then the frame with the old you over the
-    // side and the frame with the new one (the composite dissolves the one into the other).
+    // side and the frame with the new one (the composite fades the one into the other).
     expect(passes.map(p => [p.target, p.camera, p.visible, p.clipped])).toEqual([[reflOld, mirror, [old], true], [refl, mirror, [body], true],
       [frame, cam, [old, water], false], [frameNew, cam, [body, water], false]]);
     // Afterwards the new look shows and the old one hides (it stays mounted, in step, for the next change).

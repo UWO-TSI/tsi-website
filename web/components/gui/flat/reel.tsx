@@ -20,7 +20,8 @@
 import confetti from "canvas-confetti";
 import type { ComponentProps, ReactNode, Ref } from "react";
 import PixelImage from "@/components/economy/PixelImage";
-import { DarkButton } from ".";
+import { BiomeTag, DarkButton } from ".";
+import type { WaterType } from "@/lib/game/fishingSpots";
 import r from "./reel.module.css";
 
 export { r as reelStyles };
@@ -30,9 +31,9 @@ export function ReelPanel({ className, ...rest }: ComponentProps<"div">) {
   return <div {...rest} className={`${r.panel} ${className ?? ""}`} />;
 }
 
-/** The panel's top-left: the fish's name ("???" until it's known) and the water it lives in ("sea", "river"), as small chips. */
-export function ReelTags({ name, water }: { name: string; water: string }) {
-  return <div className={r.tags}><span className={r.tag} data-kind="name">{name}</span><span className={r.tag} data-kind="water">{water}</span></div>;
+/** The panel's top-left: the fish's name ("???" until it's known) and the biome you're fishing (round 6, David: "it should say the biome when you fish on the fish bar"). */
+export function ReelTags({ name, water }: { name: string; water: WaterType }) {
+  return <div className={r.tags}><span className={r.tag} data-kind="name">{name}</span><BiomeTag water={water} /></div>;
 }
 
 export function ReelTrack({ trackRef, windowRef, markerRef, picture, unknown, windowWidth, windowAt = 0, fishAt = 0.15, state = "in" }: {

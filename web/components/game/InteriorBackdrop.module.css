@@ -7,9 +7,9 @@
   pointer-events: none;
   /* Deep charcoal, the building's tint gathered toward the middle, and a soft vignette to the corners. */
   background:
-    radial-gradient(ellipse 120% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.5) 100%),
-    radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--tint) 52%, #17181b) 0%, color-mix(in srgb, var(--tint) 14%, #121315) 72%);
-  background-color: #121315;
+    radial-gradient(ellipse 120% 95% at 50% 42%, transparent 52%, rgba(0, 0, 0, 0.5) 100%), /* world */
+    radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--tint) 52%, #17181b) 0%, color-mix(in srgb, var(--tint) 14%, #121315) 72%); /* world */
+  background-color: #121315; /* world */
 }
 
 /* The Tethos mark, tiled faintly; it drifts one tile a loop, so it never jumps. */

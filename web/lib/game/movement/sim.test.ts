@@ -343,6 +343,24 @@ describe("collision", () => {
     const s = drive(createMoveState(0.4, -3, w), w, 1.5, (_t, q) => ({ z: 1, jump: true, jumpPressed: q.z > -1.2 && q.z < -1.05 && q.mode === "ground" }));
     expect(s.z).toBeGreaterThan(1);
   });
+  it("walks off a thin top rather than being caught back onto it each step (a bot slid along a path fence at 37 u/s)", () => {
+    // A rail 0.24 across and 1 high, stood on and walked off at an angle: each step the centre leaves it and the
+    // just-missed catch set the body back on it up to 0.32 ahead.
+    const rail: MoveWorld = { top: (x, z) => (Math.abs(z) < 0.12 && Math.abs(x) < 4 ? 1 : 0), wet: () => false };
+    let fastest = 0;
+    drive(createMoveState(-3.5, 0, rail), rail, 1, () => ({ x: 1, z: -0.35 }), (() => {
+      let last: [number, number] | null = null;
+      return (q: MoveState) => { if (last) fastest = Math.max(fastest, Math.hypot(q.x - last[0], q.z - last[1]) / STEP); last = [q.x, q.z]; };
+    })());
+    expect(fastest).toBeLessThanOrEqual(T.walkSpeed + 1e-6);
+  });
+  it("starts beside a post it was placed in, on the ground, rather than at its Infinity top (a bot flew a minute at y Infinity)", () => {
+    const post: MoveWorld = { top: (x, z) => (Math.hypot(x, z) < 0.15 ? Infinity : 0), wet: () => false };
+    const s = drive(createMoveState(0, 0, post), post, 0.5, () => ({}));
+    expect(s.y).toBe(0);
+    expect(s.mode).toBe("ground");
+    expect(Math.hypot(s.x, s.z)).toBeGreaterThan(0.15);
+  });
 });
 
 describe("the sea's edge on foot (world audit item 21)", () => {

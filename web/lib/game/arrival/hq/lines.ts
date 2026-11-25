@@ -21,15 +21,6 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
     "[happy] There you are! Bram said you'd be up. I'm Alice. I keep HQ running, more or less.",
     "You've washed up somewhere special. Let me tell you where.",
   ],
-  // Your island ID: the card opens after these.
-  idAsk: [
-    "[happy] Now, every islander gets an ID. Let's make yours.",
-    "A few questions, then I'll print it for you.",
-  ],
-  idDone: [
-    "[happy] There. That's you, {name}. Official.",
-    "Your friend code's on it. Give it to anyone you want to find again.",
-  ],
   // Money: each currency's icon pops up and flies to where it lives on your screen.
   coins: [
     "Now, money. Coins first.",
@@ -50,17 +41,21 @@ export const WREN_LINES: Readonly<Record<string, readonly string[]>> = {
   menu: [
     "Last thing, then you're free. {esc}",
   ],
+  // Straight after Esc, before her farewell (David's v5 review: "explain that you click to be in locked camera and esc to
+  // be free cam"): the menu, and the camera. Left out on a touch screen (no mouse).
+  camera: [
+    "That's your menu. Esc brings it up whenever you need it.",
+    "Out on the island, click and your mouse turns the camera. Esc lets it go again.",
+  ],
   // The visit's end, Bram's tour already done: your first catch to Juno at the museum (m1). Things in HQ to look at.
   // Her look-round-HQ line (the notice board, the trophy case, the Founder's desk) is out until later (David's playtest).
   farewell: [
-    "That's your menu. It's there whenever you need it.",
     "That's you registered. Bring your first catch to Juno at the museum. She'll show you round.",
     "Oh, and you'll want more than a rod. Odile has a spare net and Pim always has a shovel. Ask them.",
     "[happy] Welcome to Tethos Island, {name}.",
   ],
   // The visit's end with Bram's tour still on (HQ first): things in HQ to look at, then he's waiting outside.
   farewellTour: [
-    "That's your menu. It's there whenever you need it.",
     "[happy] That's you sorted, {name}. Welcome to Tethos Island.",
     "Bram's waiting for you outside. He'll show you the rest of the island.",
     "And once you've a first catch, bring it to Juno at the museum. She'll show you round.",
@@ -75,7 +70,6 @@ export const HQ_TITLE = "Register at HQ";
 export const HQ_TRACKER: Readonly<Record<string, string>> = {
   report: "Report to Alice at HQ",
   lore: "Hear about Tethos Island",
-  id: "Make your island ID",
   coins: "Find out about coins",
   gems: "Find out about gems",
   events: "Find out about check-ins",
@@ -101,41 +95,6 @@ export const FLY_CARDS = {
   gems: { name: "Gems", text: "For rare items and real merch" },
 } as const;
 export type FlyTarget = keyof typeof FLY_CARDS;
-
-/**
- * Your island ID (the front desk): Alice asks, prints it and stamps it. Only existing profile fields, ones that mean
- * something to anyone, in the club or not (David's playtest: "ask for stuff that matters"): your world name, your
- * birthday (private), where you're from (`hometown`) and a line about you (`bio`). Your world name only.
- */
-export const ID_CARD = {
-  eyebrow: "HQ front desk",
-  title: "Your island ID",
-  island: "Tethos Island",
-  kind: "Resident",
-  name: "World name",
-  /** Signed out (a preview): no world name. */
-  noName: "Your world name",
-  nameHint: "The only name anyone sees here.",
-  birthday: "Birthday",
-  birthdayHint: "Optional. Only HQ sees it.",
-  from: "From",
-  fromHint: "Optional. Where you call home.",
-  fromSample: "Your hometown",
-  about: "About you",
-  aboutHint: "Optional. One line about you, on your profile.",
-  aboutSample: "Say hi in a line",
-  /** An empty row on the printed card. */
-  blank: "·",
-  code: "Friend code",
-  /** No account to issue one for (signed out, a preview). */
-  codeLater: "Issued once you're signed in",
-  print: "Print my ID",
-  printing: "Printing…",
-  stamp: "Resident",
-  done: "Done",
-  /** The save didn't take: said under the card, and Done still works. */
-  unsaved: "HQ couldn't save that just now. Your card's still yours.",
-} as const;
 
 /** The check-in card: where a gathering's check-in code goes (the existing flow: the door's QR, lib/portal/checkIn.ts). */
 export const CHECKIN_CARD = {

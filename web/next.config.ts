@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
       { source: "/sponsor", destination: "/genesis#sponsor", permanent: true },
       { source: "/student/login", destination: "/student", permanent: true },
       { source: "/student/signup", destination: "/student?view=signup", permanent: true },
+      // The 2026 redesign (specs/site/revamp.md) folded the old nonprofit subpages into /npo.
+      { source: "/npo/:page(impact|people|program|voices)", destination: "/npo", permanent: true },
+      { source: "/npo/apply", destination: "/npo#apply", permanent: true },
+      { source: "/under-construction", destination: "/", permanent: false },
       ...hostRedirects,
     ];
   },

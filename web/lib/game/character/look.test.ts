@@ -16,6 +16,15 @@ function shipsCompressed(shipped: Buffer, source: Buffer, name: string) {
   expect([a.triangles, a.primitives, a.materials, a.bones], name).toEqual([b.triangles, b.primitives, b.materials, b.bones]);
 }
 
+/** A web copy that pack-glbs.mjs packed (lossless meshopt and WebP, only where smaller): the same triangles and primitives as its art source, or the source itself. */
+function shipsPacked(shipped: Buffer, source: Buffer, name: string) {
+  if (shipped.equals(source)) return;
+  const required = (readGlb(shipped).json as { extensionsRequired?: string[] }).extensionsRequired ?? [];
+  expect(required.some(e => e === "EXT_meshopt_compression" || e === "EXT_texture_webp"), name).toBe(true);
+  const [a, b] = [glbStats(shipped), glbStats(source)];
+  expect([a.triangles, a.primitives, a.materials, a.bones], name).toEqual([b.triangles, b.primitives, b.materials, b.bones]);
+}
+
 describe("character catalogue", () => {
   it("matches art/characters (re-run scripts/sync-character-assets.mjs after a character build)", () => {
     for (const [copy, source] of [["character_catalog.json", "character_catalog.json"], ["palette.json", "palette.json"], ["face_v7.json", "v7/face/face_v7.json"]]) {
@@ -35,7 +44,7 @@ describe("character catalogue", () => {
       const shipped = readFileSync(join(web, "public/assets/characters/v6/lod1", p.glb)), source = readFileSync(join(art, "lod1", p.glb));
       // the whole hairstyles and David's Roblox accessories (wardrobe batch 2) ship meshopt-compressed
       if (p.full || p.roblox?.attachment) shipsCompressed(shipped, source, `lod1/${p.glb}`);
-      else expect(shipped.equals(source), p.glb).toBe(true);
+      else shipsPacked(shipped, source, `lod1/${p.glb}`);
       expect(lod[p.glb].lod1, p.glb).toBeLessThanOrEqual(lod[p.glb].tris);
     }
     expect(existsSync(join(web, "public", LOD_SKIN_URL))).toBe(true);

@@ -19,9 +19,10 @@
  *     (`musicSchedule.ts`), else the CC0 time-of-day track, which is on disk.
  *     A musical loop layer (the campfire's drums, the soft beat) ducks it while
  *     it plays, so the drums replace the bed instead of stacking on it.
- *   - ambient: real ambience only (a listed weather or season variant; none is
- *     authored yet, so the member island's is silent). The applicant island's
- *     Stream Cafe track plays here, as it always has: that island's bed.
+ *   - ambient: real ambience only: a listed weather or season variant, else the
+ *     member island's synthesised beds (the sea, wind, birds, crickets, rain;
+ *     sky-ambient round 3). The applicant island's Stream Cafe track plays here,
+ *     as it always has: that island's bed.
  *
  * Public API:
  *   AudioManager.enable()                        — user gesture unlock
@@ -64,17 +65,73 @@ export type SFXName =
   | "bite"
   | "bite-legendary"
   | "bite-divine"
+  /** A coin landing in the wallet (art/audio/synth_coin.py), played higher for each coin of a sale. */
+  | "coin"
+  /** The collection's stamp landing hard on the menu (art/audio/synth_stamp.py). */
+  | "stamp-heavy"
+  /** A footstep on grass (two takes, left and right). (SFX audit, David 2026-11-20). */
+  | "footstep-grass"
+  /** A footstep on sand. (SFX audit, David 2026-11-20). */
+  | "footstep-sand"
+  /** A footstep on stone. (SFX audit, David 2026-11-20). */
+  | "footstep-stone"
+  /** A footstep on wooden boards. (SFX audit, David 2026-11-20). */
+  | "footstep-wood"
+  /** A footstep in shallow water (four takes). (SFX audit, David 2026-11-20). */
+  | "footstep-water"
+  /** A fishing rod's cast into the water. (SFX audit, David 2026-11-20). */
+  | "cast"
+  /** A fish caught: a splash and a ding. (SFX audit, David 2026-11-20). */
+  | "catch"
+  /** A fishing reel winding in. (SFX audit, David 2026-11-20). */
+  | "reel"
+  /** Dropping into the water. (SFX audit, David 2026-11-20). */
+  | "splash"
+  /** The fish gets away. (SFX audit, David 2026-11-20). */
+  | "fish-escape"
+  /** A coin spent from the wallet. (SFX audit, David 2026-11-20). */
+  | "coin-out"
+  /** A shovel in the soil (two takes). (SFX audit, David 2026-11-20). */
+  | "dig"
+  /** An item equipped. (SFX audit, David 2026-11-20). */
+  | "equip"
+  /** Something dropped into the bag. (SFX audit, David 2026-11-20). */
+  | "bag-thunk"
+  /** A soft chime (two takes). (SFX audit, David 2026-11-20). */
+  | "chime"
+  /** Gathering from a bush or patch (four takes). (SFX audit, David 2026-11-20). */
+  | "forage"
+  /** Leaves rustling. (SFX audit, David 2026-11-20). */
+  | "rustle"
+  /** A landing. (SFX audit, David 2026-11-20). */
+  | "land"
+  /** An item placed down. (SFX audit, David 2026-11-20). */
+  | "place"
+  /** A sale. (SFX audit, David 2026-11-20). */
+  | "sell"
+  /** A stamp landing on paper. (SFX audit, David 2026-11-20). */
+  | "stamp"
+  /** A gem found. (SFX audit, David 2026-11-20). */
+  | "gem"
+  /** An item collected. (SFX audit, David 2026-11-20). */
+  | "item-get"
+  /** A level gained. (SFX audit, David 2026-11-20). */
+  | "level-up"
+  /** A quest completed. (SFX audit, David 2026-11-20). */
+  | "quest-complete"
+  /** An upgrade bought. (SFX audit, David 2026-11-20). */
+  | "upgrade"
   | VbSfx;
 
 /** The beach volleyball match's sounds, made in art/audio/synth_volleyball.py (lib/game/volleyball/sfx.ts plays them). */
 export const VB_SFX = ["vb-bump", "vb-set", "vb-serve", "vb-dig", "vb-block", "vb-spike", "vb-perfect", "vb-good", "vb-early", "vb-late",
-  "vb-sand", "vb-boom", "vb-net", "vb-tape", "vb-takeoff", "vb-touchdown", "vb-dive", "vb-slide", "vb-charge", "vb-max", "vb-toss", "vb-whiff",
-  "vb-point", "vb-point-them", "vb-win", "vb-call", "vb-out", "vb-heat", "vb-fire"] as const;
+  "vb-sand", "vb-boom", "vb-net", "vb-tape", "vb-takeoff", "vb-touchdown", "vb-dive", "vb-charge", "vb-max", "vb-toss", "vb-whiff",
+  "vb-point", "vb-point-them", "vb-win", "vb-call", "vb-out", "vb-heat", "vb-fire", "vb-flame"] as const;
 export type VbSfx = (typeof VB_SFX)[number];
 
 interface AudioManifest {
   ambient: Record<AmbientPhase, string>;
-  sfx: Record<SFXName, string>;
+  sfx: Record<SFXName, string | readonly string[]>;
 }
 
 const MANIFEST: AudioManifest = {
@@ -88,7 +145,7 @@ const MANIFEST: AudioManifest = {
   },
   sfx: {
     footstep: "/audio/sfx/footstep.ogg",
-    jump: "/audio/sfx/blip2.ogg",
+    jump: "/audio/sfx/jump.ogg",
     enter: "/audio/sfx/enter.ogg",
     exit: "/audio/sfx/exit.ogg",
     click: "/audio/sfx/click.ogg",
@@ -102,6 +159,34 @@ const MANIFEST: AudioManifest = {
     bite: "/audio/sfx/bite.ogg",
     "bite-legendary": "/audio/sfx/bite-legendary.ogg",
     "bite-divine": "/audio/sfx/bite-divine.ogg",
+    coin: "/audio/sfx/coin.ogg",
+    "stamp-heavy": "/audio/sfx/stamp-heavy.ogg",
+    "footstep-grass": ["/audio/sfx/footstep-grass-l.ogg", "/audio/sfx/footstep-grass-r.ogg"],
+    "footstep-sand": "/audio/sfx/footstep-sand.ogg",
+    "footstep-stone": "/audio/sfx/footstep-stone.ogg",
+    "footstep-wood": "/audio/sfx/footstep-wood.ogg",
+    "footstep-water": ["/audio/sfx/footstep-water-1.ogg", "/audio/sfx/footstep-water-2.ogg", "/audio/sfx/footstep-water-3.ogg", "/audio/sfx/footstep-water-4.ogg"],
+    cast: "/audio/sfx/cast.ogg",
+    catch: "/audio/sfx/catch.ogg",
+    reel: "/audio/sfx/reel.ogg",
+    splash: "/audio/sfx/splash.ogg",
+    "fish-escape": ["/audio/sfx/fish-escape-1.ogg", "/audio/sfx/fish-escape-2.ogg"],
+    "coin-out": "/audio/sfx/coin-out.ogg",
+    dig: ["/audio/sfx/dig-1.ogg", "/audio/sfx/dig-2.ogg"],
+    equip: "/audio/sfx/equip.ogg",
+    "bag-thunk": "/audio/sfx/bag-thunk.ogg",
+    chime: ["/audio/sfx/chime-1.ogg", "/audio/sfx/chime-2.ogg"],
+    forage: ["/audio/sfx/forage-1.ogg", "/audio/sfx/forage-2.ogg", "/audio/sfx/forage-3.ogg", "/audio/sfx/forage-4.ogg"],
+    rustle: "/audio/sfx/rustle.ogg",
+    land: "/audio/sfx/land.ogg",
+    place: "/audio/sfx/place.ogg",
+    sell: "/audio/sfx/sell.ogg",
+    stamp: "/audio/sfx/stamp.ogg",
+    gem: "/audio/sfx/gem.ogg",
+    "item-get": "/audio/sfx/item-get.ogg",
+    "level-up": "/audio/sfx/level-up.ogg",
+    "quest-complete": "/audio/sfx/quest-complete.ogg",
+    upgrade: "/audio/sfx/upgrade.ogg",
     ...(Object.fromEntries(VB_SFX.map(n => [n, `/audio/sfx/${n}.ogg`])) as Record<VbSfx, string>),
   },
 };
@@ -143,6 +228,29 @@ export const DEFAULT_VOLUMES: AudioVolumes = { master: 0.7, ambient: 0.6, music:
 export function loopOffset(worldMs: number, lengthS: number): number {
   const len = lengthS * 1000, t = worldMs % len;
   return (t < 0 ? t + len : t) / 1000;
+}
+/**
+ * A footstep's playback rate at `speedRatio` (the player's speed over walk speed): faster walking plays each step
+ * faster and a touch higher (David, SFX library r1: "faster the sound goes faster"). The library renders its slow and
+ * fast walks at these rates (art/audio/sfxlib.py WALKS). Pass it as playSFX's rate.
+ */
+export function footstepRate(speedRatio: number): number {
+  return Math.min(1.2, Math.max(0.9, 1 + 0.3 * (speedRatio - 1)));
+}
+/**
+ * Which take of a sound plays (SFX audit, David 2026-11-20): an explicit `variant` indexes the takes by modulo (a foot's
+ * number picks its side), else a random take that never repeats `last` (so consecutive sounds vary). Returns the index.
+ */
+/** PITCH_JITTER: each one-shot's pitch is scaled by a random factor in this range (David, 2026-11-20). */
+export const PITCH_JITTER = [0.92, 1.08] as const;
+export const pitchJitter = (rand: () => number = Math.random) => PITCH_JITTER[0] + (PITCH_JITTER[1] - PITCH_JITTER[0]) * rand();
+
+export function pickVariant(paths: readonly string[], variant?: number, last?: number): number {
+  const n = paths.length;
+  if (n <= 1) return 0;
+  if (variant !== undefined && Number.isFinite(variant)) return ((Math.trunc(variant) % n) + n) % n;
+  if (last === undefined) return Math.floor(Math.random() * n);
+  return (last + 1 + Math.floor(Math.random() * (n - 1))) % n;
 }
 /** A loop layer: its buffer once decoded, its source while playing, its gain node and where its gain is heading. */
 interface LoopLayer { buffer: AudioBuffer | null; loading: boolean; failed: boolean; source: AudioBufferSourceNode | null; gain: GainNode; target: number; idleAt: number }
@@ -210,6 +318,8 @@ export class AudioManagerImpl {
   private ambientCh: TrackChannel = emptyChannel();
   private musicCh: TrackChannel = emptyChannel();
   private oneShots = new Map<HTMLAudioElement, { name: SFXName; gain: number }>();
+  /** The last take index played for a sound, so a random take never repeats it (SFX audit, David 2026-11-20). */
+  private lastVariant = new Map<SFXName, number>();
 
   private missingFiles = new Set<string>();
   /** Looping layers (setLoop): one AudioContext, its bus at master × music (silent when muted). */
@@ -416,7 +526,7 @@ export class AudioManagerImpl {
   private sfxTargetVolume(name: SFXName): number {
     const applicant = this.phase === "applicant-island" || this.phase === "applicant-hq";
     const sceneGain = applicant ? 0.25 : 1;
-    const movementGain = applicant && (name === "footstep" || name === "jump") ? 0.35 : 1;
+    const movementGain = applicant && (name.startsWith("footstep") || name === "jump") ? 0.35 : 1;
     return this.volumes.master * this.volumes.sfx * sceneGain * movementGain * this.mutedGain();
   }
 
@@ -563,15 +673,21 @@ export class AudioManagerImpl {
     ch.raf = requestAnimationFrame(tick);
   }
 
-  /** A one-shot. `rate` plays it faster and higher (or slower and lower) so one CC0 file can serve distinct cues; `gain` scales it. */
-  playSFX(name: SFXName, { rate = 1, gain = 1 }: { rate?: number; gain?: number } = {}): void {
+  /** A one-shot. `rate` plays it faster and higher (or slower and lower) so one CC0 file can serve distinct cues; `gain` scales it. `variant` picks a take (see `pickVariant`). */
+  playSFX(name: SFXName, { rate = 1, gain = 1, variant }: { rate?: number; gain?: number; variant?: number } = {}): void {
     if (!this.enabled || typeof window === "undefined") return;
-    const src = MANIFEST.sfx[name];
+    const entry = MANIFEST.sfx[name];
+    const paths = typeof entry === "string" ? [entry] : entry;
+    const index = pickVariant(paths, variant, this.lastVariant.get(name));
+    if (paths.length > 1) this.lastVariant.set(name, index);
+    const src = paths[index];
     if (this.missingFiles.has(src)) return; // already known missing
     const el = this.newAudio(false);
     if (!el) return;
     el.volume = Math.min(1, this.sfxTargetVolume(name) * gain);
-    if (rate !== 1) { el.defaultPlaybackRate = el.playbackRate = rate; el.preservesPitch = false; } // loading resets playbackRate to the default
+    // Every one-shot plays at a slightly random pitch so repeats never sound identical (David, 2026-11-20).
+    const r = rate * pitchJitter();
+    el.defaultPlaybackRate = el.playbackRate = r; el.preservesPitch = false; // loading resets playbackRate to the default
     this.oneShots.set(el, { name, gain });
     el.onended = () => this.oneShots.delete(el);
     el.addEventListener("error", () => { if (el.error?.code === 4) this.markMissing(src); this.oneShots.delete(el); }, { once: true });
@@ -628,7 +744,9 @@ export const AMBIENT_VARIANTS: ReadonlySet<string> = new Set<string>([]);
 
 /**
  * Ambient candidate list: a listed weather variant, then a listed season variant. The applicant island ends on its
- * scene track (on disk); the member island's time-of-day track is the music bed's, so with no variant it stays silent.
+ * scene track (on disk). The member island ends on its synthesised beds (sky-ambient round 3,
+ * art/audio/synth_ambience.py, public/audio/sfx/SOURCES.md): the weather's (wind, rain, snow, fog), else the time of
+ * day's (the sea, the breeze, birds by day, crickets at night).
  */
 export function ambientCandidates(input: { phase: AmbientPhase; weather?: IslandWeather; season?: Season }, variants: ReadonlySet<string> = AMBIENT_VARIANTS): string[] {
   const { phase, weather, season } = input;
@@ -636,6 +754,10 @@ export function ambientCandidates(input: { phase: AmbientPhase; weather?: Island
   if (weather && weather !== "clear" && variants.has(`${phase}-${weather}`)) list.push(`/audio/ambient/${phase}-${weather}.ogg`);
   if (season && variants.has(`${phase}-${season}`)) list.push(`/audio/ambient/${phase}-${season}.ogg`);
   if (phase === "applicant-island" || phase === "applicant-hq") list.push(MANIFEST.ambient[phase]);
+  else {
+    if (weather && weather !== "clear") list.push(`/audio/ambient/bed-${weather}.ogg`);
+    list.push(`/audio/ambient/bed-${phase}.ogg`);
+  }
   return list;
 }
 

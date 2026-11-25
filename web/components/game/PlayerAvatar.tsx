@@ -43,7 +43,7 @@ import { routePilot, type RouteStep } from "@/lib/game/movement/course";
 import type { AvatarRide } from "@/lib/game/movement/ride";
 import { hudLive } from "@/lib/game/hudStore";
 import { BASE_FOV, EVENT_CLIP, SEAT_FOV, MOVE_JUICE, TAKEOFF, applyFov, liveWind, momentumOf, screenOf, touchStick, useMoveParticles, type MoveJuice, type MoveTelemetry } from "./movement/moveFx";
-import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, springStep, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
+import { SPLASH, cooldownWisp, dashBurst, dashReady as dashBack, footprint, footstep, glideFurl, glideOpen, glideRibbon, glideSetDown, groundUnder, landKind, landing, leanStep, mantleGrab, mantleStep, puffRing, rollTumble, scuff, settle, skidKick, skidPush, slideBurst, slidePop, slideTrail, splash, springStep, streak, takeoff, trail, type GroundKind } from "@/lib/game/movement/juice";
 
 /**
  * The player on the movement kit (specs/movement.md): keys, the touch stick or
@@ -110,7 +110,7 @@ interface PlayerAvatarProps {
   ride?: AvatarRide;
 }
 
-const playSFX = (name: SFXName, rate = 1, gain = 1) => AudioManager.playSFX(name, { rate, gain });
+const playSFX = (name: SFXName, rate = 1, gain = 1, variant?: number) => AudioManager.playSFX(name, { rate, gain, variant });
 /** The ground under a point, for the effect, tint and sound of every move there (module scope: see turnTo). */
 function groundAt(surface: ((x: number, z: number) => number) | undefined, world: MoveWorld, x: number, z: number): GroundKind {
   return groundUnder(surface?.(x, z), WORLD_SNOW.value, world.wet, x, z);
@@ -169,7 +169,7 @@ function rideFrame(r: AvatarRide, g: THREE.Group, bd: THREE.Group, hd: THREE.Gro
     if (r.ground && !r.seated && r.speed > 0.6) {
       const side = m.foot === 0 ? 0.1 : -0.1, px = r.x + Math.cos(r.yaw) * side, pz = r.z - Math.sin(r.yaw) * side;
       const sound = footstep(pool, r.ground, px, r.y, pz, Math.sin(r.yaw) * r.speed, Math.cos(r.yaw) * r.speed, false, amount);
-      playSFX(sound.name, sound.rate, sound.gain);
+      playSFX(sound.name, sound.rate, sound.gain, sound.name === "footstep-grass" ? m.foot : undefined);
     }
   }
   f.focus.set(r.focus.x, r.focus.y, r.focus.z);
@@ -208,7 +208,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
   const backOff = useRef<{ x: number; z: number; until: number } | null>(null);
   const seat = useRef<Seat | null>(null);
   const reported = useRef<THREE.Vector3 | null>(null);
-  const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
+  const fx = useRef({ sq: 0, sqv: 0, steps: 0, trail: 0, stuck: 0, level: 0, punch: 0, leaf: 0, leafV: 0, bank: 0, pitch: 0, lean: 0, leanV: 0, lastSpeed: 0, sliding: false, slideT: 0, slideBeat: 0, drop: 0, heading: 0,
     mode: "ground", tumbled: false, ribbonT: 0, ribbonK: 0, lead: new THREE.Vector2(), pan: new THREE.Vector2(), rise: new THREE.Vector2(), focus: new THREE.Vector3(x0, 0, z0),
     // Juice timers (specs/movement-feel.md): anticipation, the Air pose, the camera dip, streaks, afterimages, the cooldown wind.
     antic: 0, anticY: 0, jumped: false, vy0: 6, fallT: 0, dip: 0, dipV: 0, streakT: 0, streakK: 0, ghostT: 0, dashT: 0, cdT: 0, wispT: 0, ready: true, sinceDash: 99, grow: 1, fadeGhost: 0, shoreT: 0, shoreOn: false,
@@ -373,6 +373,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     } });
   }, [world, camera, gl, particles, groundSurface, groundHeight]);
 
+  useEffect(() => { hudLive.camera = camera; return () => { if (hudLive.camera === camera) hudLive.camera = null; }; }, [camera]);
   useFrame((_state, rawDelta) => {
     const g = anchor.current, bd = body.current, hd = head.current;
     if (!g || !bd || !hd) return;
@@ -608,7 +609,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         // Crouch-walking tiptoes: half the dust and a softer step. Sand, wet sand and snow keep a print of the foot.
         const g = groundAt(groundSurface, world, px, pz), soft = state.crouch ? 0.5 : 1, sound = footstep(pool, g, px, groundY, pz, state.vx, state.vz, rain, j.footsteps * soft);
         footprint(particles.prints, g, px, groundY, pz, state.facing, j.prints);
-        playSFX(sound.name, sound.rate, sound.gain * soft);
+        playSFX(sound.name, sound.rate, sound.gain * soft, sound.name === "footstep-grass" ? m.foot : undefined);
         if (inCombat && f.grow > 1.5) { shakeCamera(0.06 * f.grow); puffRing(pool, g, px, groundY, pz, 0.6 * f.grow); } // Titan: every step shakes the ground
       }
     }
@@ -695,6 +696,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     f.grow = THREE.MathUtils.damp(f.grow, inCombat ? 1 + combat.rt.buffs.reduce((n, b) => n + (b.stat === "size" && b.t > 0 ? b.value : 0), 0) : 1, 6, rawDelta);
     bd.scale.set(sxz * f.grow, sy * f.grow, sxz * f.grow);
     hd.position.set(rx, sitting ? groundY : y + Math.min(1, f.leaf) * 0.45, rz); // the nameplate clears an open leaf
+    hudLive.at.x = rx; hudLive.at.y = sitting ? groundY : y; hudLive.at.z = rz; // the HUD's stamina arc stands beside it
 
     // Character: yaw, lift above the ground under it, the movement state clip; a seat holds its clip.
     if (sitting) Object.assign(m, { speed: 0, yaw: sitting.yaw, lift: sitting.lift, pose: sitting.clip, move: null });
@@ -719,7 +721,12 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
     const deep = f.sliding ? THREE.MathUtils.clamp((speed - t.walkSpeed * t.slideEnterAt) / Math.max(1, t.momentumCeiling - t.walkSpeed * t.slideEnterAt), 0, 1) : 0;
     f.bank = THREE.MathUtils.damp(f.bank, gliding ? THREE.MathUtils.clamp(-turn * 0.12, -0.3, 0.3) + 0.035 * Math.sin(state.modeT * Math.PI) : f.sliding ? THREE.MathUtils.clamp(-turn * 0.09, -0.24, 0.24) : 0, 6, dt);
     f.pitch = THREE.MathUtils.damp(f.pitch, -0.12 * deep - (bracing ? 0.09 : 0), bracing ? 9 : 5, dt);
-    bankAbout(bd, state.facing, f.bank, gliding ? y - groundY + GRIP_Y : 0.05, f.pitch);
+    // Starts and stops have weight (juice leanStep): on the ground the body tips into a start, and on a stop runs on over the feet and rocks back.
+    const accel = !sitting && state.mode === "ground" && dt > 0 ? (speed - f.lastSpeed) / dt : 0;
+    f.lastSpeed = speed;
+    const lean = leanStep(f.lean, f.leanV, accel, dt, j.lean);
+    f.lean = lean.x; f.leanV = lean.v;
+    bankAbout(bd, state.facing, f.bank, gliding ? y - groundY + GRIP_Y : 0.05, f.pitch + f.lean);
     m.rate = rawDelta > 0 ? dt / Math.min(rawDelta, 0.1) : 1;
     if (inCombat) {
       // Classes v2: in a form your body is the form's (ClassRender), and unseen you're only a shimmer.
@@ -794,7 +801,8 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
       {/* Tap-to-walk's target: one painted marker on the ground (arrival-wharf.md §4). */}
       <MoveTargetIndicator mark={moveMark} />
       <group ref={anchor} position={spawnPosition}>
-        <group ref={body}><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} clips={clips} /></group>
+        {/* Named: a volleyball dig's blink finds your body by it (VolleyMatch, fxBus.body). */}
+        <group ref={body} name="player-body"><PlayerCharacter look={look} motion={motion} inCombat={inCombat} walkSpeed={walkSpeed} leaf={leafOwned} held={held} clips={clips} /></group>
       </group>
       <group ref={head} position={spawnPosition}>
         {showNameplate && <Html calculatePosition={calculateCurvedHtmlPosition} zIndexRange={[40, 0]}
@@ -821,7 +829,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
             data-member={member || undefined}
           >
             <div style={{ fontSize: "13px", fontWeight: 800, lineHeight: 1.2, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-              {member && <span aria-label="TSI member" title="TSI member" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--gui-tethos-blue)", boxShadow: "0 0 0 2px #fffbe7", flex: "none" }} />}
+              {member && <span aria-label="TSI member" title="TSI member" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--gui-tethos-blue)", boxShadow: "0 0 0 2px var(--ui-card)", flex: "none" }} />}
               {playerName}
               {playerLevel !== undefined && <span style={{ marginLeft: 2, padding: "0 6px", borderRadius: 999, background: "var(--gui-sage)", color: "var(--gui-paper)", fontSize: "12px", fontWeight: 800 }}>Lv {playerLevel}</span>}
             </div>

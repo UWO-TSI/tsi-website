@@ -10,17 +10,17 @@
  * Categories, options and swatches come from the catalogue (lib/game/character/creatorCategories.ts). Tiles are
  * pictures, never live 3D: face parts are their atlas cells, clothes their item icons, hair a thumbnail baked once.
  *
- * `flat` (the member world's: the closet, the fitting room and the first creator; specs/polish/flat-ui.md round 3): the
- * flat UI's look. One light-grey screen with the title and the close across the top, the kit's icon rail, the character
- * on the white studio stage under the shop stage's lights, and the options in a roomy white panel with hairline
- * sections. Same controls and behaviour. Without it (the applicant island's), the cream studio as it was.
+ * The flat kit's look (specs/polish/flat-ui.md round 3; ledger row 334): one light-grey screen with the title and the
+ * close across the top, the kit's icon rail, the character on the white studio stage under the shop stage's lights, and
+ * the options in a roomy white panel with hairline sections. `applicant`: the applicant island's own studio (its cream
+ * classes and button, from recruitment's code: components/recruit/applicantStudio.ts), with the same controls and
+ * behaviour, exactly as it was.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import { RotateCcw, RotateCw, X } from "lucide-react";
-import { Button, Field, IconButton } from "@/components/gui";
-import { GuiVariantContext } from "@/components/gui/variant";
+import { Field, IconButton } from "@/components/gui";
 import { DarkButton, GhostButton, RoundButton } from "@/components/gui/flat";
 import { SignInText } from "@/components/gui/SignIn";
 import { inTopDialog, useWorldDialog } from "@/lib/game/useWorldDialog";
@@ -32,7 +32,8 @@ import { tierDpr } from "@/lib/game/qualityTier";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
 import { CategoryRail, CreatorOptions, useNameCheck } from "./CreatorControls";
 import { FRAMES, Portrait, ThumbBaker } from "./CreatorStage";
-import styles from "./CharacterCreator.module.css";
+import flatStyles from "./CharacterCreator.module.css";
+import { StudioContext, type ApplicantStudio } from "./creatorStudio";
 
 export interface CreatorProps {
   initial: CharacterLook;
@@ -48,8 +49,8 @@ export interface CreatorProps {
   onClose?: () => void;
   /** The wardrobe's open and close motion (WardrobeSheet keeps it mounted while it closes); without it, no motion. */
   presence?: "open" | "closing";
-  /** The flat UI's look (the member world's creator and wardrobe); the default is the cream studio (the applicant island's). */
-  flat?: boolean;
+  /** The applicant island's own studio (recruitment's look); without it, the game's flat creator. */
+  applicant?: ApplicantStudio;
   /** A TSI member (lookStore's `member`): the members-only parts show, free; else they never show and a look loses them. */
   member?: boolean;
 }
@@ -57,7 +58,8 @@ export interface CreatorProps {
 const STARTERS: ReadonlySet<string> = new Set(STARTER_PARTS);
 const stay = () => {};
 
-export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence, flat = false, member = false }: CreatorProps) {
+export default function CharacterCreator({ initial, mode = "create", title, askName, owned = STARTERS, onShop, onDone, onClose, presence, applicant, member = false }: CreatorProps) {
+  const flat = !applicant, styles = applicant?.styles ?? flatStyles;
   const [graphics] = useGraphicsSettings();
   // A dialog (lib/game/useWorldDialog): the world's keys hold still under it (G no longer opens the emotes over it); Escape
   // closes the wardrobe, never the first-login creator. Closing, it lets go at once: focus goes back, the world moves.
@@ -108,10 +110,9 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
   const surprise = () => setLook(randomLook(Math.random, owned)), skip = () => void confirm(randomLook(Math.random, owned)), done = () => void confirm(look);
   const doneLabel = mode === "wardrobe" ? "Wear this" : "That's me";
 
-  return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode} data-state={presence}
-    data-flat={flat || undefined} data-gui-flat={flat ? "" : undefined}>
-    <GuiVariantContext.Provider value={flat ? "flat" : "cream"}>
-    {/* The flat look's top: the title in the middle, the close at the end (the cream look has them on the portrait and the panel). */}
+  return <section ref={root} className={styles.creator} role="dialog" aria-modal="true" aria-labelledby="creator-title" data-mode={mode} data-state={presence}>
+    <StudioContext.Provider value={applicant ?? null}>
+    {/* The top: the title in the middle, the close at the end (the applicant's studio has them on the portrait and the panel). */}
     {flat && <header className={styles.top}>
       <span />
       <h1 id="creator-title" className={styles.topTitle}>{heading}</h1>
@@ -158,17 +159,17 @@ export default function CharacterCreator({ initial, mode = "create", title, askN
           onChange={e => naming.type(e.target.value)} error={naming.nameNote && !naming.nameNote.ok && !mentionsSignIn(naming.nameNote.text) ? naming.nameNote.text : undefined} className={styles.name} />}
         {askName && naming.nameNote?.ok && <p className={styles.nameOk} role="status">{naming.nameNote.text}</p>}
         {askName && naming.nameNote && !naming.nameNote.ok && mentionsSignIn(naming.nameNote.text) && <p className={styles.nameOk} role="status"><SignInText text={naming.nameNote.text} /></p>}
-        {flat ? <div className={styles.actions}>
+        {!applicant ? <div className={styles.actions}>
           <DarkButton disabled={saving} onClick={done}>{doneLabel}</DarkButton>
           {mode === "create" && <GhostButton onClick={surprise}>Surprise me</GhostButton>}
           {mode === "create" && <GhostButton disabled={saving} onClick={skip}>Skip</GhostButton>}
         </div> : <div className={styles.actions}>
-          {mode === "create" && <Button variant="quiet" onClick={surprise}>Surprise me</Button>}
-          {mode === "create" && <Button variant="quiet" disabled={saving} onClick={skip}>Skip</Button>}
-          <Button disabled={saving} onClick={done}>{doneLabel}</Button>
+          {mode === "create" && <applicant.Button variant="quiet" onClick={surprise}>Surprise me</applicant.Button>}
+          {mode === "create" && <applicant.Button variant="quiet" disabled={saving} onClick={skip}>Skip</applicant.Button>}
+          <applicant.Button disabled={saving} onClick={done}>{doneLabel}</applicant.Button>
         </div>}
       </footer>
     </div>
-    </GuiVariantContext.Provider>
+    </StudioContext.Provider>
   </section>;
 }

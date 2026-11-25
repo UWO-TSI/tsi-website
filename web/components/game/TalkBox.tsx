@@ -27,6 +27,7 @@ import { ApiError } from "@/lib/apiClient";
 import { parseTalkLine } from "@/lib/content/talk";
 import { FRIEND_MAX, friendNote, tasteLine } from "@/lib/npc/friendship";
 import { toast } from "./ToastHub";
+import { useInTutorial } from "@/lib/game/arrival/arrivalStore";
 import { blipAt, emptyTalkView, endTalk, leaveTalk, pressTalk, sayMore, stepTalk, subscribeTalk, talkChanged, talkStore, talkView, voiceBlip } from "@/lib/game/residentTalk";
 import styles from "./TalkBox.module.css";
 
@@ -173,6 +174,9 @@ export default function TalkBox() {
   }, [phase, panel]);
 
   const friend = useFriendLevel(view.slug);
+  // Through the tutorial the talk is the lesson: no hearts, no gift (they come back after).
+  const inTutorial = useInTutorial();
+  const friendRow = !!slug && !inTutorial;
   if (!open) return null;
   const line = talkStore.active?.lines[view.index]?.text ?? "";
   const title = view.post && view.post !== "villager" ? POST_TITLES[view.post as ResidentPost] : null;
@@ -189,12 +193,12 @@ export default function TalkBox() {
       </p>
       <p className={styles.sr} aria-live="polite">{view.phase === "speaking" ? line : ""}</p>
     </Dialogue>
-    {slug && <div className={styles.friend} onClick={e => e.stopPropagation()}>
+    {friendRow && <div className={styles.friend} onClick={e => e.stopPropagation()}>
       <span className={styles.hearts}><HeartMeter halves={friend} max={FRIEND_MAX} size={17} label={`Friendship with ${view.name}: ${friend / 2} of ${FRIEND_MAX} hearts`} /></span>
       <RoundButton label={giving ? "Put the gift away" : `Give ${view.name} a gift`} className={styles.give} aria-pressed={giving} onClick={() => setGiving(g => !g)} data-testid="give-gift">
         <Gift size={17} strokeWidth={2.2} aria-hidden="true" />
       </RoundButton>
     </div>}
-    {giving && slug && <GiftPicker slug={slug} onDone={() => setGiving(false)} />}
+    {giving && friendRow && <GiftPicker slug={slug} onDone={() => setGiving(false)} />}
   </div>;
 }

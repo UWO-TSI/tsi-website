@@ -231,12 +231,12 @@ describe("the sushi bar's menu, the big dish and the chef's order (f-sushi phase
     m.fund(A, 100);
     const nigiri = SUSHI_MENU.find((d) => d.id === "salmon_nigiri")!;
     const r = await orderDish(m.store, A, { dish: "salmon_nigiri", idempotency_key: "sushi-0001" }, noon);
-    expect(r).toMatchObject({ ok: true, data: { paid: nigiri.price, buff: { luck: nigiri.buff.luck, size: nigiri.buff.size, until: new Date(noon.getTime() + nigiri.buff.minutes * 60_000).toISOString() } } });
+    expect(r).toMatchObject({ ok: true, data: { paid: nigiri.price, buff: { luck: nigiri.buff.luck, size: 0, until: new Date(noon.getTime() + nigiri.buff.minutes * 60_000).toISOString() } } });
     expect(await orderDish(m.store, A, { dish: "salmon_nigiri", idempotency_key: "sushi-0001" }, noon)).toMatchObject({ ok: true, data: { replayed: true } });
     expect(m.coinsOf(A)).toBe(100 - nigiri.price!);
     expect(await orderDish(m.store, A, { dish: "omakase", idempotency_key: "sushi-0002" }, noon)).toMatchObject({ ok: false, code: "insufficient" });
     await orderDish(m.store, A, { dish: "miso_soup", idempotency_key: "sushi-0003" }, noon);
-    expect(await m.store.buff(A, noon)).toMatchObject({ luck: SUSHI_MENU.find((d) => d.id === "miso_soup")!.buff.luck });
+    expect(await m.store.buff(A, noon)).toMatchObject({ source: "miso_soup", luck: 0 });
     expect(await m.store.buff(A, new Date(noon.getTime() + 3_600_000))).toBeNull();
     expect(await orderDish(m.store, A, { dish: "fugu", idempotency_key: "sushi-0004" }, noon)).toMatchObject({ ok: false, code: "not_found" });
   });
@@ -269,7 +269,7 @@ describe("the sushi bar's menu, the big dish and the chef's order (f-sushi phase
     expect(await fill("chef-0003")).toMatchObject({ ok: true, data: { replayed: true } });
     expect(await fill("chef-0004")).toMatchObject({ ok: false, code: "already_filled" });
     expect(await fill("chef-0005", "fish_dace")).toMatchObject({ ok: false, code: "not_requested" });
-    expect(await m.store.buff(A, noon)).toMatchObject({ luck: STAFF_MEAL.luck, size: STAFF_MEAL.size });
+    expect(await m.store.buff(A, noon)).toMatchObject({ source: "staff_meal", luck: STAFF_MEAL.luck, size: 0 });
     const view = await chefView(m.store, A, noon, waters);
     expect(view.ok && view.data.order).toMatchObject({ item_key: o.item_key, filled: true });
   });

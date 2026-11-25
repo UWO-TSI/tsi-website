@@ -65,7 +65,7 @@ export function sceneryOf(v: Village, ground: (x: number, z: number) => number, 
     ...at("tree", seed => treeParts(seed, SEASON_TREES[season])),
     ...at("bush", seed => bushParts(seed, SEASON_BUSHES[season])),
     ...(SEASON_FLOWERS[season].length ? at("flower", seed => flowerParts(seed, SEASON_FLOWERS[season])) : []),
-    ...propsOf(v).filter(o => o.model && !isJoinedFence(o)).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : propUrl(p.model!), position: [p.x, propY(p, ground), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
+    ...propsOf(v).filter(o => o.model && !isJoinedFence(o)).map((p): ModelPlacement => ({ url: isRockModel(p.model) ? rockUrl(p.model) : propUrl(p.model!), position: [p.x, propY(p, ground) + (p.lift ?? 0), p.z], rotation: p.yaw ?? 0, scale: p.scale ?? 1 })),
     // The wharf kit on the deck squares, kept clear where the jetty's gangways land (lib/game/wharf.ts deckPieces).
     ...deckPieces(objectsOf("deck", v), ground, jettyLanding(v), undefined, propsOf(v).filter(o => EDGE_SHOPS.includes(o.model!) || o.id === SELL_BARREL)).map((p): ModelPlacement => ({ url: propUrl(p.model), position: [p.x, p.y, p.z], rotation: p.yaw, scale: 1 })),
     // The connectable fences: a post on each, rails to the posts beside it (lib/game/fences.ts).

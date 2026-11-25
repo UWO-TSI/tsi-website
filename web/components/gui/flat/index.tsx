@@ -5,27 +5,33 @@
  * shared so the game's menus can wear the same style. One flat light-grey panel over most of the screen (`FlatPanel`):
  * a purse top left, the title, a round close; a rail of icons down the left (`IconRail`); white cards in a grid
  * (`CardGrid`, `ItemCard`); an item opened in the same panel on the white studio stage (`DetailView`, `SpecBand`); and the
- * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `HairlineRow`). Colours: the theme's --ui-* tokens
+ * small parts (`Pill`, `DarkButton`, `GhostButton`, `RoundButton`, `FlatField`, `FlatToggle`, `FlatSlider`, `HairlineRow`). Colours: the theme's --ui-* tokens
  * (styles/themes). Nothing here knows about the shop: every piece takes plain props.
  */
 import type { Rarity } from "@/lib/rarity";
-import { Fragment, useEffect, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Heart, Sparkles, Star, X, Zap } from "lucide-react";
+import { Fragment, useId, useMemo, useRef, type ButtonHTMLAttributes, type CSSProperties, type HTMLAttributes, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import { usePresence, useWorldDialog } from "@/lib/game/useWorldDialog";
 import { CurrencyIcon } from "@/components/economy/Amount";
 import PixelImage from "@/components/economy/PixelImage";
-import { GuiVariantContext } from "../variant";
 import { bothRefs, useMarker, useNudge } from "../motion";
 import f from "./flat.module.css";
 
 /** The kit's class names, for the odd surface that lays out its own content in the flat style. */
 export { f as flatStyles };
-export { CardOverlay, FLY_MS, FlyIn, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
+export { CardOverlay, COIN_SLOTS, FLY_HOME_MS, FLY_MS, FlyHome, FlyIn, coinCount, coinHeat, coinShares, flyCoins, KEYBOARD, KeyBoard, PaperField, PrintedCard, QUEST_CHECK_MS, QuestCheck, SlotPop, Spotlight, boardLabel, type BoardKey } from "./moments";
 export { CountUp, WalletSlot } from "./wallet";
-export { KEYWORD_KINDS, Keyword, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
+export { Phone, type PhoneApp, type PhoneView } from "./phone";
+export { box, frame, sprite, text, textWidth, type Ink } from "./phoneScreen";
+export { inCorner } from "./phoneMotion";
+export { BackLink, Fold, Folds, QuietButton, Section, type FoldState } from "./folds";
+export { KEYWORD_KINDS, KEYWORD_LIBRARY, Keyword, KeywordIcon, KeywordLine, keywordParts, type KeywordKind, type LinePart } from "./keyword";
 export { ProgressCard } from "./ProgressCard";
+export { PODIUM, Podium, podiumFeet, type PodiumPlace } from "./Podium";
 export { ServeMeter } from "./ServeMeter";
+export { CallTag, type CallKind } from "./CallTag";
 export { ActionBar, ActionIcon, type ActionSlot } from "./ActionBar";
+export { BarRows, CHART, ChartCard, Columns, Delta, Heatmap, Legend, Segmented, StatTile, TimeChart, type BarRow, type Series } from "./charts";
 export { SpinPicker } from "./SpinPicker";
 /** The detail stage's classes: a viewer (TurnStage, ItemViewer, the keychain's stage) fills `stage`; a picture `picture`. */
 export const STAGE = { stage: f.stage, picture: f.stagePicture } as const;
@@ -39,6 +45,8 @@ export { useNudge };
 export { GoalMeter, HeartMeter, RewardTrack, PrizeWheel, WHEEL_SPIN_MS, type TrackStep, type WheelPrize } from "./rewards";
 export { HexRadar, type RadarAxis } from "./HexRadar";
 export { GearSlot, type GearOption } from "./GearSlot";
+export { StaminaArc, TALLY, VitalBar, Vitals, XpRing, type VitalKind } from "./vitals";
+export { LEVEL_UP_MS, LevelUpMoment, type LevelBeat, type MomentItem } from "./levelUp";
 
 /** A rarity's thin outline (design bible UI 7) on a card or a stage: `data-rarity` and its colour as `--edge`. */
 export const rarityEdge = (rarity: Rarity | null | undefined) =>
@@ -73,19 +81,16 @@ export function FlatPanel({ open, onClose, title, purse, rail, keys, testId, emb
     <h2 className={f.heading}>{title}</h2>
     {onClose ? <button type="button" className={f.close} aria-label="Close" onClick={onClose}><X size={18} aria-hidden /></button> : <span />}
   </header>;
-  // The GUI pieces inside wear the flat look too (components/gui/variant).
-  if (embedded) return <GuiVariantContext.Provider value="flat"><section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="" data-gui-flat="">
+  if (embedded) return <section aria-label={title} className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-embedded="">
     {top}{rail}<div className={f.main}>{content}</div>
-  </section></GuiVariantContext.Provider>;
+  </section>;
   if (!state) return null;
   return <div className={f.layer} data-state={state}>
     <div className={f.scrim} onClick={onClose} aria-hidden="true" />
-    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined} data-gui-flat="">
-      <GuiVariantContext.Provider value="flat">
-        {top}
-        {rail}
-        <main className={f.main}>{content}</main>
-      </GuiVariantContext.Provider>
+    <section ref={panel} role="dialog" aria-modal aria-label={title} tabIndex={-1} data-gui-dialog data-gui-overlay className={f.panel} data-testid={testId} data-rail={rail ? "" : undefined}>
+      {top}
+      {rail}
+      <main className={f.main}>{content}</main>
     </section>
   </div>;
 }
@@ -96,7 +101,7 @@ export function Purse({ coins, gems, coinsRef, gemsRef }: {
   coins: number | null; gems: number | null; coinsRef?: Ref<HTMLSpanElement>; gemsRef?: Ref<HTMLSpanElement>;
 }) {
   return <span className={f.purse} aria-label="Your coins and Gems">
-    <span className={f.amount}><CurrencyIcon size={18} /><span ref={coinsRef}>{coins === null ? "…" : coins.toLocaleString()}</span></span>
+    <span className={f.amount} data-purse="coins"><CurrencyIcon size={18} /><span ref={coinsRef}>{coins === null ? "…" : coins.toLocaleString()}</span></span>
     <span className={f.amount}><CurrencyIcon currency="gems" size={18} /><span ref={gemsRef}>{gems === null ? "…" : gems.toLocaleString()}</span></span>
   </span>;
 }
@@ -169,13 +174,13 @@ export function CardGrid({ title, min, phoneMin, label, children }: { title?: Re
   </>;
 }
 
-export type CardCover = "sold-out" | "owned" | "not-found";
+export type CardCover = "sold-out" | "owned" | "given" | "not-found";
 /** A price: its amount and currency. An amount of nothing (unset, or 0) is a price still to come. */
 export type Price = { amount: number | null | undefined; currency: string };
 export const PRICE_TO_COME = "Price to come";
 /** Has it a price you can pay? */
 export const priced = (p: Price | null | undefined): boolean => !!p && !!p.amount;
-const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out": "Sold out", owned: "Owned" };
+const COVER_TEXT: Record<Exclude<CardCover, "not-found">, string> = { "sold-out": "Sold out", owned: "Owned", given: "Given" };
 
 /**
  * A white card: the picture centred with lots of air (a URL gets the pixel finish, `PixelImage`), the name small and a
@@ -354,6 +359,30 @@ export function GhostButton({ className, ...props }: ButtonHTMLAttributes<HTMLBu
 export function RoundButton({ label, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return <button type="button" {...props} className={cx(f.round, className)} aria-label={label} />;
 }
+/** A text field on a grey well, no box: the label is read aloud and shown as the placeholder (the title's sign-in). */
+export function FlatField({ label, className, placeholder, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return <label className={cx(f.field, className)}><span>{label}</span><input {...props} placeholder={placeholder ?? label} /></label>;
+}
+/** On or off: the label, then a grey-well track whose white knob slides over on a spring and fills with the accent. */
+export function FlatToggle({ checked, onChange, children, hint, disabled, className }: { checked: boolean; onChange: (on: boolean) => void; children: ReactNode; hint?: ReactNode; disabled?: boolean; className?: string }) {
+  const hintId = useId();
+  return <button type="button" role="switch" aria-checked={checked} aria-describedby={hint ? hintId : undefined} disabled={disabled} className={cx(f.toggle, className)} onClick={() => onChange(!checked)}>
+    <span><b>{children}</b>{hint && <small id={hintId}>{hint}</small>}</span>
+    <i aria-hidden="true" />
+  </button>;
+}
+/** A slider on a grey-well track, the accent filling up to a white knob; the label and the value either side. */
+export function FlatSlider({ label, value, min = 0, max = 100, step = 1, onChange, format = v => String(v), className }: {
+  label: ReactNode; value: number; min?: number; max?: number; step?: number; onChange: (v: number) => void; format?: (v: number) => string; className?: string;
+}) {
+  const id = useId();
+  return <div className={cx(f.slider, className)}>
+    <label htmlFor={id}>{label}</label>
+    <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))}
+      style={{ "--fill": `${((value - min) / (max - min || 1)) * 100}%` } as CSSProperties} aria-valuetext={format(value)} />
+    <output htmlFor={id}>{format(value)}</output>
+  </div>;
+}
 
 // ── Lists ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -421,70 +450,20 @@ export function RewardPop({ picture, title, name, rarity, rarityLabel, facts, no
   </article>;
 }
 
-// ── The HUD's bars ──────────────────────────────────────────────────────────────────────────────────────────────────
-
-export type StatKind = "health" | "stamina" | "xp";
-const STAT_ICON = { health: Heart, stamina: Zap, xp: Star } as const;
-
 /**
- * One of the player's bars (specs/design-bible.md UI 8, 8b: health, stamina and XP): its icon and a rounded track filled to
- * `value` (0 to 1), then `badge` if any (the level, beside the XP bar in the UI view). The fill eases with a little spring; `snap` sets it without
- * (an XP bar rolling over), `live` drops the ease for a value written every frame through the element's `--v`.
- * `low`: a soft warning (stamina run out). `alone`: on its own little card (stamina, which shows only while it's used).
+ * A meal's buff at rest (tasting-book r3, David: "buff will show on the right side of the screen with icon, timer and
+ * percent, its like very faint so its not obvious"): a slim column of each stat's icon over its share, then the minutes
+ * left, all faint; it firms up under the pointer, where `title` says it in words.
  */
-export function StatBar({ kind, value, label, badge, low, snap, live, alone, shown = true, ref }: {
-  kind: StatKind; value: number; label: string; badge?: ReactNode; low?: boolean; snap?: boolean; live?: boolean; alone?: boolean; shown?: boolean; ref?: Ref<HTMLDivElement>;
-}) {
-  const Icon = STAT_ICON[kind];
-  return <div ref={ref} className={f.stat} data-kind={kind} data-low={low || undefined} data-snap={snap || undefined} data-live={live || undefined}
-    data-alone={alone || undefined} data-shown={shown || undefined} style={{ "--v": Math.max(0, Math.min(1, value)) } as CSSProperties}
-    role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(value * 100)} aria-hidden={!shown || undefined}>
-    <span className={f.statLead} aria-hidden><Icon size={13} strokeWidth={2.75} /></span>
-    <span className={f.statTrack} aria-hidden><i /></span>
-    {badge != null && <span className={f.statBadge} aria-hidden>{badge}</span>}
-  </div>;
+export function BuffChip({ stats, left, title }: { stats: readonly { key: string; icon: ReactNode; value: string }[]; left: string; title: string }) {
+  return <p className={f.buff} title={title} aria-label={title} data-testid="buff-chip">
+    {stats.map(s => <span key={s.key}><i aria-hidden>{s.icon}</i>{s.value}</span>)}
+    <small>{left}</small>
+  </p>;
 }
 
-/** The bars' card, top left: one soft white card for the bars that are always on. */
-export function StatBars({ children, hidden, className }: { children: ReactNode; hidden?: boolean; className?: string }) {
-  return <div className={className ? `${f.stats} ${className}` : f.stats} data-hidden={hidden || undefined} data-testid="hud-bars">{children}</div>;
-}
-
-export interface MomentItem { key: string; icon: ReactNode; title: ReactNode; line?: ReactNode }
-
-/**
- * A big moment over the world (a level up): a scrim, one white card that springs in, the kicker, the big number or word
- * with a burst behind it, what it brings (icon rows) and one dark button. Escape, Enter or E, a click on the scrim or
- * the button put it away.
- */
-export function BigMoment({ kicker, big, title, items, action = "Nice!", onClose, testId }: {
-  kicker: ReactNode; big: ReactNode; title?: ReactNode; items?: readonly MomentItem[]; action?: ReactNode; onClose: () => void; testId?: string;
-}) {
-  const close = useRef(onClose);
-  useEffect(() => { close.current = onClose; });
-  useEffect(() => {
-    const key = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== "Escape" && e.key !== "Enter" && e.key.toLowerCase() !== "e") return;
-      e.stopPropagation(); e.preventDefault(); close.current();
-    };
-    window.addEventListener("keydown", key, true);
-    return () => window.removeEventListener("keydown", key, true);
-  }, []);
-  return <div className={f.momentLayer} onClick={onClose} data-testid={testId}>
-    <section className={f.moment} role="dialog" aria-modal="true" aria-labelledby="moment-big" onClick={e => e.stopPropagation()}>
-      <span className={f.momentBurst} aria-hidden>{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ "--k": i } as CSSProperties} />)}</span>
-      <span className={f.momentKicker}><Sparkles size={14} aria-hidden />{kicker}</span>
-      <strong id="moment-big" className={f.momentBig}>{big}</strong>
-      {title && <span className={f.momentTitle}>{title}</span>}
-      {items && items.length > 0 && <ul className={f.momentList}>{items.map((it, i) => <li key={it.key} style={{ "--i": i } as CSSProperties}>
-        <span className={f.momentIcon} aria-hidden>{it.icon}</span>
-        <span><b>{it.title}</b>{it.line && <small>{it.line}</small>}</span>
-      </li>)}</ul>}
-      <DarkButton onClick={onClose} autoFocus>{action}</DarkButton>
-    </section>
-  </div>;
-}
 /** The day strip, the hover card, odds, the reveal, tasks and the small panel (pieces.tsx). */
 export * from "./pieces";
 /** Paper for what is paper in the world: the folded menu, ink art, the hanko, a dish on its tray (paper.tsx). */
 export * from "./paper";
+export { KeyPeek, type PeekKind } from "./keyPeek";

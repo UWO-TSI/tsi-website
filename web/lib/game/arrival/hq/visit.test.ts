@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { HQ_END, HQ_END_TOUR, HQ_SCRIPT, type HqEvent } from "./script";
 import { hqQuest, newVisit, parseVisit, visitCue, visitEvent, waitingFor, type HqState } from "./visit";
-import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, HQ_TRACKER, ID_CARD, LORE_CARD, TOOL_LINES, WREN_LINES, trackerEsc } from "./lines";
+import { CHECKIN_CARD, FLY_CARDS, FOUNDER_PLAQUE, HQ_TRACKER, LORE_CARD, TOOL_LINES, WREN_LINES, trackerEsc } from "./lines";
 import { tourSteps } from "./uiTour";
 import { END_LINE } from "../lines";
 
@@ -21,17 +21,16 @@ function playThrough() {
 }
 
 describe("the HQ visit with Alice (row 312)", () => {
-  it("runs in the v3 review's order: report, the lore, your ID, coins and gems, check-ins, the keys (each bringing in its part of the screen), Esc, goodbye", () => {
+  it("runs in the v3 review's order: report, the lore, coins and gems, check-ins, the keys (each bringing in its part of the screen), Esc, goodbye", () => {
     expect(playThrough().seen).toEqual([
       "wait:wren",
       "say:welcome", "card:lore", "wait:lore",
-      "say:idAsk", "card:id", "wait:signed",
-      "say:idDone+coins", "card:fly:coins", "wait:flown",
+      "say:coins", "card:fly:coins", "wait:flown",
       "say:gems", "card:fly:gems", "wait:flown",
       "say:events", "card:checkin", "wait:checkin",
       "say:tour", "card:tour", "wait:tour",
       "say:menu", "wait:esc",
-      "say:farewell",
+      "say:camera+farewell",
     ]);
     expect(playThrough().s.done).toBe(true);
   });
@@ -63,7 +62,7 @@ describe("the HQ visit with Alice (row 312)", () => {
     let s: HqState = visitEvent(newVisit(), "wren");
     expect(visitCue(s)).toEqual({ kind: "say", keys: ["welcome"] });
     // The lore closed before she's asked (or anything else) changes nothing.
-    for (const e of ["lore", "signed", "esc", "tour", "flown"] as HqEvent[]) expect(visitEvent(s, e)).toEqual(s);
+    for (const e of ["lore", "esc", "tour", "flown"] as HqEvent[]) expect(visitEvent(s, e)).toEqual(s);
     s = visitEvent(s, "said");
     expect(visitCue(s)).toEqual({ kind: "card", card: "lore" });
     // Esc pressed early isn't the lore read.
@@ -100,10 +99,16 @@ describe("the HQ visit with Alice (row 312)", () => {
     expect(HQ_END.at(-1)).toBe("farewell");
   });
 
+  it("explains the menu and the camera straight after Esc (David's v5 review: click to lock it, Esc to free it)", () => {
+    expect(HQ_END[0]).toBe("camera");
+    expect(WREN_LINES.camera.join(" ")).toMatch(/menu/);
+    expect(WREN_LINES.camera.join(" ")).toMatch(/click.*camera.*Esc/);
+  });
+
   it("with Bram's tour still on (HQ first), sends you back out to him", () => {
     let s = newVisit();
     for (let g = 0; g < 50 && !(s.beat >= HQ_SCRIPT.length); g++) s = visitEvent(s, visitCue(s)?.kind === "say" ? "said" : waitingFor(s)!);
-    expect(visitCue(s, HQ_SCRIPT, HQ_END_TOUR)).toEqual({ kind: "say", keys: ["farewellTour"] });
+    expect(visitCue(s, HQ_SCRIPT, HQ_END_TOUR)).toEqual({ kind: "say", keys: ["camera", "farewellTour"] });
     expect(WREN_LINES.farewellTour.join(" ")).toMatch(/Bram's waiting for you outside/);
   });
 
@@ -125,9 +130,9 @@ describe("the HQ visit with Alice (row 312)", () => {
 
   it("keeps to the lore: no Founder words written for David, no school words, no em dashes", () => {
     expect(FOUNDER_PLAQUE).toBeNull();
-    const tour = tourSteps({ wheel: "tab", emote: "g", hud: "h", bag: "i", collection: "b", quests: "j", map: "m", mail: "l" });
+    const tour = tourSteps({ wheel: "tab", emote: "g", bag: "i", collection: "b", quests: "j", map: "m", mail: "l", phone: "x" });
     const all = [...Object.values(WREN_LINES).flat(), ...Object.values(HQ_TRACKER), ...LORE_CARD.pages.flatMap(p => [p.title, p.text]),
-      ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...Object.values(ID_CARD), ...CHECKIN_CARD.steps.filter(x => !x.includes("{host}")), CHECKIN_CARD.note,
+      ...Object.values(FLY_CARDS).flatMap(c => [c.name, c.text]), ...CHECKIN_CARD.steps.filter(x => !x.includes("{host}")), CHECKIN_CARD.note,
       ...tour.map(t => t.title), ...Object.values(TOOL_LINES).flatMap(t => [t.given, t.done, ...t.offer, ...t.during])];
     for (const line of all) {
       expect(line, line).not.toMatch(/—/);

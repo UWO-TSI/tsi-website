@@ -18,6 +18,7 @@ import { prizeByKey, type Counter, type Pulls } from "@/lib/wallet/tackle";
 import { sellRows } from "@/lib/wallet/rules";
 import { readBag } from "@/lib/game/bagStore";
 import { getHud } from "@/lib/game/hudStore";
+import { AudioManager } from "@/lib/game/audio";
 import { httpEconomyTransport, type EconomyTransport } from "@/lib/wallet/transport";
 import { apiCall, newKey } from "@/lib/apiClient";
 import { iconUrl } from "@/lib/icons/keys";
@@ -28,7 +29,7 @@ import { CurrencyIcon } from "@/components/economy/Amount";
 import { errText } from "@/components/economy/EconomySheets";
 import { mealText } from "@/components/game/peaceful/SushiSheets";
 import {
-  CardGrid, DarkButton, FlatDialog, ItemCard, FlatPanel, GachaReveal, GhostButton, IconRail, OddsTable, Purse, HoverTip, Quiet, StatusLine, TaskCard, Thumb, TipBody,
+  CardGrid, DarkButton, FlatDialog, ItemCard, flyCoins, FlatPanel, GachaReveal, GhostButton, IconRail, OddsTable, Purse, HoverTip, Quiet, StatusLine, TaskCard, Thumb, TipBody,
   type OddsRow, type RailItem, type RevealItem,
 } from "@/components/gui/flat";
 import s from "./places.module.css";
@@ -62,25 +63,63 @@ function knownFish(transport: EconomyTransport): SellEntry[] | null {
 
 /**
  * The purse, counting up or down when it changes (design bible UI 9: animate the change, never jump). `move` counts from
- * one balance to another; `add` counts on from what it shows now (a sale before the server answers); `settle` puts it
- * on the server's balance, counting only if that differs. It opens on the last purse it knew and settles on the server's.
+ * one balance to another; `add` counts on from what it shows now (a refused sale's coins going back); `sell` sends a
+ * sale's coins flying from the fish (`from`, its card's box) into the purse, which ticks up as each lands (the kit's
+ * flyCoins; David, 2026-11-02: "coins fly from the fish you sold to the wallet"); `settle` puts it on the server's
+ * balance, counting only if that differs (after the coins in the air have landed). It opens on the last purse it knew
+ * and settles on the server's.
  */
 function useTill(transport: EconomyTransport) {
   const [wallet, setWallet] = useState(() => knownPurse(transport));
   const coinsEl = useRef<HTMLSpanElement>(null), gemsEl = useRef<HTMLSpanElement>(null), timers = useRef<number[]>([]), now = useRef(wallet), moved = useRef(false);
+  /** The coins the purse shows (its number is written straight to the page while coins fly), and the sales in the air. */
+  const shown = useRef<number | null>(null), flying = useRef(0);
   // The server's purse, unless a sale already moved it (then the sale's answer settles it).
   useEffect(() => { let live = true; transport.wallet().then(w => { if (live && !moved.current) { now.current = seenBy(transport).wallet = w; setWallet(w); } }, () => {}); return () => { live = false; }; }, [transport]);
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
-  const move = useCallback((currency: "coins" | "gems", from: number, to: number) => {
+  // The balance as known now; the purse's own number is left to the count (or the coins in the air) to write.
+  const record = useCallback((currency: "coins" | "gems", to: number) => {
     moved.current = true;
     if (now.current) now.current = seenBy(transport).wallet = { ...now.current, [currency]: to };
+  }, [transport]);
+  const move = useCallback((currency: "coins" | "gems", from: number, to: number) => {
+    record(currency, to);
+    if (currency === "coins") {
+      if (flying.current) return;
+      shown.current = to;
+    }
     setWallet(w => (w ? { ...w, [currency]: to } : w));
     countUp(currency === "coins" ? coinsEl.current : gemsEl.current, from, to, timers.current);
-  }, [transport]);
-  const add = useCallback((currency: "coins" | "gems", by: number) => { const from = now.current?.[currency]; if (from !== undefined && by) move(currency, from, from + by); }, [move]);
-  const settle = useCallback((currency: "coins" | "gems", to: number) => { const from = now.current?.[currency]; if (from !== undefined && from !== to) move(currency, from, to); }, [move]);
+  }, [record]);
+  const add = useCallback((currency: "coins" | "gems", by: number) => { const from = now.current?.[currency]; if (from !== undefined && by) move(currency, currency === "coins" ? shown.current ?? from : from, from + by); }, [move]);
+  const settle = useCallback((currency: "coins" | "gems", to: number) => { const from = now.current?.[currency]; if (from !== undefined && from !== to) move(currency, currency === "coins" ? shown.current ?? from : from, to); }, [move]);
+  const sell = useCallback((from: DOMRect | null, by: number) => {
+    const was = now.current?.coins, el = coinsEl.current;
+    if (was === undefined || !by) return;
+    if (!from || !el) { add("coins", by); return; }
+    record("coins", was + by);
+    timers.current.forEach(window.clearTimeout);
+    timers.current.length = 0;
+    shown.current ??= was;
+    el.textContent = shown.current.toLocaleString();
+    flying.current++;
+    flyCoins({ from, amount: by,
+      onLand: (share, i) => {
+        shown.current = (shown.current ?? 0) + share;
+        el.textContent = shown.current.toLocaleString();
+        AudioManager.playSFX("coin", { rate: 0.94 + 0.045 * i, gain: 0.45 });
+      },
+      onDone: () => {
+        if (--flying.current > 0) return;
+        const to = now.current?.coins;
+        if (to === undefined) return;
+        setWallet(w => (w ? { ...w, coins: to } : w));
+        if (to !== shown.current) countUp(el, shown.current ?? to, to, timers.current);
+        shown.current = to;
+      } });
+  }, [add, record]);
   const purse = <Purse coins={wallet ? wallet.coins : null} gems={wallet ? wallet.gems : null} coinsRef={coinsEl} gemsRef={gemsEl} />;
-  return { wallet, purse, move, add, settle };
+  return { wallet, purse, move, add, sell, settle };
 }
 type Till = ReturnType<typeof useTill>;
 
@@ -175,11 +214,14 @@ function QuickSell({ transport, till }: { transport: EconomyTransport; till: Til
   const fish = useMemo(() => lessSold((data ?? []).filter(e => FISHY.has(e.category)), pending), [data, pending]);
   const open = fish.filter(e => !e.locked), total = open.reduce((t, e) => t + e.price_each * e.count, 0);
   const bump = (key: string, by: number) => setPending(p => ({ ...p, [key]: (p[key] ?? 0) + by }));
+  const place = useRef<HTMLDivElement>(null);
   const sell = (list: readonly (readonly [SellEntry, number])[]) => {
     setError(null);
-    for (const [e, qty] of list) {
+    // Each fish's card where it is now, before the sale takes it off: its coins fly from there.
+    const boxes = list.map(([e]) => (card => (card?.querySelector("canvas") ?? card)?.getBoundingClientRect() ?? null)(place.current?.querySelector(`[data-sell="${CSS.escape(e.item_key)}"]`)));
+    list.forEach(([e, qty], i) => {
       bump(e.item_key, qty);
-      till.add("coins", e.price_each * qty);
+      till.sell(boxes[i], e.price_each * qty);
       waiting.current++;
       queue.current = queue.current.then(async () => {
         const r = await sellAtCounter(transport, e, qty);
@@ -193,16 +235,16 @@ function QuickSell({ transport, till }: { transport: EconomyTransport; till: Til
           setError(r.error);
         }
       });
-    }
+    });
   };
   if (!data) return error ? <Quiet>{error}</Quiet> : null;
-  return <div className={s.place}>
+  return <div className={s.place} ref={place}>
     {error ? <StatusLine error>{error}</StatusLine> : null}
     {fish.length === 0 ? <div className={s.empty}><Fish size={40} aria-hidden /><Quiet>No fish in your bag.</Quiet></div> : <>
       <CardGrid min={168} phoneMin={140} label="Your fish">
         {fish.map(e => <ItemCard key={e.item_key} size="md" arrow={false} picture={iconUrl(e.item_key)} rarity={e.rarity as Rarity}
           name={e.name} line={<>{e.count > 1 ? <b className={s.count}>×{e.count} · </b> : null}{e.locked ? <><Lock size={12} aria-hidden /> Locked</> : fishLine(e)}</>}
-          price={{ amount: e.price_each, currency: "coins" }} cover={null} label={e.locked ? `${e.name}: locked in your bag` : `${e.name}: sell one for ${e.price_each} coins`}
+          price={{ amount: e.price_each, currency: "coins" }} cover={null} data-sell={e.item_key} label={e.locked ? `${e.name}: locked in your bag` : `${e.name}: sell one for ${e.price_each} coins`}
           onClick={e.locked ? undefined : () => sell([[e, 1]])} />)}
       </CardGrid>
       <div className={s.bar}>

@@ -23,7 +23,7 @@
 .step { display: flex; align-items: flex-start; gap: 12px; color: var(--gui-ink); font: 600 var(--gui-text-md)/1.4 var(--gui-font); }
 .check { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 0; border-radius: 7px; box-shadow: inset 0 0 0 2px var(--gui-paper-line); color: var(--gui-paper); }
 .step[data-done="true"] .check { background: var(--gui-sage); box-shadow: none; }
-.step[data-done="true"] .stepLabel { color: var(--gui-muted); text-decoration: line-through; text-decoration-color: rgb(114 100 80 / 0.45); }
+.step[data-done="true"] .stepLabel { color: var(--gui-muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--ui-strike) 45%, transparent); }
 .stepText { display: grid; gap: 2px; min-width: 0; }
 /* The step to do now: the kit's highlighter swipe under it. */
 .step[data-now] .stepLabel { color: var(--gui-ink-strong); font-weight: 800; background: linear-gradient(transparent 56%, var(--ui-marker) 56% 92%, transparent 92%); border-radius: 3px; }
@@ -88,7 +88,7 @@
 .readTitle { margin: 0; color: var(--gui-ink-strong); font: 800 var(--gui-text-xl)/1.25 var(--gui-font); }
 .byline { margin: 0; color: var(--gui-muted); font: 700 var(--gui-text-sm)/1.35 var(--gui-font); }
 /* A letter is paper: the grain, a hand-cut edge and a little lift. */
-.letter { margin: 0; padding: 26px 28px 30px; border-radius: 6px 9px 5px 8px; background: var(--gui-grain) var(--gui-paper-hi); box-shadow: 3px 5px 0 rgb(95 68 35 / 0.12), inset 0 0 0 1.5px var(--gui-paper-edge);
+.letter { margin: 0; padding: 26px 28px 30px; border-radius: 6px 9px 5px 8px; background: var(--gui-grain) var(--gui-paper-hi); box-shadow: 3px 5px 0 color-mix(in srgb, var(--ui-pin-shade) 12%, transparent), inset 0 0 0 1.5px var(--gui-paper-edge);
   white-space: pre-wrap; color: var(--gui-ink); font: 600 var(--gui-text-md)/1.7 var(--gui-font); }
 .field { display: grid; gap: 6px; margin-bottom: 16px; }
 .label { color: var(--gui-ink-2); font: 800 var(--gui-text-sm)/1.3 var(--gui-font); }
@@ -113,5 +113,5 @@ textarea.input { min-height: 160px; padding: 16px 18px; resize: vertical; line-h
   .mail > li + li::before { left: 12px; }
   .letter { padding: 22px 20px 24px; }
 }
-:global(html[data-contrast="high"]) .letter, :global(html[data-contrast="high"]) .input { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
-:global(html[data-contrast="high"]) .text, :global(html[data-contrast="high"]) .aside, :global(html[data-contrast="high"]) .mailPreview, :global(html[data-contrast="high"]) .hint { color: #000000; }
+:global(html[data-contrast="high"]) .letter, :global(html[data-contrast="high"]) .input { background: var(--ui-on-scrim); color: var(--ui-contrast-ink); box-shadow: inset 0 0 0 2px var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .text, :global(html[data-contrast="high"]) .aside, :global(html[data-contrast="high"]) .mailPreview, :global(html[data-contrast="high"]) .hint { color: var(--ui-contrast-ink); }

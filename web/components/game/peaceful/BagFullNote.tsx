@@ -9,7 +9,7 @@ import s from "../BagHud.module.css";
 /**
  * "Your backpack is full", over the spot a pickup didn't fit (specs/game-ui.md §5): the tree, rock, bug or water named
  * by `tsi:bag-full` { x, z }, for a couple of seconds. The item stays where it was. "It got away!" over a bug that
- * fled (`tsi:bug-fled` { x, z }, m2: you learn what scared it). And "Point at the water" over you when a cast is aimed
+ * your swing scared off (`tsi:bug-fled` { x, z }, m2: you learn what scared it; one that flies off on its own says nothing). And "Point at the water" over you when a cast is aimed
  * at land (`tsi:fish-aim`): the rod never throws onto the sand.
  */
 const NOTES = { "tsi:bag-full": { text: "Your backpack is full", Icon: Backpack, warn: true }, "tsi:bug-fled": { text: "It got away!", Icon: Wind, warn: false }, "tsi:fish-aim": { text: "Point at the water", Icon: Waves, warn: false } } as const;

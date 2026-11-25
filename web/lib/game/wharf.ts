@@ -268,6 +268,8 @@ export const JETTY = {
 
 /** The new world's quick-sell stall outside the fish market (a prop by this id; art/wharf/build_sell_stall.py): E there opens the sell sheet. */
 export const SELL_BARREL = "sell-barrel";
+/** The three fish on top of the stall's heap, each its own part so they can flop (art/wharf/build_sell_stall.py FLOPPERS). */
+export const SELL_FISH_URL = "/assets/game/wharf/sell-fish.glb";
 
 /**
  * The fish market's two boards (David, 2026-10-28: the catch board "should be near the fish shop"; the fishing tasks "on
@@ -288,41 +290,27 @@ export type BoardSize = (typeof BOARD)[keyof typeof BOARD];
  * Each turns its face by `turn` from the market's. The catch board stands right of the carts and left of the market,
  * facing the deck (round 5, David: "place it to the right side of the stands, to left side of the fish shot and faced
  * towards the deck area"; of round 4's spots "c is the closest"): between spot C and the market's front, clear of the sell
- * stall and the walk past it, its face toward the boardwalk and turned a little to the camera so the chalk reads.
+ * stall and the walk past it. Round 6 (David: "should be angled outwards towards the wharf rotate 90 degrees"): its face
+ * turned a quarter from round 5's, out toward the wharf and the jetty. Round 7 (David: "direction is good, move to where
+ * the barrels are rn"): the same facing, 2.6 m to the left where three barrels stood; they took its old place.
  */
-export const MARKET_BOARDS = { catch: { x: -0.44, z: 6.36, turn: 2.173 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
-export interface BoardSpot { x: number; z: number; yaw: number }
-/** Where the market's boards stand in the world and which way they face; null on a world without the market. */
+export const MARKET_BOARDS = { catch: { x: -2.9, z: 5.35, turn: 2.173 - Math.PI / 2 }, tasks: { x: -8.2, z: 6.5, turn: Math.PI + 0.55 } } as const;
+export interface BoardSpot { x: number; z: number; yaw: number; lift?: number }
+/**
+ * Where the market's boards stand by default and which way they face, from the market (the generator lays the `board`
+ * objects here: lib/game/world/generate.ts); null on a world without the market. The game reads the objects (boardsOf).
+ */
 export function marketBoardsOf(props: readonly { model?: string; x: number; z: number; yaw?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {
   const m = props.find(o => o.model === FISH_MARKET);
   if (!m) return null;
   const d = { x: m.x, z: m.z, yaw: m.yaw ?? 0 }, at = (b: { x: number; z: number; turn: number }) => ({ ...dockToWorld(d, b.x, b.z, { x: 0, z: 0 }), yaw: d.yaw + b.turn });
   return { catch: at(MARKET_BOARDS.catch), tasks: at(MARKET_BOARDS.tasks) };
 }
-/**
- * The water signs (round 5; David approved round 4's mock: "build them for the shores"), one where each water is fished:
- * the river's by the washed-out bridge on the village bank, the mountain pond's at the foot of the mountain way (its
- * water is up the mountain, shut for now), the sea's on the jetty's platform by the middle gangway, the deep sea's at the
- * head of the jetty's middle pier, where the boat goes out. Each stands in its anchor's frame (an object of the world:
- * the jetty, the bridge, the rockslide) so it moves with it; `turn` is its face's turn from the anchor's, most toward the
- * game camera. E at one reads the catch board.
- */
-export const WATER_SIGNS = [
-  { water: "river", anchor: "bridge-river", x: 3.4, z: 2.6, turn: 1.171 },
-  { water: "pond", anchor: "slide-mountain", x: -2.16, z: 6.52, turn: 3.042 },
-  { water: "sea", anchor: "wharf", x: -2.4, z: 12.6, turn: 5.112 },
-  { water: "deep", anchor: "wharf", x: -1.8, z: 0.9, turn: 5.112 },
-] as const;
-export type SignWater = (typeof WATER_SIGNS)[number]["water"];
-export const waterSignUrl = (water: SignWater) => `/assets/game/props/water-sign-${water}.glb`;
-/** Where the water signs stand and face, for the anchors this world has. */
-export function waterSignsOf(objects: readonly { id: string; x: number; z: number; yaw?: number }[]): (BoardSpot & { water: SignWater })[] {
-  return WATER_SIGNS.flatMap(sg => {
-    const a = objects.find(o => o.id === sg.anchor);
-    if (!a) return [];
-    const d = { x: a.x, z: a.z, yaw: a.yaw ?? 0 };
-    return [{ water: sg.water, ...dockToWorld(d, sg.x, sg.z, { x: 0, z: 0 }), yaw: d.yaw + sg.turn }];
-  });
+/** The boards as the world places them (its `board` objects, by id; moved in the world editor like any prop); null without both. */
+export function boardsOf(boards: readonly { id: string; x: number; z: number; yaw?: number; lift?: number }[]): { catch: BoardSpot; tasks: BoardSpot } | null {
+  const spot = (id: string) => { const b = boards.find(o => o.id === id); return b && { x: b.x, z: b.z, yaw: b.yaw ?? 0, ...(b.lift ? { lift: b.lift } : {}) }; };
+  const c = spot("catch"), t = spot("tasks");
+  return c && t ? { catch: c, tasks: t } : null;
 }
 /**
  * The tackle shop's counter (David: "the tackle shop should be like a gatcha roll"): its door on the porch, in the shop's
@@ -350,15 +338,18 @@ function shedClears(s: { x: number; z: number; yaw?: number; model?: string }, x
   const c = Math.cos(s.yaw ?? 0), n = Math.sin(s.yaw ?? 0), along = (x - s.x) * c - (z - s.z) * n;
   return along > SHIP_SPAN[0] && along < SHIP_SPAN[1] && Math.abs((x - s.x) * n + (z - s.z) * c) < 6;
 }
+/** The hand lantern on an edge pile (propModels.ts SCENERY_URLS: the hand lantern's model), on its top 0.9 over the deck. */
+export const PILE_LANTERN = { model: "pile-lantern", lift: 0.9 } as const;
 /** A wharf kit model placed on the deck (art/wharf/build_wharf_kit.py, lib/game/propModels.ts SCENERY_URLS): world x, y, z and its turn. */
 export interface KitPiece { model: string; x: number; y: number; z: number; yaw: number }
 /**
  * The wharf kit on the `deck` squares (each 4 u, local +z inland, level at the ground under its middle): a deck tile on
  * each; on each square at the water's edge two rope-lashed piles just outside it (David: "wood pillars on the side with
- * rope attached"), and on some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it,
- * never within `clear` of `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of what
- * stands there (`sheds`: the shops, the quick-sell stall). Everything but the tiles sits a little off and turned its
- * own way, the ladders at uneven gaps (David, R2d: "make it organic").
+ * rope attached"), a hand lantern on one of the two (round 10, David: "have landers on the dock wood stumps"), and on
+ * some a ladder down with a life ring by it, a rope net with floats, or rope fencing along it, never within `clear` of
+ * `keep` (the jetty's gangways land there); none at all on the edge within SHED_CLEAR of what stands there (`sheds`: the
+ * shops, the quick-sell stall). Everything but the tiles sits a little off and turned its own way, the ladders at uneven
+ * gaps (David, R2d: "make it organic").
  */
 export function deckPieces(decks: readonly { x: number; z: number; yaw?: number }[], ground: (x: number, z: number) => number, keep?: { x: number; z: number }, clear = 9,
   sheds: readonly { x: number; z: number; yaw?: number; model?: string }[] = []): KitPiece[] {
@@ -377,6 +368,8 @@ export function deckPieces(decks: readonly { x: number; z: number; yaw?: number 
     if (ground(at.x, at.z) > 0 || sheds.some(s => shedClears(s, o.x, o.z))) continue;
     const i = edge++, open = !keep || Math.hypot(o.x - keep.x, o.z - keep.z) > clear;
     for (const lx of [-1, 1]) put("dock-pile-rope", lx, -2.2, 0.5);
+    const pile = out[out.length - (hash01(i, 11) < 0.5 ? 2 : 1)];
+    out.push({ ...pile, model: PILE_LANTERN.model, y: pile.y + PILE_LANTERN.lift });
     if (open && i - ladder > 2 && hash01(i, 8) < 0.4) {
       ladder = i;
       const side = hash01(i, 10) < 0.5 ? 1 : -1;

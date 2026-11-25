@@ -22,10 +22,12 @@ import styles from "./island.module.css";
 import { useApplicantDayPhase } from "./RecruitmentAppearance";
 import ApplicantLoading from "./ApplicantLoading";
 import appearanceStyles from "./appearance.module.css";
+import applicantLook from "./applicantLook.module.css";
+import { APPLICANT_STUDIO } from "./applicantStudio";
 import PreviewCompletion from "./PreviewCompletion";
 import CharacterCreator from "@/components/game/character/CharacterCreator";
 import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
-import FishingOverlay from "@/components/game/FishingOverlay";
+import FishingOverlay from "./FishingOverlay";
 import ToastHub from "@/components/game/ToastHub";
 import CollectionBook from "@/components/game/CollectionBook";
 import { pickFlower as markFlowerPicked, subscribeFlowerPicks, getPickedSnapshot, getPickedServerSnapshot } from "@/lib/game/flowerPicks";
@@ -201,7 +203,7 @@ export default function ApplicantIsland() {
   }, [play, ready, avatarLoaded, customizing, arriving, panel, bagOpen, fishing, transitioning, hidden, near, act]);
   if (compact) return <RecruitmentLanding />;
   const previewAppearance = preview && ["light", "dark"].includes(params.get("appearance") ?? "") ? params.get("appearance") : undefined;
-  return <main className={`${appearanceStyles.theme} ${styles.island}`} data-time={renderedPhase} data-appearance={previewAppearance}>
+  return <main className={`${appearanceStyles.theme} ${applicantLook.look} ${styles.island}`} data-time={renderedPhase} data-appearance={previewAppearance}>
     {play && <IslandBoundary onFailure={onFailure}><Scene guideToHQ={!visitedHQ} guideToBoard={!readBoard} onFishingTarget={onFishingTarget} countdownPositions={positions} nearClock={near === "clock"} loading={!ready} collectionScope={collectionScope} arrival={arriving} onArrived={finishArrival} pickedFlowers={pickedFlowers} onFlowerNear={setNearFlower} onPickFlower={pickFlower} fishing={fishing} phase={renderedPhase} postings={positions.map(p => ({ title: p.title, complete: applied.has(p.id) || preview && rehearsed.has(p.id) }))} onSelectRole={openRole} inside={inside} returned={returned} paused={hidden || !avatarLoaded || customizing || bagOpen || panel !== null || transitioning || showAuth} hidden={hidden}
       onAction={act} onNear={setNear} onReady={onReady} onFailure={onFailure} onMetrics={setMetrics} /></IslandBoundary>}
     {play && ready && avatarLoaded && !customizing && <ToastHub />}
@@ -237,7 +239,7 @@ export default function ApplicantIsland() {
     </>}
     {play && ready && !inside && !customizing && !arriving && !panel && !bagOpen && <FishingOverlay onActiveChange={setFishing} collectionScope={collectionScope} zoneOverride="sea" />}
     <CollectionBook open={bagOpen} onClose={() => { setBagOpen(false); focusGame(); }} collectionScope={collectionScope} />
-    {play && ready && avatarLoaded && customizing && <CharacterCreator initial={mine.look} title="Make yourself at home" onDone={finishAppearance} />}
+    {play && ready && avatarLoaded && customizing && <CharacterCreator applicant={APPLICANT_STUDIO} initial={mine.look} title="Make yourself at home" onDone={finishAppearance} />}
     {play && ready && arriving && <div className={styles.arrivalClouds} aria-label="Arriving through the clouds"><i /><i /><i /><span>Welcome to Tech for Social Impact.<small>A little place to begin.</small></span></div>}
     <div className={styles.fade} data-active={transitioning} aria-hidden="true" />
     <dialog ref={dialog} className={`${styles.dialog} ${panel === "board" ? styles.boardDialog : panel === "role" ? styles.applicationDialog : panel === "guide" ? styles.guideDialog : ""}`} onCancel={e => { e.preventDefault(); void close(); }} aria-label={panel === "role" ? `${position?.title ?? "Role"} application` : undefined} aria-labelledby={panel === "role" || panel === "guide" ? undefined : "island-panel-title"}>

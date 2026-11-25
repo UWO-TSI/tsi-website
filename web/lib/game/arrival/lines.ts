@@ -55,7 +55,7 @@ export const STOP_LINES: Readonly<Record<string, readonly string[]>> = {
   wharf: [
     "Here's the wharf and the fish market. My end of the island.",
     "That's the tackle shop. Rods and bait. You'll want a better rod one day.",
-    "And the shipwright's. Boats, one of these days.",
+    "And that's the shipwright's yard, where you'll build a boat of your own one day.",
     "Now, over to the edge. Let's see you fish.",
   ],
   cast: ["Right here. The water's deep off the edge.", "Borrow my rod. Cast out and wait for the float to dip."],

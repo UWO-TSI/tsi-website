@@ -22,7 +22,7 @@ import type { World } from "./format";
 import { Paint, cellMapOf, createTerrain, paintAt, sampleX, sampleZ, terrainHeight, terrainSteepness } from "./terrain";
 import { hash01 } from "../worldFx";
 import { COURT } from "../volleyball/court";
-import { JETTY, SELL_BARREL, dockToWorld } from "../wharf";
+import { JETTY, SELL_BARREL, dockToWorld, marketBoardsOf } from "../wharf";
 import type { ObjectKind } from "../villageMap";
 import type { NEW_LAMPS } from "../propModels";
 
@@ -418,15 +418,18 @@ const SHOPS: readonly (readonly [z: number, model: string])[] = [[63.5, "tackle-
 const MARKET: readonly (readonly [model: string, z: number, d: number, turn: number, scale: number])[] = [
   // art-r2f's fish market, 7.8 wide by 4.2 deep, its porch turned south down the deck, its swordfish bursting up through the roof (R2e: "make building a bit wider").
   ["fish-market", 19.5, 4, -Math.PI / 2, 1],
-  ["market-cart", 31.2, 5.7, 0.25, 0.55], ["market-cart", 40.6, 6.4, -0.2, 0.55], ["market-cart", 70.5, 6.1, 0.15, 0.53], ["market-cart", 79.6, 5.5, -0.35, 0.56],
-  ...[[24.4, 6.9, 0.07], [25.1, 6.3, 0.066], [24.7, 7.5, 0.072], [43.4, 7.1, 0.068], [57.8, 1.6, 0.07], [58.4, 2.2, 0.065], [72.7, 7.3, 0.07], [77.2, 7.5, 0.07], [77.9, 6.8, 0.066]]
+  // The stands by the catch board, back off the boards onto the grass behind the deck (round 10, David: "lamp and stands
+  // should clear way of the deck area").
+  ["market-cart", 33.6, 7.7, 0.1, 0.55], ["market-cart", 40.8, 7.7, -0.1, 0.55], ["market-cart", 70.5, 6.1, 0.15, 0.53], ["market-cart", 79.6, 5.5, -0.35, 0.56],
+  ...[[43.4, 7.1, 0.068], [57.8, 1.6, 0.07], [58.4, 2.2, 0.065], [72.7, 7.3, 0.07], [77.2, 7.5, 0.07], [77.9, 6.8, 0.066]]
     .map(([z, d, scale]) => ["barrel", z, d, z * 1.3, scale] as const),
+  // The three by the catch board and the cloth crate in front of it are gone (round 9, David: "barrel crate in the way").
   // The barrel and two crates by the sell barrel, where Bram stands to watch your first sale, are gone (David's playtest:
   // "these barral and crate infront of the sell fish shop should be removed").
   ["crate", 67.6, 1.3, 2, 1], ["crate", 55.4, 6.6, 0.6, 1.05],
-  ["shop-cart", 34.6, 4.6, 0.5, 1.5], ["shop-cart", 59.7, 4, -0.4, 1.5],
+  ["shop-cart", 36.5, 6.5, 0.5, 1.5], ["shop-cart", 59.7, 4, -0.4, 1.5],
   // wharf-art's dock decor: nets heaped and over crates, crates under cloth, crates of fish tipped toward the walk.
-  ["net-heap", 37.1, 3.9, 0.5, 1], ["crate-cloth", 28.2, 6.5, 0.3, 1], ["fish-crate", 25.2, 2.4, -0.5, 1], ["fish-crate", 68.9, 2.6, -0.2, 1],
+  ["net-heap", 37.1, 3.9, 0.5, 1], ["fish-crate", 25.2, 2.4, -0.5, 1], ["fish-crate", 68.9, 2.6, -0.2, 1],
   ["net-heap", 75.4, 2.1, 1.2, 1], ["crate-cloth", 54.8, 5.3, -0.2, 1], ["crate-net", 57.3, 6.6, 0.1, 1], ["net-heap", 15.6, 7.2, 2.1, 0.9],
 ];
 /**
@@ -440,6 +443,9 @@ function scenery(): Obj[] {
   const out: Obj[] = [];
   for (let z = DECK_Z[0]; z <= DECK_Z[1]; z += 4) for (const d of [1, 5]) { const q = quayAt(z, d); out.push(obj("deck", `deck-${out.length}`, q.x, q.z, q.yaw)); }
   MARKET.forEach(([model, z, d, turn, scale], i) => { const q = quayAt(z, d); out.push(obj("prop", `market-${i}`, q.x, q.z, q.yaw + Math.PI + turn, scale, model)); });
+  // The market's two chalkboards where MARKET_BOARDS puts them (lib/game/wharf.ts), objects so the editor can move them.
+  const boards = marketBoardsOf(out.filter(o => o.kind === "prop"))!;
+  out.push(obj("board", "catch", boards.catch.x, boards.catch.z, boards.catch.yaw), obj("board", "tasks", boards.tasks.x, boards.tasks.z, boards.tasks.yaw));
   // The quick-sell stall (wharf-art3's) at the fish market's south corner, its buyer's side along the deck toward the
   // jetty's gangways, room to walk up to it (David, R2c: "a big barrel that you can sell outside for quick sell"): E
   // there opens the sell sheet (DefaultIslandWorld, by its id).
@@ -549,10 +555,11 @@ function beachSet(): Obj[] {
     out.push(obj("prop", `beach-ball-${i}`, x + 2.3, z + 1.5, h(6) * 6.28, 0.28, "beach-ball")); // 0.56 across
   });
   // The volleyball court (game/volleyball): the net across the court along the beach, a ball by the far post off the
-  // free zone (the surfboards west of it too); up the grassy rise on the land side a log bench to watch from (facing
+  // free zone (the surfboards west of it too); up the grassy rise on the land side two log benches to watch from (facing
   // the court), and at the east end, toward the campfire, the leaderboard board (the plaza's catch board, facing east).
   out.push(obj("prop", "volleyball-net", ...VOLLEY, Math.PI / 2, 1, "volleyball-net"), obj("prop", "beach-ball-net", VOLLEY[0] + 0.7, VOLLEY[1] + 6.9, 1.3, 0.2, "beach-ball")); // the match's ball size (court.ts BALL_R)
-  out.push(obj("bench", "volley-bench", VOLLEY[0] + 3, VOLLEY[1] - 9.1, 0, 1, "log-bench"));
+  // Two benches (David, round 2 review: "2 benches"), either side of the net's line, both facing the court.
+  out.push(obj("bench", "volley-bench", VOLLEY[0] + 3, VOLLEY[1] - 9.1, 0, 1, "log-bench"), obj("bench", "volley-bench-2", VOLLEY[0] - 3, VOLLEY[1] - 9.1, 0, 1, "log-bench"));
   out.push(obj("prop", "volley-board", VOLLEY[0] + 12.1, VOLLEY[1] - 1.46, Math.PI / 2, 1, "catch-board"));
   out.push(obj("prop", "sandcastle", 8, SANDCASTLE_Z, 0.4, 1, "sandcastle"));
   return out;
@@ -571,14 +578,15 @@ function lamps(): Obj[] {
   [5.5, 10.5, 15.5, 20.5].forEach((s, i) => [-1, 1].forEach(side => { const q = onPath(s + side * 0.6, side * 2.2); put(`lamp-path-hand-${i}-${side > 0 ? 1 : 0}`, "hand", q.x, q.z); }));
   ([[PX - 11, PZ - 9], [PX + 14, PZ - 10], [PX - 11, PZ + 9], [PX + 14, PZ + 10], [PX - 4.5, PZ - 13.5], [PX - 15, PZ + 15]] as const).forEach(([x, z], i) => put(`lamp-plaza-${i}`, "village", x, z, PX, PZ));
   put("lamp-beach-way", "village", 39, 84, 35, 84);
-  // The deck: lantern posts here and there, their arms toward the water, one lighting the market's front (David, R2d:
-  // "lighting ... make it organic"); hand lanterns along its edge at uneven gaps, on the market's porch and by its stall.
-  ([[24.6, 1.6], [31.5, 4.4], [38.6, 3.1], [52.6, 3.7], [57.6, 5.1], [68.2, 3.2], [76.6, 4.6]] as const)
-    .forEach(([z, d], i) => { const q = quayAt(z, d), e = quayAt(z, -1); put(`lamp-deck-${i}`, "wharf", q.x, q.z, e.x, e.z); });
-  for (let z = 15, i = 0; z <= 79; z += 4.2 + 2.6 * hash01(i, 50), i++) {
-    if (Math.abs(z - DOCK.z) > 5 && [SELL_AT, ...SHOPS.map(h => h[0])].every(at => Math.abs(z - at) > 3)) { const q = quayAt(z, 0.1 + 0.5 * hash01(i, 51)); put(`lamp-deck-hand-${i}`, "hand", q.x, q.z); }
-  }
-  ([[23.6, 2.1], [23.4, 6.1], [27.9, 3.4], [57.9, 2.6], [70.9, 6.9]] as const).forEach(([z, d], i) => { const q = quayAt(z, d); put(`lamp-market-hand-${i}`, "hand", q.x, q.z); });
+  // The deck: lantern posts along its inland edge, in the gaps between the stands and crates, their arms over the boards
+  // toward the water, the first lighting the market's front (David, R2d: "lighting ... make it organic"; round 10: "move
+  // all lamp most more the the edge of the deck", the second "backwards" off the boards between the catch board and the
+  // stands). The hand lanterns along the water's edge stand on its piles (lib/game/wharf.ts deckPieces); two more where
+  // the shops have the edge, and some on the market's porch (the one between the catch board and the stall is gone,
+  // round 9, David: "remove the lanter").
+  [24.6, 31.0, 38.1, 52.6, 58.6, 67.4, 75.9].forEach((z, i) => { const q = quayAt(z, 6.8), e = quayAt(z, -1); put(`lamp-deck-${i}`, "wharf", q.x, q.z, e.x, e.z); });
+  ([[66.7, 0.5], [78.0, 0.3]] as const).forEach(([z, d], i) => { const q = quayAt(z, d); put(`lamp-deck-hand-${i}`, "hand", q.x, q.z); });
+  ([[23.6, 2.1], [23.4, 6.1], [57.9, 2.6], [70.9, 6.9]] as const).forEach(([z, d], i) => { const q = quayAt(z, d); put(`lamp-market-hand-${i}`, "hand", q.x, q.z); });
   // The jetty: lantern posts on the platform and at the walkway's ends, a hand lantern at each pier's tip (David, R2c:
   // "make the dock bigger so it feels less clutter").
   ([[-3.2, 11.2], [3.2, 11.2], [-13.4, 2], [13.9, 2]] as const).forEach(([lx, lz], i) => { dockToWorld(DOCK, lx, lz, at); put(`lamp-jetty-${i}`, "wharf", at.x, at.z, at.x, DOCK.z); });
@@ -796,13 +804,40 @@ function forestTrees(): Obj[] {
   return out;
 }
 
-/** The kinds only the generator places (every one of them is rebuilt each run). */
-const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush", "fence", "lamp", "tree", "flower"]);
-/** The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them. */
+/** The kinds only the generator places (every one of them is rebuilt each run, but what David pinned in the editor). */
+const GENERATED: ReadonlySet<string> = new Set(["deck", "prop", "house", "bush", "fence", "lamp", "tree", "flower", "board"]);
+/** How far the generator's copy of a pinned object may have moved (a reshaped quay) and still be known as it. */
+const PIN_REACH = 3;
+/**
+ * The layout's moves, then the generated objects (the border and the scenery) in place of any earlier copy of them.
+ * What David placed, moved or deleted in the world editor (`pin`) stays as he left it. One that came from here (`of`,
+ * where it stood) stands in for the generated object of its kind and model nearest that spot, and takes its id: ids
+ * are positions in this file's lists, which shift as they change.
+ */
 export function layoutObjects(objects: World["objects"]): World["objects"] {
-  const made = [...borderObjects(), ...scenery(), ...forestTrees()], ids = new Set(made.map(o => `${o.kind}:${o.id}`));
-  const stale = (o: Obj) => GENERATED.has(o.kind) || ids.has(`${o.kind}:${o.id}`) || (o.kind === "barrier" && o.model === "border") || (o.kind === "bug" && o.id.startsWith("bug-lamp-"));
-  return [...objects.filter(o => !stale(o)).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...made];
+  const key = (o: Obj) => `${o.kind}:${o.id}`;
+  let made = [...borderObjects(), ...scenery(), ...forestTrees()];
+  const twins = objects.filter(o => o.pin).map(o => {
+    if (!o.of) return [o, null] as const;
+    let twin: Obj | null = null, best = PIN_REACH;
+    for (const m of made) {
+      const d = m.kind === o.kind && m.model === o.model ? Math.hypot(m.x - o.of[0], m.z - o.of[1]) : Infinity;
+      if (d < best) { best = d; twin = m; }
+    }
+    if (twin) made = made.filter(m => m !== twin);
+    return [o, twin] as const;
+  });
+  const ids = new Set(made.map(key));
+  // One the generator no longer makes is David's own now (a deletion of it is moot), under an id of its own.
+  const mine = twins.flatMap(([o, twin]): Obj[] => {
+    if (twin) return [{ ...o, id: twin.id, of: [twin.x, twin.z] }];
+    if (!o.of) return [o];
+    const { of: _of, ...own } = o;
+    void _of;
+    return o.gone ? [] : [ids.has(key(o)) ? { ...own, id: `placed-${o.id}` } : own];
+  });
+  const stale = (o: Obj) => o.pin || GENERATED.has(o.kind) || ids.has(key(o)) || (o.kind === "barrier" && o.model === "border") || (o.kind === "bug" && o.id.startsWith("bug-lamp-"));
+  return [...objects.filter(o => !stale(o)).map(o => (LAYOUT[o.id] ? { ...o, ...LAYOUT[o.id] } : o)), ...mine, ...made];
 }
 
 /** The village's house and lot marks for David's editor session, in the gaps round the new plaza (5 x 5 cells each). */

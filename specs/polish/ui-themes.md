@@ -2,6 +2,8 @@
 
 David, 2026-10-22 (round 3b verdict), verbatim: "i want you to set up the ui so that when i add new ui color schemes, its a easy swap where its just like a css color sheet change with ui change or smth". The themes he means: dark mode and an ACNH-style theme, sold in the shop later (round 3 verdict).
 
+> **2026-11-13 (ledger rows 334 and 335):** there is no cream base and no cream theme any more. Clean sits on `:root` and is the base for everything; `--gui-*` resolve from the theme wherever one is worn (`:root, [data-ui-theme]`), so there is no `[data-gui-flat]`. The bullets below about cream are history. Themes are now UI packs: see the section at the end.
+
 ## How it works
 
 - **A theme is one CSS file** in `web/styles/themes/`, setting the `--ui-*` tokens below on `[data-ui-theme="<name>"]`. No library, no dependency.
@@ -68,3 +70,23 @@ Shot with `specs/evidence/flat-ui/shots-themes.mjs` (headless; `UITHEME=<name>` 
 ## The dark sample
 
 `dark.css` proves the swap. It is registered (so the dev switch lists it) but dev only: `?uitheme=` and the switch work only in development, and no player-facing switch exists yet, so every player wears `clean`.
+
+## UI packs (row 335)
+
+David, 2026-11-13: "in the future well design ui packs, which will the entire game ui that ppl can buy with gems". Packs aren't built yet; the code is ready for them.
+
+- **A pack is one file** in `web/styles/themes/`, imported and named in `styles/themes/index.ts` (`UI_THEMES`). It sets every `--ui-*` token that `clean.css` sets (`lib/gui/contrast.test.ts` checks the list matches), under its own `[data-ui-theme="<name>"]` and nothing else. Only `clean.css` sits on `:root` (`components/gui/flatOnly.test.ts`).
+- **What it sets:** the colours (panel, cards, inks, accent, lines, status tints, rarity, the phone, the vitals, paper's printed tokens), and the shapes and type:
+  - `--ui-font`, `--ui-weight`, `--ui-weight-strong`;
+  - `--ui-r-panel` (sheets), `--ui-r-card`, `--ui-r-blob` (icon wells), `--ui-r-tag` (badges), `--ui-r-button`, `--ui-r-field`;
+  - `--ui-border` (hairlines);
+  - `--ui-shadow-sm`, `--ui-shadow-md`, `--ui-shadow-lg`, `--ui-shadow-press`, `--ui-shadow-inset`;
+  - `--ui-panel-texture` (a texture over sheets and panels, `none` in clean).
+- **Components read tokens only:** `--ui-*`, or the kit's `--gui-*` aliases for them (`styles/game-tokens.css`), never a hex and never a theme's name. A new shape or surface a pack should change gets a token in `clean.css` (and every pack) first.
+- **Wearing one:** `<body data-ui-theme="<name>">` (`setUiTheme`). `dark.css` is the dev sample (`?uitheme=dark`): it changes colours and shapes (squarer panels, cards, buttons and fields, deeper shadows) from the one file.
+- **Paper stays paper** in every pack: `styles/paper.css` sits outside the theme tokens.
+- **Buying one** (the shop item, gems, owning and choosing a pack) is later work, not built.
+
+## The vintage pack (2026-11-19)
+
+David, on Flat UI Only 1 (fo-pieces-a): "the old design should old keep the font, and color and card format, so it can be a possible ui design back you load in for the game like the vintage vibe and the plain new one is the default". `vintage.css` is the old cream kit as a pack: its colours (warm paper, sage, wood ink), Nunito, the cut-paper radii on panels, cards, icon wells and tags, the offset bark shadows and the paper grain over sheets. It loads like the dark sample (`?uitheme=vintage`, dev only). Clean stays the default every player has. This narrows row 334: the cream look returns only as this pack, never as the base.

@@ -1,4 +1,5 @@
-/* The dark theme: a sample that proves the swap (specs/polish/ui-themes.md). Dev only: ?uitheme=dark. */
+/* The dark theme: a sample UI pack that proves the swap, colours and shapes from this one file (specs/polish/ui-themes.md,
+   row 335). Dev only: ?uitheme=dark. */
 [data-ui-theme="dark"] {
   --ui-bg: #161618;
   --ui-panel: #1c1c1f;
@@ -12,6 +13,12 @@
   --ui-highlight: #f2f2f2;
   --ui-marker: rgb(255 204 0 / 0.28);
   --ui-gold: #f2c14e;
+  /* A sale's coins landing: the wallet glows from the light yellow to the deep (more coins, deeper). */
+  --ui-gold-light: #ffe48a;
+  --ui-gold-deep: #d98a1a;
+  --ui-silver: #c3cad4;
+  --ui-bronze: #d9965e;
+  --ui-title-outline: #8fcfd6;
   --ui-home: #ef7a5a;
   --ui-away: #4bb3c8;
   --ui-ink: #f2f2f2;
@@ -24,17 +31,32 @@
   --ui-accent: #f2f2f2;
   --ui-accent-deep: #ffffff;
   --ui-accent-ink: #151515;
-  --ui-chart: #86acff;  /* a chart's line and its light fill (the rod radar): soft, never bold */
+  --ui-chart: #5f88e6;  /* a chart's line and its light fill (the rod radar): soft, never bold */
+  --ui-chart-gain: #22a596;  /* the build with its add-ons over the rod alone (David 10-29: "a slightly different color so its more ob") */
   --ui-pill: #34343a;
   --ui-pill-ink: #b6b6bc;
   --ui-disabled: #48484f;
   --ui-round: #4a5a94;
   --ui-error: #f08a74;
+  --ui-good: #6cc685;
   --ui-heart: #f58aa0;
   --ui-focus: #f2f2f2;
   --ui-scrim: rgb(0 0 0 / 0.55);
   --ui-shade: 0 0 0;
   /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
+  /* The phone's screen (bible UI 8d; components/gui/flat/phoneScreen.ts): the home screen is today's UI on a pale
+     green glass with green highlights (screen, glow, glow-soft; round 14, David: "keep it old"); the moments drawn on
+     it in pixels (setting it up) are pearl and lime, the same in every theme: they're the phone's. */
+  --ui-phone-screen: #1d241f;
+  --ui-phone-glow: #5fd27a;
+  --ui-phone-glow-soft: #26382b;
+  --ui-phone-ink: #34492f;
+  --ui-phone-white: #ffffff;
+  --ui-phone-pearl: #f3f6ec;
+  --ui-phone-pearl-2: #e4ebd8;
+  --ui-phone-lime: #b6e33c;
+  --ui-phone-lime-deep: #76aa22;
+  --ui-phone-lime-soft: #e6f6bd;
   --ui-water: #1c3240;
   --ui-water-line: #3f6c82;
   --ui-water-deep: #5cc0de;
@@ -60,6 +82,8 @@
   --ui-word-gem: #c49af2;
   --ui-word-place: #f0a07a;
   --ui-word-item: #6fd1c2;
+  --ui-word-person: #f08cc4;
+  --ui-word-act: #f5927d;
   --ui-stage: radial-gradient(ellipse 24% 4.5% at 50% 87%, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.18) 55%, transparent 100%),
     linear-gradient(180deg, #2c2c31 0%, #2c2c31 60%, #242428 84%, #1f1f22 100%);
   /* The rarity ladder (specs/design-bible.md UI 7): a thin outline or edge, never a fill. Divine is the holo. */
@@ -76,10 +100,16 @@
   /* A little texture where it helps (UI 1, "not so flat"): a fine grain over a card, and a glint across rare things. */
   --ui-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
   --ui-glint: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.55) 48%, transparent 58%);
-  /* The HUD's bars (UI 8): health, stamina (and run out), XP. */
-  --ui-health: #f07b6e;
-  --ui-stamina: #6cc979;
+  /* The HUD's vitals (UI 8): each bar's colour when full and when nearly empty, the shared amber between; XP's ring. */
+  --ui-health: #6cc979;
+  --ui-health-low: #ff4f42;
+  --ui-stamina: #5fc2ea;
   --ui-stamina-low: #f59a5c;
+  --ui-shield: #a3a9b2;
+  --ui-mana: #b892ff;
+  --ui-vital-mid: #f5c04f;
+  /* Type straight over the world on a soft scrim (the level-up moment): white, whatever the theme. */
+  --ui-on-scrim: #ffffff;
   --ui-xp: #f5c04f;
   --ui-sheen: rgb(255 255 255 / 0.35);
   /* Paper, the material (design bible UI 2): only for what is paper in the world (the sushi bar's folded menu, a
@@ -92,4 +122,74 @@
   --ui-paper-tray: #26221e;
   --ui-paper-plate: #f2efe8;
   --ui-paper-washi: url("/assets/ui/washi.png");
+  /* The game HUD, overlays and world labels (the packs swap these too; clean keeps today's values). */
+  --ui-heading-night: #0b0d18;
+  --ui-nametag-ink: #f2f2f2;
+  --ui-mastery-a: #f2c14e;
+  --ui-mastery-b: #ffe48a;
+  --ui-hp-a: #ff7a6a;
+  --ui-hp-b: #ffa07a;
+  --ui-energy-a: #5fc2ea;
+  --ui-energy-b: #b892ff;
+  --ui-nametag-resident: #ffdba8;
+  --ui-tag-paper: #27272b;
+  --ui-tag-ink: #f2f2f2;
+  --ui-tag-special-ink: #ef7a5a;
+  --ui-warn-ink: #f0a07a;
+  --ui-toast-ink: #f2f2f2;
+  --ui-cap-hover: #2d2d32;
+  --ui-tier-good: #6cc685;
+  --ui-tier-warn: #ffe48a;
+  --ui-pip: #6f6f76;
+  --ui-pip-on: #d98a1a;
+  --ui-emote-petal: #3a332e;
+  --ui-btn-hover: #3f7a8f;
+  --ui-progress-a: #6cc685;
+  --ui-progress-b: #6cc685;
+  --ui-xp-a: #6cc685;
+  --ui-xp-b: #a8cf7e;
+  --ui-plaque-a: #4a4032;
+  --ui-plaque-b: #3a3227;
+  --ui-plaque-edge: #8a7a66;
+  --ui-plaque-ink: #f2f2f2;
+  --ui-pin-hole: #3a3a3a;
+  --ui-hud-pill: #1c1c1f;
+  --ui-toast-panel: #27272b;
+  --ui-toast-rule: #3a3a3a;
+  --ui-shadow-paper: #000000;
+  --ui-shadow-bubble: #000000;
+  --ui-shadow-well: #000000;
+  --ui-nametag-outline: #000000;
+  --ui-pin-shade: #000000;
+  --ui-pin-ring: #000000;
+  --ui-strike: #000000;
+  --ui-key-edge: #000000;
+  --ui-scene-shadow: #000000;
+  --ui-ring-highlight: #ffffff;
+  --ui-closed-outline: #f2c14e;
+  --ui-preview-scrim: #000000;
+  --ui-preview-shadow: #000000;
+  --ui-glyph-ring: #f2c14e;
+  --ui-progress-sheen: #ffffff;
+  --ui-contrast-ink: #000000;
+  --ui-contrast-key: #ffe14d;
+  --ui-contrast-focus: #ffb000;
+  --ui-nametag-resident-hc: #ffe9c4;
+  /* ── The shapes and the type (row 335): a UI pack swaps these with the colours. ── */
+  --ui-font: "Tethos Nunito", "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ui-weight: 600;
+  --ui-weight-strong: 800;
+  --ui-r-panel: 12px;    /* the dark sample's squarer cut proves a shape swap */
+  --ui-r-card: 8px;
+  --ui-r-blob: 8px;
+  --ui-r-tag: 4px;
+  --ui-r-button: 10px;
+  --ui-r-field: 6px;
+  --ui-border: 1px;      /* hairlines: a sheet's foot, a card's ring */
+  --ui-shadow-sm: none;
+  --ui-shadow-md: 0 8px 22px rgb(0 0 0 / 0.3);
+  --ui-shadow-lg: 0 24px 80px rgb(0 0 0 / 0.55);
+  --ui-shadow-press: none;
+  --ui-shadow-inset: none;
+  --ui-panel-texture: none;  /* a texture over sheets and panels (a pack's paper grain, say) */
 }

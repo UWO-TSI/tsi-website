@@ -12,6 +12,7 @@ const SCENES = {
   campfire: { url: "/student/dashboard?time=night&weather=clear&season=summer&at=17,104", dance: true, leave: [14, 150] },
   cafe: { url: "/student/dashboard?time=day&weather=clear&season=summer&cafe=inside" },
   bar: { url: "/student/dashboard?time=night&weather=clear&season=summer", teleport: [-47, 115] },
+  barspawn: { url: "/student/dashboard?time=night&weather=clear&season=summer&at=-47,114.5" },
   applicant: { url: "/student/apply/portal", island: false },
 };
 const INIT = () => {

@@ -176,8 +176,9 @@ const R = 0.2, D = R * Math.SQRT1_2, SUBSTEP = 0.1, AIR_STEP = 0.2, SNAP_DOWN = 
 const PROBES: readonly (readonly [number, number])[] = [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R], [D, D], [D, -D], [-D, D], [-D, -D]];
 
 export function createMoveState(x: number, z: number, world: MoveWorld, facing = 0): MoveState {
-  // Started off released land (a teleport, an old spot behind a barrier, out on an islet): from the nearest released spot.
-  if (world.released?.(x, z) === false) [x, z] = refuge(world, x, z);
+  // Started off released land (a teleport, an old spot behind a barrier, out on an islet), or inside a solid (a post or a
+  // wall where a spot was picked or saved: at its Infinity top the body would never land): from the nearest clear spot.
+  if (world.released?.(x, z) === false || !Number.isFinite(world.top(x, z))) [x, z] = refuge(world, x, z);
   const y = world.top(x, z);
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, mode: "ground", modeT: 0, facing, coyote: 0, buffer: 0, cut: false, long: false, slideJump: false,
@@ -393,8 +394,9 @@ function timeToGround(s: MoveState, w: MoveWorld, t: MoveTuning, held: boolean) 
 function descend(s: MoveState, w: MoveWorld, t: MoveTuning, input: MoveInput, y: number) {
   const wet = w.wet(s.x, s.z), floor = w.top(s.x, s.z), speed = hypot(s.vx, s.vz);
   if (!wet && y <= floor) { land(s, t, input, floor, w.steep?.(s.x, s.z)); return; }
-  if (y < s.y && speed > 0.5 && (wet || floor < y - 0.3)) {
-    // Coming down past a surface just ahead: land on it (the "almost made it" catch).
+  if (y < s.y && speed > 0.5 && s.coyote <= 0 && (wet || floor < y - 0.3)) {
+    // Coming down past a surface just ahead: land on it (the "almost made it" catch). Not in the moment after walking
+    // off an edge: a top too thin to stand on (a fence's) would catch you back onto itself each step, up to 0.32 ahead.
     for (const r of [0.12, 0.22, 0.32]) for (let a = 0; a < 8; a++) {
       const ox = Math.sin((a * Math.PI) / 4) * r, oz = Math.cos((a * Math.PI) / 4) * r;
       if ((ox * s.vx + oz * s.vz) / speed < 0.2 * r) continue;
@@ -707,11 +709,12 @@ export function clearSpot(w: MoveWorld, x: number, z: number, y: number, facing:
   return [x, z];
 }
 
-/** The nearest released, dry, level spot the body fits on, out from (x, z) in half-unit rings (as is, if there is none). */
+/** The nearest released, dry, level spot the body fits on, outside every solid, out from (x, z) in half-unit rings (as is, if there is none). */
 function refuge(w: MoveWorld, x: number, z: number): [number, number] {
   for (let r = 0.5; r <= 400; r += 0.5) for (let a = 0, n = Math.ceil((2 * Math.PI * r) / 0.5); a < n; a++) {
     const px = x + Math.sin((2 * Math.PI * a) / n) * r, pz = z + Math.cos((2 * Math.PI * a) / n) * r;
-    if (w.released!(px, pz) && !w.wet(px, pz) && !w.steep?.(px, pz) && overlap(w, px, pz, w.top(px, pz), true, MOVE_TUNING, 0) === 0) return [px, pz];
+    const top = w.top(px, pz);
+    if (w.released?.(px, pz) !== false && Number.isFinite(top) && !w.wet(px, pz) && !w.steep?.(px, pz) && overlap(w, px, pz, top, true, MOVE_TUNING, 0) === 0) return [px, pz];
   }
   return [x, z];
 }

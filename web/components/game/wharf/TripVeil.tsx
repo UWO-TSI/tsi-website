@@ -29,10 +29,10 @@ export default function TripVeil({ phase, to, firstLogin, quick, haze, touch, on
       <div className={s.card}>
         <svg className={s.boat} viewBox="0 0 96 54" aria-hidden="true">
           <g className={s.hull}>
-            <path d="M10 31 Q48 32 86 27 L78 41 Q48 47 18 41 Z" fill="#fffbe7" stroke="#3a2e22" strokeWidth="3" strokeLinejoin="round" />
+            <path d="M10 31 Q48 32 86 27 L78 41 Q48 47 18 41 Z" strokeWidth="3" strokeLinejoin="round" style={{ fill: "var(--ui-card)", stroke: "var(--ui-ink)" }} />
             <path d="M14 37 Q48 42 82 35" fill="none" stroke="#4f7fb0" strokeWidth="3" strokeLinecap="round" />
-            <path d="M66 28 L66 9" stroke="#3a2e22" strokeWidth="3" strokeLinecap="round" />
-            <path d="M66 10 L80 14 L66 18 Z" fill="#e8704a" stroke="#3a2e22" strokeWidth="2.5" strokeLinejoin="round" />
+            <path d="M66 28 L66 9" strokeWidth="3" strokeLinecap="round" style={{ stroke: "var(--ui-ink)" }} />
+            <path d="M66 10 L80 14 L66 18 Z" fill="#e8704a" strokeWidth="2.5" strokeLinejoin="round" style={{ stroke: "var(--ui-ink)" }} />
           </g>
           <path className={s.waves} d="M0 49 q6 -4 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0" fill="none" stroke="#6fb3d9" strokeWidth="3" strokeLinecap="round" />
         </svg>

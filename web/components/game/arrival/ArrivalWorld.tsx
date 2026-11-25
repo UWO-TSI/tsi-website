@@ -193,8 +193,10 @@ function CrossingDirector({ dock, player }: { dock: Dock; player: React.RefObjec
   const st = useMemo<DirectorState>(() => ({ boat: { x: 0, y: 0, z: 0, yaw: 0, matrix: new THREE.Matrix4() }, cam: { pos: [0, 0, 0], look: [0, 0, 0], fov: 40 }, drip: 0, seed: 1 }), []);
   const points = useMemo<CrossingPoints>(() => {
     const tip = dockToWorld(dock, 0, -3.5, { x: 0, z: 0 });
-    const hq = landmark("hq");
-    return { island: { x: (hq?.x ?? 0) * 0.5, z: (hq?.z ?? 0) * 0.5 }, wharf: tip };
+    // The island as it reads from the sea: a quarter of the way from the pier's tip to HQ, the wharf's buildings and
+    // the town behind them (the island's middle is too far off: the world's curve sinks it under the sea).
+    const hq = landmark("hq") ?? { x: 0, z: 0 };
+    return { island: { x: tip.x + (hq.x - tip.x) * 0.25, z: tip.z + (hq.z - tip.z) * 0.25 }, wharf: tip };
   }, [dock]);
   // After the follow camera (-3) and the boat (-5): the shot wins this frame. Released at the landing (the trip cuts to the walking view).
   useFrame((_, raw) => directShot(camera as THREE.PerspectiveCamera, dock, points, st, pool, player.current, Math.min(raw, 0.1)), -2.5);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { useGLTF } from "@react-three/drei";
+import { gltfsOf } from "@/lib/game/gltfsOf";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { applyModelTextures, disposeModelMaterials, lightHQWindows, prepareModel } from "@/lib/game/modelMaterials";
@@ -154,7 +154,7 @@ export function ACNHParts({
   /** Night (0 day → 1 night, islandLighting windowLit): the panes glow and the model's own lamps and lit rooms brighten, easing over a few seconds. */
   lit?: number;
 }) {
-  const gltfs = useGLTF(parts as string[]);
+  const gltfs = gltfsOf(parts);
   const lights = lit !== undefined;
   const group = useMemo(() => partsGroup(gltfs, parts, windowColor, lights), [gltfs, parts, windowColor, lights]);
   const contact = useMemo(() => modelContact(group, parts[0], "solid"), [group, parts]);
@@ -178,7 +178,7 @@ const placeOf = (p: PartsPlacement) => new THREE.Matrix4().compose(new THREE.Vec
  */
 export function ACNHHouses({ sets, lit }: { sets: readonly (readonly [readonly string[], readonly PartsPlacement[]])[]; lit: number }) {
   const urls = useMemo(() => sets.flatMap(([parts]) => parts), [sets]);
-  const gltfs = useGLTF(urls);
+  const gltfs = gltfsOf(urls);
   const groups = useMemo(() => sets.map(([parts]) => partsGroup(parts.map(url => gltfs[urls.indexOf(url)]), parts, undefined, true)), [gltfs, urls, sets]);
   useEffect(() => () => groups.forEach(g => disposeModelMaterials(g)), [groups]);
   const owner = useMemo(() => {

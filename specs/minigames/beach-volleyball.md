@@ -74,6 +74,8 @@ Axes: the net lies along x at z = 0; each team owns one half (z < 0 or z > 0). T
 
 ## 2. Camera
 
+**Round 3** (David: "the charater takes up too much space"): further back and higher (4.9 back, 0.85 right, 2.75 up, looking 8 ahead at 0.75 up, FOV 58), so you're a small figure low in the frame and the net and the far court read over your head. The camera rides a smoothed height (the sand under you plus 30% of your jump), so a jump lifts the view a touch instead of yanking it. Before and after: `specs/evidence/volleyball/p2/p2-camera.png`, `p3/p3-camera.png`.
+
 **Round 2:** as a match starts, the camera glides in (the sushi bar's stool view's logic): from the island's view, up behind your baseline over the whole court, then down to your shoulder (1.8 s, smootherstep). The island's fog draws in to near 20 and far 70 while you play, so the court is the stage, and the island's top-right HUD steps aside. Anything between the camera and you (the palms in the free zone, a building) eases see-through round you: the island's own cut (`lib/game/occluders.ts`), aimed from the match camera. The shoulder view is a little further back (3.1 back, 0.65 right, 1.95 up). During your toss the look lifts to keep the ball and its ring in view.
 
 
@@ -84,6 +86,8 @@ Third person over the right shoulder, as in the reference: close, the character 
 
 ## 3. Controls
 
+**Round 3** (David: "dont do crtl and just do a dive qith q and thats it"): Q is the dive, there's no dash and no slide dive in the court, and Ctrl does nothing.
+
 | Input | On the ground | In the air |
 |---|---|---|
 | WASD | Move (camera relative) | Air control |
@@ -91,15 +95,20 @@ Third person over the right shoulder, as in the reference: close, the character 
 | Left click | **Bump** (forearm pass) | **Spike** (timed; lands where you look) |
 | E | **Set** (overhand) | **Jump set** |
 | Right click | **Call it**: "Mine!" over your head for 1.5 s; your bot partner leaves that ball to you | **Block** (at the net) |
-| Ctrl | **Dive**: a lunge that digs up a ball near the sand | — |
-| Q | Dash (the movement system's dash) | Air dash |
-| Q then Ctrl (within 0.3 s, or Ctrl during a dash) | **Slide dive**: longer, faster, wider reach and a cleaner dig | — |
+| Q (the dash key) | **Dive**: a clutch lunge (below) | — |
 | Hold left click (serving) | Fill the power bar; release to toss | — |
 | Esc | Pause and leave | |
 
-Ctrl is the movement system's crouch key on a Mac; inside the court it means dive. Ctrl with a click is a right click on a Mac, so the dive is Ctrl alone and the court reads `button === 2` from the mouse event, not the Ctrl state. The first click in a match takes the mouse (pointer lock), as the island's mouse-look does; Esc lets it go, and the HUD's Leave ends the match.
+The court reads `button === 2` from the mouse event for the right click (Ctrl with a click is a right click on a Mac).
 
-**Stamina hooks (spec only, until main-quest r3's stamina is on main):** the dash, the dive and the slide dive each cost a little stamina, refilled while walking or standing; an empty bar makes the dive shorter, never impossible.
+**Round 3, the play** (David: "many bugs, ui not responsive to jumps, the timing for balls is off when in the air"):
+- **A press in the air meets the ball.** The root cause: an airborne press waited for the ball to come down to where your hands were at the press, ignoring that you were still rising or falling, so presses on the way up whiffed or touched late. Now a spike or a jump set in the air plans its meeting on both flights (your jump's arc and the ball's, stepped together, `match.ts meetOf`, up to 0.42 s ahead) and touches then; the arms stretch a little for it (0.4 u further, 0.25 u of height). The grade is the press's lead on that meeting: 0.08 s before is perfect (the swing's wind-up), much earlier is early, after it late.
+- **The jump** is 1.75 u high with its top at 0.44 s and a firmer fall (×1.3), no apex hang, so its arc is the same every time (a spike's hand still clears the 2.17 u tape). It plays vb_spike_jump posed by the arc (push off, tuck at the top, feet down at touchdown; `moves.ts jumpPose`), not the island's Air clip. Near the top with the ball close the match slows to 0.62 (was 0.45).
+- **The dive** (`feel.ts dive`): 7.6 u/s easing as the body goes down (the old dash was 18), 0.55 s, then 0.8 s on the sand. Clutch: it steers onto a ball coming down within 3.8 u if you push within 75° of it (or don't push), digs it anywhere along the lunge within 1.25 u and 0.6 u of height, and the dig always comes up playable (quality 0.5 or better), with a slow-mo beat.
+- **The block** counts from 2 u off the net, 0.85 u either side of you and 0.5 u over the spike's hand, down to 0.25 u under the tape; a stuff hangs a beat (0.1 s hit-stop).
+- Real-input checks on the island, airborne ones included: `specs/evidence/volleyball/p3/input-results.json` (`p3input.mjs`). The first click in a match takes the mouse (pointer lock), as the island's mouse-look does; Esc lets it go, and the HUD's Leave ends the match.
+
+**Stamina hooks (spec only, until main-quest r3's stamina is on main):** the dive costs a little stamina, refilled while walking or standing; an empty bar makes the dive shorter, never impossible.
 
 **Round 2, the feel (one block, `lib/game/volleyball/feel.ts` VB_FEEL):**
 - The ball has its own clock (`Ball.k`): it starts at 0.52 of real pace and quickens with each touch of a rally (+0.035) and a little with each point played (+0.006), up to 0.9. Velocities stay real-pace, so the launch solvers and the rules don't change; predictions convert.
@@ -141,8 +150,7 @@ Serving order: the team that wins a rally serves the next. When a team wins the 
 | Jump set | 0.8 / in the air, above the head | As the set, quicker and flatter |
 | Spike | 0.75 / in the air, above the head | Hard and down toward the sand point under your aim on the far side. Timing sets the pace (perfect 100%, good 85%) and the scatter; an early or late press is a weak roll shot that may find the net |
 | Block | Arms over the net, 1 u wide, 0.9 u tall, for 0.35 s | A spike through it is stuffed straight down on the attacker's side (good timing) or popped up on your side (soft block, a touch) |
-| Dive | 1.0 from the body, all along a 2.5 u lunge / up to 0.75 | A high, weak dig up on your side; then you're on the sand for 0.6 s |
-| Slide dive | 1.3 from the body, all along a 4.7 u lunge / up to 0.75 | A cleaner, higher dig toward the set spot; 0.45 s on the sand |
+| Dive (Q) | 1.25 from the body, all along a lunge of about 3 u that steers onto the ball (§3, round 3) / up to 0.6 round the dig hand | A playable dig up on your side (quality 0.5 or better); then you're on the sand for 0.8 s |
 
 **Receiving.** Whenever the ball is coming down on your half, a **landing circle** sits on the sand where it will land and closes in as it falls; a second, inner ring marks the moment to press. Get there and bump or set as the rings meet.
 
@@ -167,6 +175,8 @@ Simple and believable; one skill value (0 to 1) drives every error.
 
 ## 7. HUD (flat kit, minimal)
 
+**Round 3** (David: "the ui for the action bar needs heavy work ... the bar should old show bump set dive, no jump or right click for callout. and jumping should switch the set of ui to jumping actions"): the kit `ActionBar` rebuilt. On the sand it shows Bump, Set, Dive; in the air Spike, Jump set, Block (jump and the call still work, off the bar). Each card is a bold silhouette of the move, its name and its key (a mouse with its button lit for a click, a keycap for E and Q); the air row wears a sky edge. The row follows your stance the frame you leave or touch the sand (the HUD sets it on the DOM ahead of React; checked frame by frame, 0 frames out of step). The serve's meter and curve sit low either side of the bar, out of the view; the meter's fill has a swelling glow, notches, sparks riding its edge and turning rays at Max. A high ball you'd jump for (your attack, or theirs at the net to block) gets a ring that rides the ball and closes on the moment to jump, then in the air on the moment to press (gold at the moment); a flat ball keeps the landing circle on the sand.
+
 **Round 2:** the bottom is an action bar (kit `ActionBar`, in `/lab/gui`): one card per move with a pictogram of the move, its key and its name; ground row Bump, Set, Mine!, Dive (Slide dive after a dash), Jump; air row Spike, Jump set, Block; serve row Hold to serve, Curve; toss row Serve, Jump. The rows stack in one place and crossfade, and the shown row is steadied (air after 0.04 s aloft, ground after 0.09 s down), so a jump never flickers it. A slot that would connect now glows gold; a press flashes it, a whiff shakes it. Over it a touch's grade pops (Perfect!, Good, Poor). The serve meter is the kit's `ServeMeter`; the curve is the kit's `SpinPicker` (the ball's rendered icon). A thin line under the score shows the ball's pace. The point's word is bigger ("Point!" or "Their point"), the score digits spring in the team's colour, and the final card drops the ball in, rings gold on a win, and shows the coins.
 
 
@@ -179,6 +189,8 @@ One prompt at a time; nothing on screen that isn't needed now.
 - **Big moments:** a point: a sand burst at the landing, the camera nudges, the score pops and a short "Point" word for the side that won it (in its team colour). The win: a slow-motion beat, confetti, the winning team cheering, and a flat panel with the final score, "Play again" and "Leave".
 
 ## 8. Juice
+
+**Round 3** (David's notes per effect): a perfect spike or serve sets the ball on fire for its flight (flames and a wide hot trail, an ignition burst, an explosion where it lands); a block is a wall (a big ripple in the blocker's colour, two hard rings in the net's plane, light and sparks thrown back, the hardest hit-stop and shake); bumps and sets pop a ring and the ball squashes harder and wobbles out (45%, a damped spring); your jump kicks a ring and sand at the feet, your landing another; a dig off a dive is a slow-mo save. Each moment's stamp carries a little animated picture: OUT (the ball skips the line, an X slams), NET (the mesh bulges), TAPE! (the tape twangs, the ball rolls over), Miss (a swish past, the word droops), BLOCK! (palms slam, the stamp drops hard), SAVED! (slides in with the dive); the rally's heat is a flame chip under the score that bumps with every touch from the 4th and says "On fire!" at the 6th; a point turns rays behind its word and flies a +1 to the score (their point sags); the win turns rays behind the bouncing trophy; "MINE!" is a speech bubble in the caller's colour that pops off the head and wiggles. Every sound is its own (`art/audio/synth_volleyball.py`, SOURCES.md; previews in `specs/evidence/volleyball/p3/sfx/`). Strips: `p3/fx/` (before: `p2/fx/`).
 
 **Round 2:** David approved 15 effects and four timing grades per contact (the plan page); they're built in `components/game/volleyball/VolleyFx.tsx` and `VolleyStamps.tsx`, fed by `lib/game/volleyball/fxBus.ts`, with sounds in `lib/game/volleyball/sfx.ts` (synthesised, CC0, `art/audio/synth_volleyball.py`, logged in `web/public/audio/sfx/SOURCES.md`). Effects and sounds exist only for the player in the match. The text below is phase 1's.
 

@@ -35,6 +35,15 @@ describe("the crossing's shots", () => {
     const wharf = crossingCamera("wharf", 1, near, pts, out());
     expect(Math.hypot(wharf.look[0] - pts.wharf.x, wharf.look[2] - pts.wharf.z)).toBeLessThan(Math.hypot(near.x - pts.wharf.x, near.z - pts.wharf.z));
   });
+  it("rides high enough at the bow that the curve can't hide the island, and looks at it (David's round 5 playtest)", () => {
+    const boat = { x: 20, y: 0, z: -60, yaw: Math.atan2(pts.island.x - 20, pts.island.z + 60) };
+    for (const k of [0, 0.5, 1]) {
+      const bow = crossingCamera("bow", k, boat, pts, out(), 0.0032);
+      expect(bow.pos[1]).toBeGreaterThan(3);
+      const ahead = [bow.look[0] - bow.pos[0], bow.look[2] - bow.pos[2]], toIsland = [pts.island.x - bow.pos[0], pts.island.z - bow.pos[2]];
+      expect(Math.abs(Math.atan2(ahead[0], ahead[1]) - Math.atan2(toIsland[0], toIsland[1]))).toBeLessThan(0.01);
+    }
+  });
   it("drops the aim with the curved world's bend, by the distance squared", () => {
     const boat = { x: 20, y: 0, z: -60, yaw: 0 };
     const flat = crossingCamera("drone", 0.5, boat, pts, out());

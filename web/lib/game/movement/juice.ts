@@ -72,15 +72,15 @@ const SAND_BURST: Recipe = { ...STEP_SAND, count: [2, 3], size: [0.7, 0.8], spee
 const SNOW_BURST: Recipe = { ...STEP_SNOW, count: [3, 4], speed: [0.8, 1.4], spread: Math.PI };
 
 const GROUND: Record<GroundKind, GroundFx> = {
-  grass: { dust: 0xd8cfa8, step: [STEP_FLECKS, STEP_MOTE], stepTint: 0xdbe6a2, extra: FLECKS, extraTint: 0xdbe6a2, scuff: 0x8fa16c, sound: { name: "footstep", rate: 1, gain: 1 } },
-  soil: { dust: 0xd6bd94, step: [STEP_PUFF], stepTint: 0xd6bd94, extra: null, extraTint: 0, scuff: 0xba9664, sound: { name: "footstep", rate: 0.92, gain: 1 } },
-  sand: { dust: 0xe9d3a0, step: [STEP_SAND, STEP_MOTE], stepTint: 0xd8bd85, extra: SAND_BURST, extraTint: 0xd8bd85, scuff: 0xe2cb93, sound: { name: "footstep", rate: 0.8, gain: 0.85 } },
-  wetSand: { dust: 0xc9b282, step: [STEP_WET_SAND], stepTint: 0xb49c6c, extra: SAND_BURST, extraTint: 0xb49c6c, scuff: 0xb49c6c, sound: { name: "footstep", rate: 0.72, gain: 0.9 } },
-  snow: { dust: 0xf4f8fc, step: [STEP_SNOW], stepTint: 0xf4f8fc, extra: SNOW_BURST, extraTint: 0xf4f8fc, scuff: 0, sound: { name: "footstep", rate: 0.66, gain: 0.85 } },
+  grass: { dust: 0xd8cfa8, step: [STEP_FLECKS, STEP_MOTE], stepTint: 0xdbe6a2, extra: FLECKS, extraTint: 0xdbe6a2, scuff: 0x8fa16c, sound: { name: "footstep-grass", rate: 1, gain: 1 } },
+  soil: { dust: 0xd6bd94, step: [STEP_PUFF], stepTint: 0xd6bd94, extra: null, extraTint: 0, scuff: 0xba9664, sound: { name: "footstep-grass", rate: 0.92, gain: 1 } },
+  sand: { dust: 0xe9d3a0, step: [STEP_SAND, STEP_MOTE], stepTint: 0xd8bd85, extra: SAND_BURST, extraTint: 0xd8bd85, scuff: 0xe2cb93, sound: { name: "footstep-sand", rate: 1, gain: 1 } },
+  wetSand: { dust: 0xc9b282, step: [STEP_WET_SAND], stepTint: 0xb49c6c, extra: SAND_BURST, extraTint: 0xb49c6c, scuff: 0xb49c6c, sound: { name: "footstep-sand", rate: 0.92, gain: 1 } },
+  snow: { dust: 0xf4f8fc, step: [STEP_SNOW], stepTint: 0xf4f8fc, extra: SNOW_BURST, extraTint: 0xf4f8fc, scuff: 0, sound: { name: "footstep-sand", rate: 0.85, gain: 0.9 } },
   // Built ground: a footstep is only its sound; a landing raises a little pale dust.
-  stone: { dust: 0xdcd7cf, step: [], stepTint: 0, extra: null, extraTint: 0, scuff: 0, sound: { name: "blip3", rate: 1, gain: 0.7 } },
-  wood: { dust: 0xd8c3a0, step: [], stepTint: 0, extra: null, extraTint: 0, scuff: 0, sound: { name: "blip4", rate: 1, gain: 0.7 } },
-  water: { dust: 0xd4ecf7, step: [RAIN_DROPS], stepTint: 0xd4ecf7, extra: null, extraTint: 0, scuff: 0, sound: { name: "blip5", rate: 1, gain: 0.8 } },
+  stone: { dust: 0xdcd7cf, step: [], stepTint: 0, extra: null, extraTint: 0, scuff: 0, sound: { name: "footstep-stone", rate: 1, gain: 1 } },
+  wood: { dust: 0xd8c3a0, step: [], stepTint: 0, extra: null, extraTint: 0, scuff: 0, sound: { name: "footstep-wood", rate: 1, gain: 1 } },
+  water: { dust: 0xd4ecf7, step: [RAIN_DROPS], stepTint: 0xd4ecf7, extra: null, extraTint: 0, scuff: 0, sound: { name: "footstep-water", rate: 1, gain: 1 } },
 };
 const HARD = new Set<GroundKind>(["stone", "wood"]);
 
@@ -226,8 +226,8 @@ const SPLASH_SMALL: Recipe = { ...SPLASH_DROPS, count: [4, 4], up: [1.6, 2.4], s
 /** A foot coming down in a rain puddle: a small crown of droplets kicked forward, and a ring running out across it. */
 const PUDDLE_SPLASH: Recipe = { ...SPLASH_DROPS, count: [5, 6], up: [1.4, 2.2], speed: [0.5, 1.1], size: [0.3, 0.38], spread: 1.4 };
 const PUDDLE_RING: Recipe = { ...SPLASH_RIPPLE, count: [1, 1], size: [0.9, 1.1], grow: 1.7, life: [0.65, 0.8], alpha: 0.7 };
-/** Its sound: the step pitched up and brighter (a real splash is on the sound list). */
-const PUDDLE_SOUND = { name: "footstep" as SFXName, rate: 1.35, gain: 1.1 };
+/** Its sound: a step in water. */
+const PUDDLE_SOUND = { name: "footstep-water" as SFXName, rate: 1, gain: 1 };
 const SPLASH_CROWN: Recipe = { ...SPLASH_DROPS, count: [10, 11], up: [3.6, 4.8], speed: [1.2, 2.2], size: [0.42, 0.55], life: [0.62, 0.8] };
 const SPLASH_WIDE: Recipe = { ...SPLASH_RIPPLE, count: [1, 1], size: [2.2, 2.4], grow: 1.6, life: [1.2, 1.4], alpha: 0.55 };
 const SPLASH_MIST: Recipe = { sprite: "dust", count: [3, 3], life: [0.5, 0.65], size: [0.6, 0.75], grow: 1.6, speed: [0.4, 0.8], spread: Math.PI, up: [0.5, 0.9], gravity: 0, drag: 3, wind: 0.6, lift: 0.3, alpha: 0.45, face: B, rise: [0.1, 0.2] };
@@ -415,4 +415,16 @@ export function springStep(x: number, v: number, target: number, k: number, c: n
   }
   SPRING_OUT.x = x; SPRING_OUT.v = v;
   return SPRING_OUT;
+}
+
+/**
+ * The body's lean with the ground speed's changes (vb-anim round 2, David: "movement should not feel so linear"): it
+ * tips into a start, and on a stop it runs on over the planted feet, rocks back past upright and settles (an
+ * underdamped spring). `accel`: the change of ground speed (u/s per s); `amount`: the Juice panel's `lean`. Returns
+ * springStep's scratch { x: pitch in radians, + forward; v }.
+ */
+export const LEAN = { start: 0.0016, stop: 0.0026, max: 0.16, k: 130, c: 9 };
+export function leanStep(x: number, v: number, accel: number, dt: number, amount: number) {
+  const want = amount * Math.min(LEAN.max, accel > 0 ? accel * LEAN.start : -accel * LEAN.stop);
+  return springStep(x, v, want, LEAN.k, LEAN.c, dt);
 }

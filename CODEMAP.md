@@ -7,7 +7,7 @@ Layout: `web/` (Next.js: app, components, lib, data, scripts, supabase), `realti
 
 | Surface | Routes | Code |
 |---|---|---|
-| Marketing | `/`, `/genesis`, `/globetest`, `/npo/*` | `web/app/(site)/`, `app/genesis`, `app/npo`, `components/{sections,hero,layout,ui,title}/` |
+| Marketing | `/`, `/npo`, `/genesis`, `/students`, `/contact`, `/admin/npo` | `web/app/(site)/` (pages and their CSS), `components/site/` (frame, home sections, glyph field and seams, the NPO form), `lib/site/` (config, seasonal button), `lib/npo-*.ts`, `app/api/npo-applications/`, the globe in `components/ui/GlobeVisualizerWebGPU.tsx`. Spec: `specs/site/revamp.md` |
 | Recruitment/apply | `/student/apply/*`, `/student/election`, `/finalround[/token]`, `/admin/recruit` | `app/student/apply/`, `components/{recruit,admin}/`, `lib/recruitment*.ts`, `app/finalround/FinalRound.tsx` |
 | Applicant island (3D) | `/student/apply/portal` | `components/recruit/{ApplicantIsland,ApplicantWorld}.tsx`, `lib/game/{applicantVillage,applicantTime}.ts` |
 | Member game (3D) | `/student/dashboard` (renders `DefaultIslandWorld`), `/student/go`, `/student/onboarding`, `/student/opening-soon` | `components/game/DefaultIslandWorld.tsx`, `lib/game/` |
@@ -44,7 +44,7 @@ Logic `web/lib/game/` (flat, `foo.ts` + `foo.test.ts`). R3F `web/components/game
 | Study tables | `C/study/`, `web/lib/study/`, `api/study/*` | `C/study/StudySeats.tsx` | `lib/study/*.test.ts` |
 | Multiplayer client | `web/lib/net/` (protocol.ts wire format), `C/net/` (NetWorld, RemoteAvatars, ChatDock), `web/lib/world/` (friends), `api/world/*`, `lib/server/realtimeNotify.ts` | `C/net/NetWorld.tsx` | `lib/net/*.test.ts`, `C/net/*.test.ts` |
 | Realtime server | `realtime/src/` (`rooms/{IslandRoom,chat,state,limits,sanity,views}.ts`, auth/, world.ts, internal.ts), `realtime/scripts/bots.ts` | `rooms/IslandRoom.ts` | `realtime/test/*.test.ts`, `soak.ts` |
-| UI, HUD, menus, GUI kit | `C/{TopCluster,MiniMap,ToolWheel,TalkBox,ToastHub,QuestTracker,EscLayers,RewardCard}.tsx`, `web/components/gui/`, `L/{hudStore,hudPrefs,escMenu,toolWheel,toastQueue}.ts`, design tokens `web/styles/game-tokens.css` | `C/TopCluster.tsx` | `hudStore`, `escMenu`, `toolWheel`, `MiniMap` |
+| UI, HUD, menus, GUI kit | `C/{TopCluster,MiniMap,ToolWheel,TalkBox,ToastHub,QuestTracker,EscLayers,RewardCard}.tsx`, `web/components/gui/` (the flat kit: one look, rows 334 and 335; showroom `/lab/gui`; guard `components/gui/flatOnly.test.ts`), `L/{hudStore,hudPrefs,escMenu,toolWheel,toastQueue}.ts`, tokens `web/styles/themes/` (UI packs, clean the base) via `web/styles/game-tokens.css`, paper `web/styles/paper.css` | `C/TopCluster.tsx` | `hudStore`, `escMenu`, `toolWheel`, `MiniMap` |
 | Economy (coins, gems, shop, prices) | `web/lib/wallet/` (rules, catalogue, service, shopShelves, merchShelf), `web/components/economy/`, `C/DailyGift.tsx`, `api/{economy,shop}/*` | `lib/wallet/service.ts`, `rules.ts` | `lib/wallet/*.test.ts` |
 | Progression, quests, crafting | `web/lib/progression/`, `web/components/progression/`, `web/lib/crafting/`, `L/{questTracker,progressionBridge}.ts`, `api/{progression,quests,crafting}/*` | `lib/progression/` | `lib/progression/*.test.ts` |
 | Perf budget | `L/perf/` (budget, governor, frameStats), `L/{mapBudget,qualityTier}.ts`, `C/{QualityGovernor,PerfProbe}.tsx`, `specs/perf/` (perf-check.mjs, budget.md, baseline.json), `web/scripts/map-budget.mjs` | `specs/perf/perf-check.mjs` | `perf/budget`, `governor` |

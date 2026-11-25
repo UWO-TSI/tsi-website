@@ -4,7 +4,7 @@ import { islandOf } from "./defaultIsland";
 import { objectsOf, type Village } from "./villageMap";
 import { loadWorldFromDisk } from "./world/disk";
 import { villageOfWorld } from "./world/village";
-import { BUOYS, MOORED, marketBoardsOf, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, mooredPose, newBoatPose, newFloat, newRide, tackleCounterOf, worldToDock, type Dock } from "./wharf";
+import { BUOYS, MOORED, PILE_LANTERN, boardsOf, marketBoardsOf, SEA_Y, deckPieces, dockToWorld, fitPlane, floatBoat, floatBuoy, mooredPose, newBoatPose, newFloat, newRide, tackleCounterOf, worldToDock, type Dock } from "./wharf";
 import { TRAINS, waterWaveAt, waveState } from "./waves";
 import { mirrorWaterField } from "./waterField";
 import { TUNING_DEFAULTS } from "./tuning";
@@ -150,18 +150,26 @@ describe("the wharf kit on the deck squares", () => {
     for (const p of piles) { expect(Math.abs(p.x - 4.2)).toBeLessThan(0.05); expect(p.y).toBe(1); }
   });
 
+  it("stands a hand lantern on the top of one pile of each edge square (David, round 10: \"have landers on the dock wood stumps\")", () => {
+    const pieces = deckPieces(row(2), ground), piles = pieces.filter(p => p.model === "dock-pile-rope");
+    const lanterns = pieces.filter(p => p.model === PILE_LANTERN.model);
+    expect(lanterns.length).toBe(10);
+    for (const l of lanterns) expect(piles.some(p => p.x === l.x && p.z === l.z && l.y === p.y + PILE_LANTERN.lift)).toBe(true);
+    expect(new Set(lanterns.map(l => piles.findIndex(p => p.z === l.z) % 2)).size).toBe(2);
+  });
+
   it("puts ladders with life rings, rope nets and rope fencing on some edge squares, none near the jetty's landing", () => {
     const all = deckPieces(row(2), ground), kept = deckPieces(row(2), ground, { x: 0, z: 18 }, 7);
     expect(all.some(p => p.model === "wharf-ladder")).toBe(true);
     for (const m of ["rope-span", "rope-net", "life-ring"]) expect(all.some(p => p.model === m), m).toBe(true);
-    for (const p of kept) if (p.model !== "deck-tile" && p.model !== "dock-pile-rope") expect(Math.abs(p.z - 18)).toBeGreaterThan(5);
+    for (const p of kept) if (!["deck-tile", "dock-pile-rope", PILE_LANTERN.model].includes(p.model)) expect(Math.abs(p.z - 18)).toBeGreaterThan(5);
   });
 });
 
 describe("the fish market's boards and the tackle shop's counter (David, 2026-10-28)", () => {
   it("stands the catch board and the task board on open ground before the fish market, clear of the stall, and the counter at the tackle shop's door", () => {
     const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))) as Village;
-    const props = objectsOf("prop", v), boards = marketBoardsOf(props)!, island = islandOf(v);
+    const props = objectsOf("prop", v), boards = boardsOf(objectsOf("board", v))!, island = islandOf(v);
     const barrel = props.find(o => o.model === "sell-barrel")!, market = props.find(o => o.model === "fish-market")!;
     for (const b of [boards.catch, boards.tasks]) {
       const front = dockToWorld({ x: b.x, z: b.z, yaw: b.yaw }, 0, 1.2, { x: 0, z: 0 });
@@ -173,6 +181,20 @@ describe("the fish market's boards and the tackle shop's counter (David, 2026-10
     const counter = tackleCounterOf(props)!;
     expect(counter).not.toBeNull();
     expect(marketBoardsOf([])).toBeNull();
+    expect(boardsOf([{ id: "catch", x: 0, z: 0 }])).toBeNull();
     expect(tackleCounterOf([])).toBeNull();
+  }, 60_000);
+
+  // The world editor moves the boards like any prop (world-editor r1). Until David does (`pin`), they stand where
+  // MARKET_BOARDS puts them, so a change to MARKET_BOARDS has to rewrite their two rows in world.json (or rerun the layout).
+  it("reads the boards from the world's board objects, where MARKET_BOARDS puts them until David moves them", () => {
+    const v = villageOfWorld(loadWorldFromDisk(fileURLToPath(new URL("../../data/world/", import.meta.url)))) as Village;
+    const placed = objectsOf("board", v), want = marketBoardsOf(objectsOf("prop", v))!;
+    expect(placed.map(o => o.id).sort()).toEqual(["catch", "tasks"]);
+    for (const o of placed.filter(b => !b.pin)) {
+      const w = want[o.id as "catch" | "tasks"];
+      expect([o.x, o.z, o.yaw], o.id).toEqual([+w.x.toFixed(2), +w.z.toFixed(2), +w.yaw.toFixed(4)]);
+    }
+    expect(boardsOf([{ id: "catch", x: 1, z: 2, yaw: 0.5, lift: 0.2 }, { id: "tasks", x: 3, z: 4 }])).toEqual({ catch: { x: 1, z: 2, yaw: 0.5, lift: 0.2 }, tasks: { x: 3, z: 4, yaw: 0 } });
   }, 60_000);
 });

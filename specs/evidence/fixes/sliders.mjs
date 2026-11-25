@@ -1,0 +1,11 @@
+import { createRequire } from "node:module";
+const require = createRequire("/opt/homebrew/lib/node_modules/");
+const { chromium } = require("playwright");
+const browser = await chromium.launch({ channel: "chromium", headless: true, args: ["--mute-audio", "--use-angle=metal", "--ignore-gpu-blocklist"] });
+const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+await page.goto("http://localhost:3333/student/dashboard?sheet=settings", { timeout: 180000 });
+await page.getByRole("button", { name: "Skip", exact: true }).click({ timeout: 90000 }).catch(() => {});
+await page.getByRole("tab", { name: /sound/i }).click({ timeout: 150000 });
+console.log("sliders:", JSON.stringify(await page.evaluate(() => [...document.querySelectorAll("input[type=range], [role=slider]")].map(e => e.getAttribute("aria-label") ?? e.closest("label")?.textContent ?? e.id))));
+console.log("fieldset:", (await page.evaluate(() => [...document.querySelectorAll("fieldset")].find(f => /Sound/.test(f.textContent))?.innerText)).replace(/\n/g, " | "));
+await browser.close();

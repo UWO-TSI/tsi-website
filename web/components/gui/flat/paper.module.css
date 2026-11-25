@@ -1,21 +1,27 @@
 /* Paper (paper.tsx): a folded teahouse menu in washi and ink. The theme's --ui-* tokens only (--ui-paper and friends). */
 .book { --h: min(84dvh, 820px); --ease: cubic-bezier(0.45, 0.05, 0.25, 1); --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   position: relative; width: min(96vw, calc(var(--h) * 1.3)); aspect-ratio: 1.3; outline: none; font-family: var(--gui-font); color: var(--ui-paper-ink); }
-.spread { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 100%; height: 100%; perspective: 2400px; transform-style: preserve-3d;
+.spread { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 100%; height: 100%; perspective: 2400px;
   transition: transform 0.72s var(--ease); }
+/* The book's shadow on the counter, under both pages at once (round 7, David: "the creese in the middle apear after the
+   page is turned and it flashes in"): a page's own shadow fell across the fold onto the other page, so the crease came
+   and went as the turning leaf covered it. Now the crease is the pages' fold shade alone, the same on the leaf as under it. */
+.spread::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 4px; pointer-events: none;
+  box-shadow: 0 26px 60px rgb(var(--ui-shade) / 0.3), 0 4px 10px rgb(var(--ui-shade) / 0.12); transition: left 0.72s var(--ease); }
 /* Closed, only the cover shows: the book slides half a panel so the cover sits in the middle. */
 .book[data-closed] .spread { transform: translateX(-25%); }
+.book[data-closed] .spread::before { left: 50%; }
 .page { position: relative; }
 
 /* A panel of washi: the paper colour under our fibre texture; the fold's shade on its inner edge. */
 .panel { all: unset; position: absolute; inset: 0; display: grid; align-content: start; gap: 4%; box-sizing: border-box; padding: 9% 8% 8%; overflow: hidden;
   background-color: var(--ui-paper); background-image: var(--ui-paper-washi); background-size: 256px; color: var(--ui-paper-ink); font-family: var(--gui-font);
-  box-shadow: 0 1px 0 var(--ui-paper-edge), 0 26px 60px rgb(var(--ui-shade) / 0.3), 0 4px 10px rgb(var(--ui-shade) / 0.12); }
+  box-shadow: 0 1px 0 var(--ui-paper-edge); }
 .panel[data-side="left"] { border-radius: 4px 0 0 4px; }
 .panel[data-side="right"] { border-radius: 0 4px 4px 0; }
 .panel::after { content: ""; position: absolute; top: 0; bottom: 0; width: 9%; pointer-events: none; }
-.panel[data-side="left"]::after { right: 0; background: linear-gradient(to left, rgb(var(--ui-shade) / 0.13), transparent); }
-.panel[data-side="right"]::after { left: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.1), transparent); }
+.panel[data-side="left"]::after { right: 0; background: linear-gradient(to left, rgb(var(--ui-shade) / 0.2), rgb(var(--ui-shade) / 0.06) 30%, transparent); }
+.panel[data-side="right"]::after { left: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.16), rgb(var(--ui-shade) / 0.05) 30%, transparent); }
 /* The cover: a bound edge with its stitches, and a click opens it. */
 .cover { cursor: pointer; border-radius: 4px; justify-items: center; align-content: stretch; grid-template-rows: auto 1fr; padding-left: 13%; }
 /* The spine: darker, sewn across with thread every few centimetres, as a bound teahouse menu is. */
@@ -31,8 +37,10 @@
 @keyframes turnBack { from { transform: rotateY(-180deg); } to { transform: rotateY(0deg); } }
 .leafFace, .leafBack { position: absolute; inset: 0; backface-visibility: hidden; }
 .leafBack { transform: rotateY(180deg); }
+/* The leaf darkens a little toward the fold as it stands up, on both faces (the back's fold is its right edge). */
 .leafFace::after, .leafBack::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to right, rgb(var(--ui-shade) / 0.18), transparent 60%); opacity: 0;
   animation: leafShade 0.72s var(--ease) both; pointer-events: none; }
+.leafBack::after { background: linear-gradient(to left, rgb(var(--ui-shade) / 0.18), transparent 60%); }
 @keyframes leafShade { 50% { opacity: 1; } }
 
 .turn { all: unset; position: absolute; bottom: 2.6%; z-index: 4; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--ui-paper-quiet);
@@ -90,7 +98,7 @@
 /* A dish: its photo, and beside it the name and price on a hairline, then what it does, a row a stat. */
 .dish { display: grid; gap: 8px; }
 .dishPick { all: unset; display: grid; grid-template-columns: clamp(96px, 18vh, 168px) minmax(0, 1fr); align-items: start; gap: clamp(10px, 1.8vh, 16px); cursor: pointer; }
-.dishPick:disabled { cursor: default; }
+.dishPick:disabled, div.dishPick { cursor: default; }
 .dishPick:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 4px; border-radius: 6px; }
 /* The photo: a print laid on the menu, a plate seen from above on a soft ground. */
 .photo { position: relative; display: grid; place-items: center; aspect-ratio: 1; padding: 6%; box-sizing: border-box; border-radius: 3px;
@@ -119,20 +127,120 @@
 .dishAction { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; animation: open 0.3s var(--spring) both; }
 @keyframes open { from { opacity: 0; transform: translateY(-4px); } }
 
+/* The tasting book: a page per water, its count, then a grid of slots, the fish faint in ink until it's filled. */
+.bookCount { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0; color: var(--ui-paper-quiet); font: 500 12px/1.3 var(--gui-font); }
+.bookCount b { color: var(--ui-paper-ink); font: 700 clamp(16px, 2.6vh, 22px)/1 var(--gui-font); font-variant-numeric: tabular-nums; }
+.bookNote { flex-basis: 100%; }
+.slots { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(clamp(26px, 5.4vh, 46px), 1fr)); gap: clamp(3px, 0.8vh, 7px); }
+.slot { position: relative; display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ui-paper-rule); }
+.slotArt { display: grid; place-items: center; width: 78%; height: 78%; }
+.slotArt canvas { width: 100%; height: 100%; }
+.slot[data-state="empty"] .slotArt { filter: brightness(0); opacity: 0.1; }
+.slot:not([data-state="empty"]) { background: var(--ui-paper-plate); box-shadow: 0 0 0 1px var(--ui-paper-rule), 0 2px 4px rgb(var(--ui-shade) / 0.12); }
+.slot[data-fresh] .slotArt { animation: ink 0.6s ease-out both; }
+@keyframes ink { from { filter: brightness(0); opacity: 0.1; } }
+
+/* The collection (the menu's first page): the boost large, a track of stamps to the cap; the fish given, each with what it gave. */
+.boost { display: grid; gap: 10px; justify-items: start; }
+.boostValue { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin: 0; color: var(--ui-paper-quiet); font: 600 13px/1.2 var(--gui-font); }
+.boostValue b { color: var(--ui-paper-ink); font: 700 clamp(26px, 5vh, 44px)/1 var(--gui-font); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.boostIcon { display: grid; place-items: center; width: clamp(30px, 5vh, 42px); aspect-ratio: 1; border-radius: 50%; background: var(--ui-paper-plate); color: var(--ui-paper-ink);
+  box-shadow: 0 0 0 1px var(--ui-paper-rule); }
+.boostIcon svg { width: 55%; height: 55%; }
+.track { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; width: 100%; max-width: 310px; }
+.track i { display: grid; place-items: center; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ui-paper-rule); }
+.track i[data-on] { box-shadow: none; }
+.track i svg { width: 100%; height: 100%; }
+/* The stamp (round 7): round red ink pressed into the washi, a touch see-through so the paper's fibre shows in it. */
+.stamp { display: block; overflow: visible; mix-blend-mode: multiply; opacity: 0.94; }
+.stampLine { fill: none; stroke: var(--ui-paper-seal); }
+.stampInk { fill: var(--ui-paper-seal); }
+.stampEye { fill: var(--ui-paper); }
+/* The stamp coming down (round 8, StampDown): 0.15 s in, a lift, the slam at 0.7 s (--hit), a squash, then away. Its height in
+   the air is mostly scale (nearer you), so it stays inside the page, which clips (overflow hidden). */
+.track i[data-fresh] { position: relative; z-index: 2; --hit: 0.7s; }
+.track i[data-fresh] svg.stamp { animation: inked 0.45s ease-out var(--hit) both; }
+.track i[data-fresh] svg.stampTool { position: absolute; left: -6%; bottom: -4%; width: 112%; height: auto; transform-origin: 50% 100%; overflow: visible;
+  filter: drop-shadow(0 3px 2px rgb(var(--ui-shade) / 0.3)); animation: toolDown 0.55s linear 0.15s both, toolUp 0.75s linear var(--hit) forwards; }
+.toolFace { fill: var(--ui-paper-seal); }
+.toolWood { fill: var(--ui-paper-ink); }
+.toolTop { fill: var(--ui-paper-quiet); }
+.toolShine { fill: var(--ui-paper); opacity: 0.3; }
+.stampShade, .stampSplat { position: absolute; inset: 0; border-radius: 50%; pointer-events: none; }
+.stampShade { background: radial-gradient(closest-side, rgb(var(--ui-shade) / 0.5), transparent); animation: shadeDown 0.55s linear 0.15s both, shadeUp 0.6s ease-in var(--hit) forwards; }
+/* The ink squeezed out round the face at the hit, a ring and a few drops, fading as it spreads. */
+.stampSplat { inset: -45%; mix-blend-mode: multiply;
+  background: radial-gradient(circle at 10% 32%, var(--ui-paper-seal) 0 4.5%, transparent 5.5%), radial-gradient(circle at 90% 62%, var(--ui-paper-seal) 0 4%, transparent 5%),
+    radial-gradient(circle at 72% 6%, var(--ui-paper-seal) 0 3.5%, transparent 4.5%), radial-gradient(circle at 22% 92%, var(--ui-paper-seal) 0 3.5%, transparent 4.5%),
+    radial-gradient(circle at 96% 22%, var(--ui-paper-seal) 0 2.5%, transparent 3.5%),
+    radial-gradient(closest-side, transparent 44%, color-mix(in srgb, var(--ui-paper-seal) 80%, transparent) 50% 56%, transparent 66%);
+  animation: splat 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) var(--hit) both; }
+@keyframes inked { from { opacity: 0; transform: scale(0.86); } 30% { opacity: 1; transform: scale(1.06); } }
+@keyframes toolDown {
+  0% { opacity: 0; transform: translateY(-45%) scale(1.9); }
+  22% { opacity: 1; transform: translateY(-55%) scale(1.95); animation-timing-function: ease-in-out; }
+  62% { transform: translateY(-80%) scale(2.2) rotate(-5deg); animation-timing-function: cubic-bezier(0.7, 0, 1, 0.5); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toolUp {
+  0% { transform: translateY(0) scale(1.14, 0.8); }
+  10% { transform: translateY(0) scale(0.96, 1.05); }
+  20%, 42% { transform: translateY(0) scale(1); opacity: 1; animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1); }
+  100% { transform: translateY(-70%) scale(2); opacity: 0; }
+}
+@keyframes shadeDown { 0% { opacity: 0; transform: scale(2.2); } 62% { opacity: 0.25; transform: scale(2.4); animation-timing-function: cubic-bezier(0.7, 0, 1, 0.5); } 100% { opacity: 1; transform: scale(1.05); } }
+@keyframes shadeUp { 0%, 40% { opacity: 0; transform: scale(1.05); } 50% { opacity: 0.4; transform: scale(1.3); } 100% { opacity: 0; transform: scale(2.4); } }
+@keyframes splat { from { opacity: 1; transform: scale(0.6) rotate(-10deg); } 35% { opacity: 0.9; } to { opacity: 0; transform: scale(1.2); } }
+.boostNote { color: var(--ui-paper-quiet); font: 500 12px/1.4 var(--gui-font); }
+.given { display: grid; justify-items: center; align-content: start; gap: 5px; margin: 0; text-align: center; }
+.given .slot { width: clamp(34px, 6.4vh, 56px); }
+.given figcaption { display: grid; gap: 2px; min-width: 0; max-width: 100%; color: var(--ui-paper-quiet); font: 600 10.5px/1.25 var(--gui-font); }
+.given figcaption span { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+.given figcaption b { overflow: hidden; color: var(--ui-paper-ink); font: 700 11.5px/1.2 var(--gui-font); text-overflow: ellipsis; white-space: nowrap; }
+.given[data-fresh] figcaption { animation: open 0.4s ease-out 0.5s both; }
+/* A line that turns to its page: a small picture, the words, its state at the end. */
+.row { all: unset; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 4px; border-bottom: 1px solid var(--ui-paper-rule);
+  font-family: var(--gui-font); color: var(--ui-paper-ink); }
+button.row { cursor: pointer; border-radius: 6px; transition: background 0.2s ease-out; }
+button.row:hover { background: var(--ui-paper-hover); }
+button.row:focus-visible { outline: 2px solid var(--ui-paper-ink); outline-offset: 1px; }
+.rowArt { display: grid; place-items: center; width: clamp(30px, 5vh, 40px); }
+.rowArt .slot { width: 100%; }
+.rowText { display: grid; gap: 2px; min-width: 0; }
+.rowText b { font: 700 13px/1.2 var(--gui-font); }
+.rowText span { color: var(--ui-paper-quiet); font: 500 11.5px/1.3 var(--gui-font); }
+.rowEnd { color: var(--ui-paper-quiet); font: 600 11px/1 var(--gui-font); }
+/* The menu's parts, under it: a word each, the one you are in inked. */
+.chapters { position: absolute; left: 50%; bottom: -36px; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgb(var(--ui-shade) / 0.4); transform: translateX(-50%); }
+.chapters button { all: unset; padding: 5px 11px; border-radius: 999px; color: var(--ui-paper); font: 600 12px/1 var(--gui-font); opacity: 0.8; cursor: pointer; white-space: nowrap;
+  transition: background 0.2s ease-out, color 0.2s ease-out, opacity 0.2s ease-out; }
+.chapters button:hover { opacity: 1; }
+.chapters button[data-on] { background: var(--ui-paper); color: var(--ui-paper-ink); opacity: 1; }
+.chapters button:focus-visible { outline: 2px solid var(--ui-paper); outline-offset: 2px; }
+
 /* A phone held upright: a taller menu, so each narrow panel stacks its dishes, the photo over the words. */
 @media (max-aspect-ratio: 3/4) {
   .book { width: min(96vw, calc(var(--h) * 0.78)); aspect-ratio: 0.78; }
   .panel { padding: 10% 7% 8%; }
   .dishPick { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .photo { width: min(100%, 112px); }
+  div.dishPick .photo { display: none; }
+  .photo { width: min(100%, 76px); }
   .dishLine { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   .stat { gap: 5px; font-size: 11px; }
   .dishNote { display: none; }
   .kindRow { gap: 6px; letter-spacing: 0.2em; }
   .dots { display: none; }
+  .dish[data-open] .stats { display: none; }
+  .slots { grid-template-columns: repeat(auto-fill, minmax(22px, 1fr)); gap: 3px; }
+  .track { gap: 3px; }
+  .boostValue { font-size: 11px; }
+  .chapters { bottom: -34px; }
+  .chapters button { padding: 5px 8px; font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .spread, .turn, .photo { transition: none; }
-  .leaf, .dishAction { animation: none; }
+  .leaf, .dishAction, .track i[data-fresh] svg.stamp, .slot[data-fresh] .slotArt, .given[data-fresh] figcaption { animation: none; }
+  .chapters button, button.row { transition: none; }
+  .stampTool, .stampShade, .stampSplat { display: none; }
 }

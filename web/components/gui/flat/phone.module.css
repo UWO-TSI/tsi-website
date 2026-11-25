@@ -1,0 +1,14 @@
+/* The kit's phone (phone.tsx; design bible UI 8d): a box bottom right holding the live model's canvas, its body drawn at the
+   world's pixel finish, and the screen's invisible buttons, laid on the tilted glass by phone.tsx (a matrix3d from the
+   glass's projected corners), so a click, a hover and a tab land where the texture draws them. */
+/* Clipped, never scrolled: the glass's fields take the keys, and typing must not scroll the game to their caret. */
+.phone { position: absolute; z-index: 13; pointer-events: none; font-family: var(--gui-font); overflow: clip; }
+.phone[data-state="open"]:not([data-away]) .hit, .phone[data-state="open"]:not([data-away]) .app { pointer-events: auto; }
+.stage { position: absolute !important; inset: 0; pointer-events: none !important; }
+/* The phone's face (the base and the top half): it takes the click, so a click on the phone never reaches the island. */
+.hit { position: absolute; left: 0; top: 0; width: 100px; height: 100px; transform-origin: 0 0; pointer-events: none; }
+.screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.app { position: absolute; padding: 0; border: 0; border-radius: 6px; background: none; cursor: pointer; pointer-events: none; }
+.app:focus-visible { outline: none; }
+/* The icon is drawn into the texture; here it only lends its drawing and tone. */
+.icon { position: absolute; inset: 0; opacity: 0; display: grid; place-items: center; }

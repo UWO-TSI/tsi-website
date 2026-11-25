@@ -2,18 +2,17 @@
 
 /**
  * Companion shell, Me tab (specs/companion.md deliverable 4, reachability §4): profile (display name, member dot
- * [row 223], family [row 222/034], showcase), then the game's own sheets under the game's names: the Bag (items),
+ * [row 223], family [row 222/034]), then the game's own sheets under the game's names: the Bag (items),
  * the Collection (catches), the Journal (quests), the Mailbox, the Wallet and Settings (the phone's part of them).
  */
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import { Backpack, BookOpen, Mail, ScrollText, Settings, Wallet, type LucideIcon } from "lucide-react";
-import { Button, ErrorNote } from "@/components/gui";
+import { ErrorNote } from "@/components/gui";
 import type { Family } from "@/lib/oracle/engine";
 import { apiCall } from "@/lib/apiClient";
 import { ClassBadge } from "@/components/portal/classIdentity";
 import { BagSheet } from "@/components/game/Bag";
 import CollectionBook from "@/components/game/CollectionBook";
-import { ShowcaseSheet } from "@/components/game/peaceful/ShowcaseSheets";
 import LettersSheet from "@/components/progression/LettersSheet";
 import JournalSheet from "@/components/progression/JournalSheet";
 import { WalletSheet } from "@/components/economy/EconomySheets";
@@ -26,9 +25,9 @@ interface IdentityMe {
   family: Family | null;
 }
 
-type SheetName = "bag" | "collection" | "journal" | "mailbox" | "wallet" | "settings" | "showcase" | null;
+type SheetName = "bag" | "collection" | "journal" | "mailbox" | "wallet" | "settings" | null;
 /** The six, as phone app tiles in their colours. */
-const TILES: { sheet: Exclude<SheetName, "showcase" | null>; label: string; icon: LucideIcon; tile: string }[] = [
+const TILES: { sheet: Exclude<SheetName, null>; label: string; icon: LucideIcon; tile: string }[] = [
   { sheet: "bag", label: "Bag", icon: Backpack, tile: "#f7cd67" },
   { sheet: "collection", label: "Collection", icon: BookOpen, tile: "#82d5bb" },
   { sheet: "journal", label: "Journal", icon: ScrollText, tile: "#c3a6ee" },
@@ -70,9 +69,6 @@ export default function MeTab() {
           </div>
         </div>
         {me === "error" ? <ErrorNote>Your profile didn’t load. The connection may have dropped.</ErrorNote> : null}
-        <div className={s.row} style={{ marginTop: 12 }}>
-          <Button variant="quiet" size="sm" onClick={() => setSheet("showcase")}>Your showcase</Button>
-        </div>
       </section>
 
       {/* The game's names (menus §4): the Bag holds items, the Collection your catches, the Journal your quests. */}
@@ -88,7 +84,6 @@ export default function MeTab() {
       <LettersSheet open={sheet === "mailbox"} onClose={close} />
       <WalletSheet open={sheet === "wallet"} onClose={close} />
       <SettingsSheet open={sheet === "settings"} onClose={close} place="phone" />
-      <ShowcaseSheet open={sheet === "showcase"} onClose={close} />
     </>
   );
 }

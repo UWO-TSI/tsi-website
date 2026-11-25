@@ -25,7 +25,7 @@ export function menuMove(selected: number, key: string, count: number): number |
 }
 
 /**
- * The cream card's list: one tab stop (the selected item: a roving tab index), the arrows move it and its focus, the
+ * The banner's list: one tab stop (the selected item: a roving tab index), the arrows move it and its focus, the
  * pointer selects what it rests on, Enter or Space picks. It takes focus when it mounts, on the item it was left on, so
  * coming back from Settings lands on Settings.
  */

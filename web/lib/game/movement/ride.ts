@@ -25,8 +25,8 @@ export interface AvatarRide {
   /** Footsteps (sound and dust) while walking on this. */
   ground: GroundKind | null;
   /**
-   * A volleyball match (game/volleyball) drives the avatar too: a held movement clip (Air in a jump, Slide in a slide
-   * dive) and its Air phase, and a one-shot over the body or the upper body (a bump, a spike), taken by the avatar.
+   * A volleyball match (game/volleyball) drives the avatar too: a held movement clip (vb_spike_jump in a jump, posed
+   * by `air`, a fraction of the clip), and a one-shot over the body or the upper body (a bump, a spike), taken by the avatar.
    */
   move?: ClipName | null; air?: number; play?: ClipName | null; upper?: ClipName | null;
   /** The next one-shot's rate (a volleyball move's clip timed so its contact meets the ball). */

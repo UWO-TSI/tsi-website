@@ -21,8 +21,26 @@ tsc, vitest (full run once at the end), eslint on changed files. No perf:check u
 
 ## Status
 
-Not started.
+Done 2026-11-01, reported to the coordinator. Commits on game/fixes (head: the lane-file commit after 429a50f4), one per fix:
+
+1. 180ad475 sushi bar music on spawn. Cause: SushiBar's frame loop reported "near" before its mount effect ran, then React's strict-mode effect replay ran the cleanup `onNear(false)` while the component's own near flag stayed true, so it never reported again and the override was dropped. Fix: `barEarshot` in `lib/game/sushiBar.ts` (release() resets the flag), 3 unit tests. Probe: spawn at the bar, before `night.ogg` audible, after `bar-night.mp3` the only source (`specs/evidence/fixes/bar-spawn.txt`). Strict mode is dev only: whether production ever hit it is unverified.
+2. 6b1105a3 Ambience slider dropped from SettingsSheet (member-only; the applicant island has its own sound button). `settings-sliders.txt`.
+3. ec25eae7 `gltfsOf` shared in `lib/game/gltfsOf.ts`, used by ACNHBuilding, ShopDisplays, InstancedNature, GridCliffs; Character.tsx's copy deleted. glTF parses 276 -> 267, repeated files 10 -> 4, the door 4x -> 1; Play to can-move 8469 -> 7990 ms campus, 3982 -> 3845 ms unthrottled (single runs, within noise). `gltfs-of.md`.
+4. 429a50f4 character GLBs packed by sync-character-assets.mjs: 41 files change, brotli 7.60 -> 7.52 MB (v8_clips 428 -> 402 KB), 41 of 41 identical (data, texels, four renders). `glb-pack-characters.md`.
+
+Gates: tsc clean, eslint clean on changed files, full vitest 3733 passed (398 files). No perf:check (nothing that changes frame time).
+
+## David's decisions
+
+None this round.
 
 ## Next
 
-Fixes 1 to 4 in order.
+Coordinator merges 1 to 3 once verified; 4 with its identical proof. Still twice-parsed on entry (not touched): Crown,Trunk, acc_glasses_square, acc_glasses_round, bottom_shorts (a single-url loader in Character.tsx and the list loader both ask for them).
+
+## Tools and gotchas
+
+- Probe for the bar: `specs/evidence/music-one/audible.mjs` now has a `barspawn` scene (`?at=-47,114.5`).
+- Entry trace needs a production build: `NEXT_PUBLIC_MEMBER_WORLD=open NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9 NEXT_PUBLIC_SUPABASE_ANON_KEY=x npx next build`, then drop `/student/dashboard/:path*` from `.next/server/middleware-manifest.json` matchers, then `next start` with the same env. Runs are in `specs/evidence/fixes/runs/`.
+- `specs/evidence/fixes/same-glb.mjs` (THREE env or the repo's three) and `stills.mjs` for the GLB proof.
+- Port 3333, devserver lock held by other lanes for up to 20 minutes at a time.

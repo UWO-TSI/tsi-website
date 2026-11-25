@@ -5,9 +5,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExt
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useProgress } from "@react-three/drei";
 import * as THREE from "three";
-import { Menu, Settings } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { Toggle } from "@/components/gui";
-import { DarkButton } from "@/components/gui/flat";
+import { BiomeTag, Phone, inCorner, type PhoneApp } from "@/components/gui/flat";
 import GridWorld from "./grid/GridWorld";
 import GridOcean from "./grid/GridOcean";
 import Seabed from "./water/Seabed";
@@ -54,10 +54,12 @@ import confetti from "canvas-confetti";
 import type { InteriorStation } from "./interiorShared";
 import { villageIsland, villageSpawn, villageScale, landmark, landmarks, landmarkPoint, turn, wharfDecks, wharfDock, benchSeat, propFootprint, BENCH_SEAT_TOP, houseHalf, houseModel, type Landmark } from "@/lib/game/defaultIsland";
 import { village, objectsOf, type Village } from "@/lib/game/villageMap";
-import { SELL_BARREL, marketBoardsOf, tackleCounterOf, waterSignsOf } from "@/lib/game/wharf";
-import { CatchBoardSheet, CatchChalk, TaskChalk, WaterSigns } from "@/components/game/peaceful/CatchBoard";
+import { PILE_LANTERN, SELL_BARREL, boardsOf, tackleCounterOf } from "@/lib/game/wharf";
+import { CatchBoardSheet, CatchChalk, SellBinFish, TaskChalk } from "@/components/game/peaceful/CatchBoard";
 import { LEVEL_STEP, levelAt, worldToCellX, worldToCellZ } from "@/lib/game/grid";
 import { useGraphicsSettings } from "@/lib/game/useGraphicsSettings";
+import { setNightLit } from "@/lib/game/glow";
+import InteractRing, { type RingSpot } from "./InteractRing";
 import { CLUBHOUSE_LIGHTING, ISLAND_TERRAIN, islandLightAt, smoothWorldLight, weatherLight, windowLit, withSeason, type IslandLight } from "@/lib/game/islandLighting";
 import { SEASON_TREES, paletteBySeason, seasonLook, type SeasonLook } from "@/lib/game/seasonalLook";
 import { useNPCPersonas, useSeasonPalettes } from "@/lib/content/loader";
@@ -116,7 +118,6 @@ import AudioController from "./AudioController";
 import { AudioManager, type DayPhase } from "@/lib/game/audio";
 import { useMusicDirector } from "@/lib/game/useAudio";
 import DonateSheet from "./peaceful/DonateSheet";
-import { ShowcaseSheet, TrophySheet } from "./peaceful/ShowcaseSheets";
 import type { MuseumWing } from "@/lib/collections/logic";
 import MemberFishing from "./fishing/MemberFishing";
 import RaidCall from "./fishing/RaidCall";
@@ -140,6 +141,7 @@ import { setLoadPart } from "@/lib/game/loadProgress";
 import { READY_FILES } from "@/lib/game/preloadAssets";
 import { lastCall } from "@/lib/game/lastCall";
 import { loadGameWorld } from "@/lib/game/world/load";
+import { placeAt, type Place } from "@/lib/game/world/places";
 import TalkBox from "./TalkBox";
 import { emptyTalkView, requestTalk, subscribeTalk, talkStore, talkView } from "@/lib/game/residentTalk";
 import DailyGift from "./DailyGift";
@@ -147,7 +149,8 @@ import { markWelcomed, welcomeStep } from "@/lib/game/welcome";
 import Arrival from "./arrival/Arrival";
 import GuideArrow from "./GuideArrow";
 import ArrivalWorld, { crateSpots, placeWorld, withCrates } from "./arrival/ArrivalWorld";
-import { arrivalEvent, bramNear, bramPrompt, clearDock, useArrivalChip, useArrivalPhase, useArrivalTools, useDockCleared, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
+import { arrivalEvent, arrivalRun, bramNear, bramPrompt, clearDock, subscribeArrival, useArrivalChip, useArrivalPhase, useArrivalTools, useDockCleared, useTutorialQuest } from "@/lib/game/arrival/arrivalStore";
+import { setScreen, startSession, trackStep } from "@/lib/analytics/track";
 import { NEW_ROUTE } from "@/lib/game/arrival/routes/new";
 import { gateWheel } from "@/lib/game/arrival/tools";
 import { postArrival, useArrivalFlag } from "@/lib/game/arrival/arrivalFlag";
@@ -157,21 +160,22 @@ import { loadFriends } from "@/lib/game/friendship";
 import { isCampfireHour } from "@/lib/game/campfire";
 import { useHqOnboarding } from "./hq/useHqOnboarding";
 import { CheckInCard, FlyCard, LoreOverlay, PlaqueCard } from "./hq/HqCards";
-import IdCard from "./hq/IdCard";
 import KeyboardTour from "./hq/KeyboardTour";
 import type { HudPiece } from "@/lib/game/arrival/hq/uiTour";
 import HqInterior from "./hq/HqInterior";
 import { HQ_LINES } from "@/lib/game/hqLayout";
 import { hqEvent } from "@/lib/game/arrival/hq/store";
 import { WREN } from "@/lib/game/arrival/hq/lines";
-import { phaseInstant, solarPosition } from "@/lib/game/sunPath";
+import { phaseInstant, setSkyInstant, solarPosition } from "@/lib/game/sunPath";
 import type { WeatherBlend } from "@/lib/game/islandWeather";
 import { saveName } from "./character/PlayerCharacterUI";
 import { saveMyLook, useMyLook } from "@/lib/game/character/lookStore";
 import { useProgression } from "@/lib/progression/useProgression";
 import { WarmupProbe } from "./LoadGate";
 import { escapeAction } from "@/lib/game/sceneGate";
-import TopCluster, { HudClock, HudWallet, hudButton } from "./TopCluster";
+import { HudBuff, HudClock, HudWallet } from "./TopCluster";
+import { useMeal } from "@/lib/game/mealStore";
+import { mealOf } from "@/lib/wallet/catalogue";
 import { setHudCoins, setHudXp } from "@/lib/game/hudStore";
 import CollectionBook from "./CollectionBook";
 import { usePeacefulContext } from "@/lib/game/usePeacefulContext";
@@ -180,22 +184,21 @@ import { clickAction, heldItem, toolNeeded, wheelContents, type Reach, type Whee
 import { holdItem, swapHeld, useHeld } from "@/lib/game/heldStore";
 import { useRuinsHand } from "@/lib/game/ruinsHand";
 import { useWheelKeys } from "@/lib/game/movement/keys";
-import { rig, rodByTier } from "@/lib/game/rods";
+import { rig, rodByTier, withMeal } from "@/lib/game/rods";
 import { eatItem, localCollections, mergeWithLocal } from "@/lib/game/collections";
 import { capture } from "@/lib/game/orbitCamera";
 import { iconUrl } from "@/lib/icons/keys";
 import { FLASH_MS, compactTouchHud, fullHud as isFullHud, setClassTag, useAlwaysFullHud } from "@/lib/game/hudPrefs";
 import { nextLayer, subscribePause, type EscLayer } from "@/lib/game/escMenu";
-import { MenuDock, SystemMenu } from "./EscLayers";
+import { SystemMenu } from "./EscLayers";
 import QuestTracker from "./QuestTracker";
 import { useMainQuest } from "./useMainQuest";
-import { setNetSheet } from "./net/sheets";
-import { useNetStatus, useRoster } from "@/lib/net/netStore";
+import { setNetSheet, useNetSheet } from "./net/sheets";
 import { useFriends } from "./net/friendActions";
 import { useFlash } from "./useFlash";
 
 import { villageNodes } from "@/lib/game/islandNodes";
-import { castAim, villageWater, watersOf, type FishingSpot } from "@/lib/game/fishingSpots";
+import { castAim, nearestWater, villageWater, watersOf, type FishingSpot, type WaterType } from "@/lib/game/fishingSpots";
 import { gullAnchors } from "@/lib/game/ambientFauna";
 import { getPeacefulTarget, peacefulLabel, subscribePeacefulLabel } from "@/lib/game/peacefulNear";
 import type { WorldMoment } from "@/lib/collections/logic";
@@ -206,7 +209,7 @@ import { useDecorate } from "./home/useDecorate";
 import { useHomeLayout } from "@/lib/homes/useHomeLayout";
 import { catalogueItem } from "@/lib/homes/catalogue";
 import { ROOM_PRICE } from "@/lib/homes/layout";
-import { PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierDpr, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
+import { PIXEL_FINISH, PROBE_FRAMES, PROBE_WARMUP, medianFrameMs, tierDpr, tierForFrameMs, type QualityTier } from "@/lib/game/qualityTier";
 import { ISLAND_PHASES, torontoHour, type IslandPhase } from "@/lib/game/islandTime";
 import CraftingSheet, { BeachBottle } from "./crafting/Workshop";
 import StudySeats from "./study/StudySeats";
@@ -218,7 +221,7 @@ import CafeBuilding from "./study/CafeBuilding";
 import CafeSweeper, { cafeSweeper } from "./study/CafeSweeper";
 import SushiBar from "./SushiBar";
 import { BAR_LIGHT, CHEF_OUTSIDE, barOf, barOpen, barPoint, barSeat, type BarView } from "@/lib/game/sushiBar";
-import { MenuPickup } from "@/components/game/peaceful/SushiSheets";
+import { MenuPickup, TankSheet } from "@/components/game/peaceful/SushiSheets";
 import { SWEEPER_TALK } from "@/lib/game/cafe";
 import { DROPS } from "@/lib/game/drops";
 import HalloweenLayer, { knockAt, knockNear } from "./Halloween";
@@ -249,16 +252,19 @@ import { roomHeading } from "@/lib/game/roomHeading";
 import { DevUiTheme } from "@/components/gui/DevUiTheme";
 import styles from "./DefaultIslandWorld.module.css";
 
-type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "display" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "mine" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | "leaderboard" | "catchboard" | "tasks" | "tackle" | "chef" | null;
-type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "trophies" | "showcase" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | null;
+/** How far from the water the HUD's biome tag still names it. */
+const BIOME_REACH = 8;
+type Biome = { water: WaterType | null; place: Place | null };
+type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "mine" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | "leaderboard" | "catchboard" | "tasks" | "tackle" | "chef" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | "tank" | null;
 const DEV = process.env.NODE_ENV !== "production";
-const DEV_SHEETS: readonly Sheet[] = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "trophies", "showcase", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
+const DEV_SHEETS: readonly Sheet[] = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
 const STATION_KEY = "e";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
 const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   enter: "Enter HQ", exit: "Return to the island", board: "Read the notice board",
-  display: "Look at the trophy case", desk: "Front desk · profile showcase", shelf: "Browse the library", clock: "Check the clock",
+  desk: "Front desk", shelf: "Browse the library", clock: "Check the clock",
   notice: "Read the notice board", catch: "Check the catch board", mailbox: "Check the mailbox", monument: "See the club goal",
   museum_enter: "Enter the museum", cafe_enter: "Enter the café", curator: "Talk to the curator", closet: "Open the closet", fitting: "Try on outfits", oracle_enter: "Enter the Oracle temple", altar: "Consult the crystal",
   home: "Take the boat home", fish: "Cast your line", forage: "Gather", net: "Swing the net", dig: "Dig", mine: "Break the rock", claim: "Claim your plot", donate: "Donate your first catch to the museum", report: "Report back to Alice", house: "Enter your house", village: "Take the boat to the village",
@@ -275,7 +281,7 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   bram: "Talk to Bram",
   founder: "Look at the Founder's desk",
   // HQ's new stations (specs/interiors/hq.md; the lines are drafts for David).
-  coffee: "Get a coffee", aquarium: "Look at the aquarium", admin: "Try the door",
+  coffee: "Get a coffee", aquarium: "Drop a fish in", admin: "Try the door",
   // The new world's quick-sell barrel by the fish market.
   sell: "Visit the fish market",
   // The fish market's two chalkboards (d-now; David 2026-10-28): what bites when, and the fishing tasks.
@@ -288,6 +294,19 @@ const NEAR_LABELS: Record<Exclude<Near, null>, string> = {
   volley: "Play volleyball", leaderboard: "Volleyball leaderboard",
 };
 const CLOSED: Near[] = ["museum"];
+/**
+ * The targets that wear the interact ring (InteractRing), its radius and the glow's height over the ground: the bigger
+ * things only, the stands, boards, counters and doors (pol2-ring-bench: "bench shouldnt even get a interaction its too
+ * small"; pol2-ring-skip: "people bench small things"). Not the residents (talk, Bram, the chef, Rosa) nor the picnic,
+ * not a bench or a bar stool, not the small things (the mailbox, a lantern to pick up, a cocoa). Not a building's sign
+ * (the museum, the ruins), nor the court's net, nor a tool's target (water, a bug, a dig spot).
+ */
+const RING: Partial<Record<Exclude<Near, null>, readonly [r: number, h: number]>> = {
+  sell: [0.7, 0.5], catchboard: [0.9, 0.9], tasks: [0.9, 0.9], tackle: [0.9, 0.8], leaderboard: [0.8, 0.9], notice: [0.8, 0.9],
+  catch: [0.8, 0.9], monument: [1.2, 1], knock: [0.6, 0.4], fitting: [0.9, 1], missions: [0.9, 0.9],
+  enter: [0.9, 1], claim: [0.9, 1], report: [0.9, 1], home: [0.9, 1], shop_enter: [0.9, 1], cafe_enter: [0.9, 1], cafe: [0.9, 1], oracle_enter: [0.9, 1],
+  trophy: [0.8, 0.6], posters: [0.8, 0.6],
+};
 /** The door in reach for trick-or-treat (components/game/Halloween.tsx): IslandScene writes it each frame, E knocks. */
 const knockSpot: { current: KnockDoor | null } = { current: null };
 /** The village bench in reach as a `tsi:sit` detail: IslandScene writes it each frame, E sits (or stands) there. */
@@ -301,6 +320,8 @@ const TOOL_FOR: Record<"fish" | "net" | "dig" | "mine", string> = { fish: "rod",
 const AIM: [number, number] = [0, 1];
 /** The café's prompt is its door's, open or boarded up (cafe-polish §2). */
 const CAFE_DOOR_RANGE = 1.4;
+/** A touch screen's camera, this much further back: a phone's small screen shows more of the world (David r4: "increase the camera distance"). */
+const TOUCH_ZOOM = 1.3;
 type Spot = [number, number, number];
 const spot = (p: [number, number] | null): Spot | null => p && [p[0], 0, p[1]];
 const xz = (o: { x: number; z: number }): [number, number] => [o.x, o.z];
@@ -364,10 +385,10 @@ function villageLayout(v: Village) {
     reefs: objectsOf("prop", v).filter(o => o.model?.startsWith("coral-reef-")).map(xz),
     /** The new world's quick-sell barrel (lib/game/wharf.ts SELL_BARREL), or none. */
     sellBarrel: (b => (b ? xz(b) : null))(objectsOf("prop", v).find(o => o.id === SELL_BARREL)),
-    /** The fish market's catch board and task board (lib/game/wharf.ts marketBoardsOf), or none. */
-    boards: marketBoardsOf(objectsOf("prop", v)),
-    /** The water signs, each where its water is fished (lib/game/wharf.ts waterSignsOf). */
-    signs: waterSignsOf(v.objects),
+    /** Where the sell stall stands and which way it faces (its flopping fish ride on it). */
+    sellStall: objectsOf("prop", v).find(o => o.id === SELL_BARREL) ?? null,
+    /** The fish market's catch board and task board (the world's `board` objects: lib/game/wharf.ts boardsOf), or none. */
+    boards: boardsOf(objectsOf("board", v)),
     /** The tackle shop's counter, at its door (lib/game/wharf.ts tackleCounterOf), or none. */
     tackle: (t => (t ? xz(t) : null))(tackleCounterOf(objectsOf("prop", v))),
     /** The water types the island has (the catch board lists fish for those). */
@@ -462,7 +483,7 @@ function Performance({ player, output }: { player: React.RefObject<THREE.Vector3
   return null;
 }
 
-function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, questPosts, phase, campfireHour, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, arriving, hintKeys, talking, traditions, fogNight, onBar }: {
+function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpot, fishing, chapter, questPosts, phase, campfireHour, light, look, weather, overview, zoom, reset, returned, fromBoat, liteMode, castShadows, player, onNear, progression, ceremony, event, arriving, hintKeys, talking, traditions, fogNight, onBar, onBiome, ring }: {
   /** Campfire hour (lib/game/campfire.ts): the fire burns, the drum circle plays, sitting by it earns the bonus. */
   campfireHour: boolean;
   /** Near the sushi bar (its music): lib/game/sushiBar.ts BAR_MUSIC_IN. */
@@ -484,10 +505,21 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | "shop" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
   phase: IslandPhase; light: IslandLight; look: SeasonLook; weather: IslandWeather; overview: boolean; zoom: number; reset: number; returned: boolean; liteMode: boolean; castShadows: boolean;
   player: React.RefObject<THREE.Vector3>; onNear: (near: Near) => void;
+  /** Where you are for the HUD's biome tag: the water nearest you (null with none near) and the place's name. */
+  onBiome: (biome: Biome) => void;
+  /** The E prompt is up: its target wears the interact ring (InteractRing). */
+  ring: boolean;
 }) {
   const v = village();
   const layout = layoutOf(v); // once, though the scene renders several times before it first commits (lib/game/lastCall.ts)
   const { island, spawns, doors } = layout;
+  // A door's point is its doorstep, out front: its ring sits 1.6 on toward the building's middle, at the door.
+  const doorRings = useMemo(() => new Map(([["hq", doors.hq], ["oracle", doors.oracle], ["wharf", doors.boat], ["cafe", doors.cafe], ["shop", doors.shop]] as const).flatMap(([id, p]) => {
+    const l = landmark(id, v);
+    if (!p || !l) return [];
+    const d = Math.hypot(l.x - p[0], l.z - p[1]) || 1;
+    return [[p, [p[0] + (l.x - p[0]) / d * 1.6, p[1] + (l.z - p[1]) / d * 1.6] as [number, number]] as const];
+  })), [doors, v]);
   // Photo mode holds you still while you frame a photo.
   const photoOpen = usePhoto().open;
   const { data: personas } = useNPCPersonas({ permanentOnly: true });
@@ -511,7 +543,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const court = useMemo(() => (DEV && new URLSearchParams(location.search).get("vbcourt") === "0" ? null : courtOf(v, island.ground)), [v, island]), playing = useVolley();
   const board = useMemo(() => boardSpot(v), [v]);
   const [sceneryStill, sceneryMoving] = useMemo(() => {
-    const all = court ? scenery.filter(p => !p.url.endsWith("/volleyball-net.glb")) : scenery;
+    const all = scenery.filter(p => p.url !== NEW_LAMPS.hand.url && !(court && p.url.endsWith("/volleyball-net.glb")));
     return v.terrain ? [all.filter(p => STILL.test(p.url)), all.filter(p => !STILL.test(p.url))] : [[], all];
   }, [v, scenery, court]);
   // E at the net starts a match on this court (the world's ground and walls, in the court's frame).
@@ -520,11 +552,18 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     window.addEventListener("tsi:volley", on);
     return () => window.removeEventListener("tsi:volley", on);
   }, [court, island]);
-  // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw.
+  // The lamps by model: the street lamp (none), or the new world's (propModels NEW_LAMPS), each turned by its yaw; the
+  // hand lanterns on the deck's piles (wharf.ts PILE_LANTERN) with the hand lanterns.
+  const piled = useMemo(() => scenery.filter(p => p.url === NEW_LAMPS.hand.url), [scenery]);
   const lampSets = useMemo(() => (["", ...Object.keys(NEW_LAMPS) as (keyof typeof NEW_LAMPS)[]] as const).map(kind => {
-    const ls = layout.lamps.filter(l => (l.model ?? "") === kind);
-    return { kind, positions: ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), yaws: kind ? ls.map(l => l.yaw ?? 0) : undefined };
-  }).filter(s => s.positions.length), [layout, island]);
+    const ls = layout.lamps.filter(l => (l.model ?? "") === kind), on = kind === "hand" ? piled : [];
+    return { kind, positions: [...ls.map((l): [number, number, number] => [l.x, island.ground(l.x, l.z), l.z]), ...on.map(p => p.position)], yaws: kind ? [...ls.map(l => l.yaw ?? 0), ...on.map(p => p.rotation ?? 0)] : undefined };
+  }).filter(s => s.positions.length), [layout, island, piled]);
+  // A piled lantern's pool lies on the deck under it, not on the sea below the pile.
+  const handGround = useMemo(() => {
+    const deck = new Map(piled.map(p => [`${p.position[0]},${p.position[2]}`, p.position[1] - PILE_LANTERN.lift]));
+    return (x: number, z: number) => deck.get(`${x},${z}`) ?? island.ground(x, z);
+  }, [piled, island]);
   const lampModels = useMemo(() => lampSets.flatMap(s => s.positions.map((position, i) => ({ url: s.kind ? NEW_LAMPS[s.kind].url : STREETLAMP_URL, position, rotation: s.yaws?.[i] }))), [lampSets]);
   const lampPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? [] : s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, s.kind ? NEW_LAMPS[s.kind].light : [0, 2.4, 0])))), [lampSets]);
   const handPoints = useMemo(() => lampSets.flatMap(s => (s.kind === "hand" ? s.positions.map((p, i) => lampLight(p, s.yaws?.[i] ?? 0, NEW_LAMPS.hand.light)) : [])), [lampSets]);
@@ -532,7 +571,8 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   const bar = useMemo(() => barOf(v), [v]), barY = bar ? island.ground(bar.x, bar.z) : 0, barView = useRef<BarView | null>(null);
   const chefSpot = useMemo(() => (bar ? barPoint(bar, ...CHEF_OUTSIDE.at) : null), [bar]);
   const poolPoints = useMemo(() => (bar ? [...lampPoints, lampLight([bar.x, barY, bar.z], bar.yaw ?? 0, BAR_LIGHT)] : lampPoints), [lampPoints, bar, barY]);
-  const near = useRef<Near>(null);
+  const near = useRef<Near>(null), ringAt = useRef<RingSpot | null>(null);
+  const biome = useRef<{ at: [number, number] } & Biome>({ at: [Infinity, 0], water: null, place: null });
   const fauna = useMemo(() => ({ ...layout.fauna, ground: island.ground, standable: island.standable, surface: island.surface, top: island.top, player }), [layout, island, player]);
   // The arrival (components/game/arrival): Bram walks you through, the fish crate on the pier until the tour is over.
   const arrivalPhase = useArrivalPhase();
@@ -557,7 +597,6 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // Before the café's drop Rosa sweeps out front: the café's prompt is hers.
     const sweeper: [number, number] | null = !DROPS.cafe && cafeSweeper.on ? [cafeSweeper.x, cafeSweeper.z] : null;
     // While Bram walks you round, HQ's door is only ever the way in (HQ first on the new world: Alice signs you in).
-    const sign = layout.signs.find(sg => within([sg.x, sg.z], 1.6));
     const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [arrivalPhase ? "enter" : chapter.claim ? "claim" : chapter.report ? "report" : "enter", doors.hq]
       // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
@@ -565,8 +604,6 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : within(layout.sellBarrel, 2.2) ? ["sell", layout.sellBarrel]
       : within(layout.boards && [layout.boards.catch.x, layout.boards.catch.z], 1.6) ? ["catchboard", [layout.boards!.catch.x, layout.boards!.catch.z]]
       : within(layout.boards && [layout.boards.tasks.x, layout.boards.tasks.z], 1.6) ? ["tasks", [layout.boards!.tasks.x, layout.boards!.tasks.z]]
-      // A water sign reads the catch board.
-      : sign ? ["catchboard", [sign.x, sign.z]]
       : within(layout.tackle, 1.6) ? ["tackle", layout.tackle]
       // By day the sushi chef waits outside his closed bar with his fishing order (f-sushi).
       : chefSpot && !barOpen(phase) && within(chefSpot, 1.8) ? ["chef", chefSpot]
@@ -575,7 +612,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       : DROPS.cafe && within(doors.cafe, CAFE_DOOR_RANGE) ? [progression.opened.includes("cafe") ? "cafe_enter" : "cafe", doors.cafe]
       : within(sweeper, SWEEPER_TALK) ? ["owner", sweeper]
       : DROPS.combat && within(layout.missions?.at ?? null, 1.5) ? ["missions", layout.missions!.at] : [null, null];
-    let next: Near = door[0], nextD = gap(door[1]);
+    let next: Near = door[0], nextD = gap(door[1]), at = door[1];
     const b = benchSeat(px, pz, 1.3, v, layout.benches, remoteSeatTaken), stool = !b && bar ? barSeat(bar, px, pz, barOpen(phase), remoteSeatTaken, remoteSeatOutranks) : null;
     benchSpot.current = b ? { ...b, seatY: island.ground(b.x, b.z) + BENCH_SEAT_TOP } : stool && { ...stool, seatY: barY + stool.top };
     // Another's claim on your stool outranks yours (you both pressed E together): on to the next free one, or up.
@@ -583,11 +620,12 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // An event spot and a bench both in reach: the nearer one takes E.
     const ev = spots.find(s => within([s.x, s.z], s.range)), seat = benchSpot.current;
     const nearer = (p: { x: number; z: number }) => Math.hypot(px - p.x, pz - p.z);
-    if (!next && (ev || seat)) { const e = ev && (!seat || nearer(ev) < nearer(seat)); next = e ? ev!.near : stool ? "stool" : "bench"; nextD = nearer(e ? ev! : seat!); }
+    if (!next && (ev || seat)) { const e = ev && (!seat || nearer(ev) < nearer(seat)), p = e ? ev! : seat!; next = e ? ev!.near : stool ? "stool" : "bench"; nextD = nearer(p);
+      at = [p.x, p.z]; }
     // Trick-or-treat: the door's pumpkin in reach (someone behind it hasn't answered you tonight) beats the door itself.
     const kd = knockNear(px, pz);
     knockSpot.current = kd;
-    if (kd && (!next || nearer(kd) < nextD)) { next = "knock"; nextD = nearer(kd); }
+    if (kd && (!next || nearer(kd) < nextD)) { next = "knock"; nextD = nearer(kd); at = [kd.x, kd.z]; }
     if (!next) {
       let best = 1.4;
       for (const l of layout.prompts) {
@@ -596,7 +634,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
         if (opened && l.id !== "museum") continue;
         const d = footprintDistance(l, px, pz);
         if (opened && d < best) { best = d; next = "museum_enter"; continue; }
-        if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; }
+        if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; at = [l.x, l.z]; }
       }
       if (next) nextD = best;
     }
@@ -609,7 +647,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // At the volleyball net, on either side of it: play.
     if (court && !next) { const [lx, lz] = toLocal(court, px, pz); if (Math.abs(lx) < COURT.postX && Math.abs(lz) < 1.8) next = "volley"; }
     // The leaderboard board beside the court.
-    if (board && !next && Math.hypot(px - board.x, pz - board.z) < 1.4) next = "leaderboard";
+    if (board && !next && Math.hypot(px - board.x, pz - board.z) < 1.4) { next = "leaderboard"; at = [board.x, board.z]; }
     if (studyHoldsPrompt() || talking || volley.match) next = null;
     // Bram waiting at his stop on the walk-along (or talking): E is his.
     else if (!fishing && bramNear(px, pz)) next = "bram";
@@ -624,9 +662,21 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       else if (peace && (peace === "forage" ? (getPeacefulTarget()?.distance ?? Infinity) < tn.d : held?.kind === TOOL_FOR[peace])) next = peace;
     }
     if (near.current !== next) { near.current = next; onNear(next); }
+    // The biome tag (rounds 6 and 7): the place and the water nearest you within BIOME_REACH, looked for again each metre you move.
+    if (Math.hypot(px - biome.current.at[0], pz - biome.current.at[1]) > 1) {
+      const w = nearestWater(island.map, px, pz, BIOME_REACH), water = w ? layout.water(w[0], w[1]) : null, place = placeAt(px, pz);
+      biome.current.at = [px, pz];
+      if (water !== biome.current.water || place !== biome.current.place) { biome.current.water = water; biome.current.place = place; onBiome({ water, place }); }
+    }
+    const size = next && RING[next];
+    if (at && doorRings.has(at)) at = doorRings.get(at)!;
+    // On the ground there, or on the deck you stand on (the wharf's decks are over the ground).
+    const floor = at && Math.max(island.ground(at[0], at[1]), player.current.y > island.ground(px, pz) + 0.25 ? player.current.y : -Infinity);
+    ringAt.current = size && at ? { x: at[0], y: floor!, z: at[1], r: size[0], h: size[1] } : null;
   }, -2);
   return (
     <>
+      <InteractRing spot={ringAt} on={ring} />
       <IslandAtmosphere phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} overview={overview} overviewFog={layout.scale.overviewFog}
         ground={island.ground} puddles={layout.puddles} cloudSize={layout.scale.cloudSize} shadowExtent={layout.scale.shadowExtent} shadowFollow={v.terrain ? player : undefined} fireflyAnchors={layout.fireflies} trees={layout.trees} fauna={fauna} />
       <GridWorld map={island.map} field={v.field} light={light} palette={terrain} windScale={liteMode ? 0 : weather === "wind" ? 2.2 : 1} lite={liteMode} clear={grassClear} terrain={v.terrain} waves ownGround />
@@ -654,14 +704,14 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
       {v.terrain && <LampPool points={poolPoints} intensity={light.lampsOn ? light.lamp * 2 : 0} reach={11} player={player} />}
       {/* Every lamp's warm halo and ground pool, breathing like a flame (two draws a set). */}
       {v.terrain && <LampGlow points={lampPoints} ground={island.ground} on={light.lampsOn} />}
-      {v.terrain && <LampGlow points={handPoints} ground={island.ground} on={light.lampsOn} halo={1.1} pool={2.2} />}
+      {v.terrain && <LampGlow points={handPoints} ground={handGround} on={light.lampsOn} halo={1.1} pool={2.2} />}
       {fountain && <LampGlow points={fountain.jet} ground={fountain.water} on={light.lampsOn} halo={2.4} pool={3} color="#a8e8ff" />}
       {fountain && <FadeLight position={fountain.light} color="#ffd59a" intensity={light.lampsOn ? light.lamp * 2 : 0} distance={12} />}
       {layout.boards && <>
-        <CatchChalk at={layout.boards.catch} y={island.ground(layout.boards.catch.x, layout.boards.catch.z)} waters={layout.waters} hour={peaceful.moment.hour} season={peaceful.moment.season} weather={weather} />
-        <TaskChalk at={layout.boards.tasks} y={island.ground(layout.boards.tasks.x, layout.boards.tasks.z)} waters={layout.waters} />
+        <CatchChalk at={layout.boards.catch} y={island.ground(layout.boards.catch.x, layout.boards.catch.z) + (layout.boards.catch.lift ?? 0)} waters={layout.waters} hour={peaceful.moment.hour} season={peaceful.moment.season} weather={weather} />
+        <TaskChalk at={layout.boards.tasks} y={island.ground(layout.boards.tasks.x, layout.boards.tasks.z) + (layout.boards.tasks.lift ?? 0)} waters={layout.waters} />
       </>}
-      <WaterSigns signs={layout.signs} ground={island.ground} />
+      {layout.sellStall && <SellBinFish at={layout.sellStall} y={island.ground(layout.sellStall.x, layout.sellStall.z)} />}
       {bar && <Suspense fallback={null}><SushiBar bar={bar} y={barY} player={player} phase={phase} viewRef={barView} onNear={onBar} /></Suspense>}
       {layout.campfire && <Campfire site={layout.campfire} ground={island.ground} phase={phase} hour={campfireHour} player={player} walled={!!v.terrain} />}
       {/* Nature and props from the map, instanced: one draw per model sub-mesh however many the island has. */}
@@ -809,15 +859,28 @@ export default function DefaultIslandWorld({ preset, children }: { preset?: Look
   return <GameSceneBoundary><DefaultIslandWorldContent preset={preset}>{children}</DefaultIslandWorldContent></GameSceneBoundary>;
 }
 
+/** Kept in its place but not on screen (round 9: the keyboard tour's HUD and minimap before their key). Visibility
+ * only, no fade, so the tour's fly-in owns how it appears. */
+const UNSEEN = { visibility: "hidden" } as const;
+function Unseen({ when, children }: { when: boolean; children: ReactNode }) {
+  return <div style={when ? { display: "contents", ...UNSEEN } : { display: "contents" }}>{children}</div>;
+}
+
 function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; children?: ReactNode }) {
   const [graphics, actions] = useGraphicsSettings();
   const conditions = useIslandConditions();
-  // Seated at the sushi bar while it's open (SushiBar's tsi:bar-seated): the menu on the counter (f-sushi).
-  const [barSeated, setBarSeated] = useState(false);
+  // Seated at the sushi bar while it's open (SushiBar's tsi:bar-seated), and looking down at the menu on the counter
+  // (tsi:bar-look: E reads it; tasting-book round 4). Getting up or looking back up puts the menu down.
+  const [barSeated, setBarSeated] = useState(false), [barLook, setBarLook] = useState(false);
+  // The meal you ate there, while it lasts: its stats on the rod in the reel (its luck is the server's) and faint on the right (HudBuff).
+  const meal = mealOf(useMeal()?.source)?.buff;
   useEffect(() => {
-    const on = (e: Event) => setBarSeated((e as CustomEvent<boolean>).detail);
+    const down = () => setSheet(s => (s === "sushi" ? null : s));
+    const on = (e: Event) => { const v = (e as CustomEvent<boolean>).detail; setBarSeated(v); if (!v) { setBarLook(false); down(); } };
+    const look = (e: Event) => { const v = (e as CustomEvent<boolean>).detail; setBarLook(v); if (!v) down(); };
     window.addEventListener("tsi:bar-seated", on);
-    return () => window.removeEventListener("tsi:bar-seated", on);
+    window.addEventListener("tsi:bar-look", look);
+    return () => { window.removeEventListener("tsi:bar-seated", on); window.removeEventListener("tsi:bar-look", look); };
   }, []);
   // The water types the island has, for the tackle shop's catch board (its sheet).
   const catchWaters = useMemo(() => watersOf(villageWater(village()).classes), []);
@@ -880,6 +943,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const [sceneShown, setSceneShown] = useState(0);
   const onSceneReady = useCallback(() => { setReady(true); setFading(false); tripSceneReady(); }, []);
   const [near, setNear] = useState<Near>(null);
+  const [biome, setBiome] = useState<Biome>({ water: null, place: null });
   // Walking up to the fish market's stall reads your purse and fish, so its sheet opens on them with nothing to wait for.
   useEffect(() => { if (near === "sell") prefetchMarket(); }, [near]);
   // HQ's stations answer by what they do (lib/game/hqLayout.ts).
@@ -930,6 +994,18 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const arrivalPhase = useArrivalPhase();
   // Arriving (before the walk-along): the player holds still, so no prompt and no key hints; the HUD stands back.
   const welcoming = arrivalPhase !== null && arrivalPhase !== "tutorial";
+  // The event log (lib/analytics, specs/analytics.md): this visit, the opening's and the walk's beats as the arrival
+  // moves on (its store's change, never a frame), and the screen the player is on.
+  useEffect(() => {
+    const stop = startSession();
+    const off = subscribeArrival(() => {
+      const a = arrivalRun.current, t = arrivalRun.tutorial, id = t && arrivalRun.stops?.[t.stop]?.id;
+      if (a) trackStep(a.phase === "done" ? "arrived" : `arrival_${a.phase}`);
+      if (id) trackStep(`tut_${id.toLowerCase()}`);
+    });
+    return () => { off(); stop(); };
+  }, []);
+  useEffect(() => setScreen(welcoming ? "opening" : bagOpen ? "bag" : sheet ?? inside ?? site), [welcoming, bagOpen, sheet, inside, site]);
   // Golden hour for the crossing, whatever the real time (specs/v1-drop.md §1.4): the light, the sun and a clear sky.
   // From the boat's first beat: aboard and in the creator the island is paused under the reflection, so the golden
   // island mounts there unseen and is compiled before the crossing shows it (ArrivalWorld WarmCrossing).
@@ -950,6 +1026,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const cinematic = welcoming || trip.active;
   const moveKeys = useMoveKeys(), abilityKeys = useAbilityKeys();
   const touch = useCoarsePointer() || devHome.get("touch") === "1";
+  const camZoom = devZoom * (touch ? TOUCH_ZOOM : 1);
   // Row 312: the HQ visit with Alice after Bram's tour, and the tools residents hand over (components/game/hq).
   const closeMenu = useCallback(() => setLayer(null), []);
   const hq = useHqOnboarding({ inside, free: ready && !fading && !sheet && !mapOpen && !bagOpen && !donateOpen && !talking, menuOpen: layer === "ui",
@@ -983,8 +1060,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     wheel: keyName(wheelKeys.wheel), bag: keyName(identity.settings.key_bindings.openJournal), touch }), [moveKeys, wheelKeys.wheel, identity.settings.key_bindings.openJournal, touch]);
   // Alice's UI tour names your own keys too (t-hq).
   const binds = identity.settings.key_bindings;
-  const tourKeys = useMemo(() => ({ wheel: wheelKeys.wheel, emote: wheelKeys.emote, hud: wheelKeys.hud, bag: binds.openBag, collection: binds.openJournal,
-    quests: "j", map: binds.openMap, mail: binds.openMail }), [wheelKeys, binds]);
+  const tourKeys = useMemo(() => ({ wheel: wheelKeys.wheel, emote: wheelKeys.emote, bag: binds.openBag, collection: binds.openJournal,
+    quests: "j", map: binds.openMap, mail: binds.openMail, phone: binds.openPhone }), [wheelKeys, binds]);
   const armed = useCombatValue(() => combat.rt.player.armed);
   const weaponList = useCombatValue(() => combat.rt.player.owned.join(","));
   const runtimeWeapon = useCombatValue(() => combat.rt.player.weapon);
@@ -1042,7 +1119,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const liteMode = graphics.liteMode;
   // The canvas's resolution: half with the pixel finish; without it up to 1.5 device pixels per CSS pixel, but never
   // past 1 on Lite (the weaker GPUs Lite is for draw every extra pixel; v1 performance, specs/perf/2026-10-v1-results.md).
-  const canvasDpr = tierDpr(liteMode, graphics.pixelated ? 0.5 : [1, 1.5]);
+  const canvasDpr = tierDpr(liteMode, graphics.pixelated ? 1 / PIXEL_FINISH : [1, 1.5]);
   const castShadows = graphics.shadows && !liteMode;
   // The creator and the wardrobe cover the screen: the island stops drawing under them (it resumes as they close).
   const creatorOpen = useCreatorOpen();
@@ -1061,12 +1138,18 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const weatherBlend = useMemo((): WeatherBlend => (golden ? { from: "clear", to: "clear", t: 1 } : conditions.weatherBlend), [golden, conditions.weatherBlend]);
   const sceneWeather: IslandWeather = golden ? "clear" : weather;
   const scenePhase: IslandPhase = golden ? "dawn" : phase;
-  const dayLight = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun]);
+  const moon = preset || golden ? null : conditions.moon;
+  // The crossing's dome shows its dawn too (after the conditions' own write, which this follows).
+  const dawnAt = golden ? phaseInstant("dawn", new Date(dawnStep * 600_000)).getTime() : null;
+  useEffect(() => setSkyInstant(dawnAt ?? conditions.skyAt), [dawnAt, conditions.skyAt]);
+  const dayLight = useMemo(() => weatherLight(withSeason(islandLightAt(lookPreset, blend, sun, moon), look), weatherBlend), [blend, look, weatherBlend, lookPreset, sun, moon]);
   // A fog night eases in with the dark (the porch-light curve) while a tradition has fog nights on; never on the crossing.
   const fogNight = traditions.content.fog_nights && !inside && !golden ? windowLit(dayLight) : 0;
   // The new world (a heightfield in the village's place) has its own warmer fog and livelier night.
   const smooth = useMemo(() => !!village().terrain, []);
   const light = useMemo(() => fogNightLight(smooth ? smoothWorldLight(dayLight) : dayLight, fogNight), [smooth, dayLight, fogNight]);
+  // How lit the night is, for the glows that follow it (the held lantern: glow.ts nightLit).
+  useEffect(() => setNightLit(windowLit(light)), [light]);
   const conditionsLabel = `${season.season[0].toUpperCase()}${season.season.slice(1)}${Object.values(season.weights).some(w => w > 0 && w < 1) ? " (changing)" : ""} · ${weather[0].toUpperCase()}${weather.slice(1)}`;
   const grade = inside === "cafe" ? { ...CLUBHOUSE_LIGHTING[phase].grade, ...CAFE_GRADE } : inside ? CLUBHOUSE_LIGHTING[phase].grade : light.grade;
   const atHome = site === "home";
@@ -1087,8 +1170,10 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // The plaza's board and HQ's own (the visit with Alice waits for you to read it there).
     if (action === "notice" || action === "board") { setSheet("notice"); return; }
     if (action === "founder") { setSheet("plaque"); return; }
-    // HQ's coffee bar, aquarium and locked admin doors: a line each, nothing more (principle 3: no reward for visiting).
-    if (action === "coffee" || action === "aquarium" || action === "admin") { toast(HQ_LINES[action], action === "coffee" ? iconUrl("lounge-tea") : undefined); return; }
+    // HQ's tank: drop a fish in, and that is all (TankSheet; round 6).
+    if (action === "aquarium") { setSheet("tank"); return; }
+    // HQ's coffee bar and locked admin doors: a line each, nothing more (principle 3: no reward for visiting).
+    if (action === "coffee" || action === "admin") { toast(HQ_LINES[action], action === "coffee" ? iconUrl("lounge-tea") : undefined); return; }
     // In the shop, the shopkeeper asks what you're after first (ShopkeeperChoice): the game's things, or the club merch.
     if (action === "counter") { setSheet(inside === "shop" ? "shopkeeper" : "counter"); return; }
     if (action === "cafe") { setSheet("cafe"); return; }
@@ -1106,9 +1191,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     if (action === "mailbox") { setSheet("letters"); return; }
     if (action === "monument") { setSheet("monument"); return; }
     if (action === "curator") { setDonateOpen(true); return; }
-    if (action === "display") { setSheet("trophies"); return; }
-    // Reporting to Alice (the visit's first step): the desk is hers to talk at; otherwise the profile showcase.
-    if (action === "desk") { if (hq.waiting === "wren") hqEvent("wren"); else setSheet("showcase"); return; }
+    // Reporting to Alice (the visit's first step): the desk is hers to talk at; otherwise your ID again.
+    if (action === "desk") { if (hq.waiting === "wren") hqEvent("wren"); else toast(HQ_LINES.desk); return; }
     // Stepping into the fitting room: its curtain sweeps across (FittingRoom), then the wardrobe opens.
     if (action === "fitting") { window.dispatchEvent(new CustomEvent("tsi:fitting")); window.setTimeout(() => setSheet("fitting"), FITTING_STEP_MS); return; }
     if (action === "closet" || action === "chest") { setSheet(action); return; }
@@ -1139,6 +1223,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // E again at the same bench or bed stands you up (tsi:sit toggles there).
     if (action === "volley") { window.dispatchEvent(new Event("tsi:volley")); return; }
     if (action === "leaderboard") { setSheet("vboard"); return; }
+    // Seated at the bar, E reads the menu on the counter while you look down at it; moving gets you up (round 4).
+    if (action === "stool" && barSeated) { if (barLook) setSheet("sushi"); return; }
     if (action === "bench" || action === "stool") { if (benchSpot.current) window.dispatchEvent(new CustomEvent("tsi:sit", { detail: benchSpot.current })); return; }
     if (action === "bed") {
       const bed = nearestBed(layout, player.current.x, player.current.z);
@@ -1179,7 +1265,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       // A fresh warm-up probe for the next scene: the fade lifts when it has loaded and compiled.
       setSceneShown(n => n + 1);
     }, 320);
-  }, [fading, chapterActions, homeActions, inside, gate, layout, startTrip, atHome, hq.waiting]);
+  }, [fading, chapterActions, homeActions, inside, gate, layout, startTrip, atHome, hq.waiting, barSeated, barLook]);
   // The arrival (components/game/arrival): it starts once the island is up on the village; the crossing is the boat's.
   const arrivalPlays = step === "arrival" && ready && !inside && site === "village";
   const startCrossing = useCallback(() => arriveByBoat("village", true, true), [arriveByBoat]);
@@ -1304,20 +1390,60 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const touring = hq.card === "tour" && !touch;
   useEffect(() => { if (!touring) setTourShown(s => (s.size ? new Set() : s)); }, [touring]);
   const showPiece = useCallback((p: HudPiece) => setTourShown(s => new Set(s).add(p)), []);
-  const tourDock = useMemo(() => new Set([...tourShown].filter((p): p is "quests" | "collection" | "mail" => p === "quests" || p === "collection" || p === "mail")), [tourShown]);
+  // Before their key the HUD and the minimap aren't on screen at all (round 9): they keep their places, unseen, until
+  // the key flies them in (KeyboardTour's FlyHome).
+  const tourWaits = (piece: HudPiece) => touring && !tourShown.has(piece);
   const full = isFullHud({ always: alwaysFullHud, keyHeld: hudKey, uiView, cinematic: hudCinematic }) || tourShown.has("hud");
+  // The phone (round 9; design bible UI, the phone): bottom right, its apps the menus. X (the account's binding; round
+  // 12) or the cursor touching the window's bottom-right corner brings it up over play and puts it away; the UI view
+  // (Esc 1, or the touch screen's phone button) brings it with the fuller HUD. An app opens its sheet and the phone tucks
+  // away until the sheet closes back to it.
+  const [phoneUp, setPhoneUp] = useState(false);
+  const togglePhone = useRef(() => {});
+  // The Friends app's count: friend requests waiting.
+  const friends = useFriends();
+  useEffect(() => { holdCursor("phone", phoneUp); }, [phoneUp]);
+  useEffect(() => () => holdCursor("phone", false), []);
+  const netSheet = useNetSheet();
+  const appOpen = !!sheet || bagOpen || netSheet !== null || mapOpen;
+  const phoneApps = useMemo<PhoneApp[]>(() => [
+    { id: "settings", label: "Settings", icon: "settings", onOpen: () => setSheet("settings") },
+    { id: "quests", label: "Quests", icon: "quest", keyLabel: touch ? undefined : "J", onOpen: () => setSheet("journal") },
+    { id: "bag", label: "Bag", icon: "bag", keyLabel: touch ? undefined : keyName(binds.openBag), onOpen: () => setSheet("bag") },
+    { id: "collection", label: "Collection", icon: "collection", keyLabel: touch ? undefined : keyName(binds.openJournal), onOpen: () => setBagOpen(true) },
+    { id: "friends", label: "Friends", icon: "friend", badge: friends.asking, onOpen: () => setNetSheet("friends") },
+    { id: "mail", label: "Mail", icon: "mail", keyLabel: touch ? undefined : keyName(binds.openMail), badge: progression.unreadLetters, onOpen: () => setSheet("letters") },
+  ], [touch, binds, friends.asking, progression.unreadLetters]);
+  // Alice's tour brings the phone in an app at a time (Bag, Collection, Quests, Mail), then whole with its own key.
+  const tourApps = useMemo(() => (tourShown.has("phone") ? phoneApps : phoneApps.filter(a => tourShown.has(a.id as HudPiece))), [tourShown, phoneApps]);
+  // At the tour's phone step it's put away, so its key is what brings it up (round 12, David: "phone is one of the most
+  // important thing so like make sure the button for it is obvious").
+  const [tourStep, setTourStep] = useState("");
+  const phoneOn = touring ? tourApps.length > 0 && (tourStep !== "phone" || tourShown.has("phone")) : (uiView || phoneUp) && !hudCinematic;
+  useEffect(() => { togglePhone.current = () => { if (welcoming || touring || hudCinematic) return; if (layer) setLayer(null); setPhoneUp(up => !up && !layer); }; });
+  // The corner (round 10, David: "if your mouse hits the bottom right of the screen without clicking it will pop up and
+  // hiting it again retracts"): coming into it toggles the phone; it has to leave before it toggles again.
+  useEffect(() => {
+    let inside = false;
+    const move = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse" || document.pointerLockElement) return;
+      const hit = inCorner(e.clientX, e.clientY, window.innerWidth, window.innerHeight);
+      if (hit && !inside) togglePhone.current();
+      inside = hit;
+    };
+    window.addEventListener("pointermove", move);
+    return () => window.removeEventListener("pointermove", move);
+  }, []);
   // On a phone the menu button opens the UI view; the heading and touch hint flash (world audit item 11).
   const compact = compactTouchHud({ touch, always: alwaysFullHud });
   // Mouse-look ending on its own (Esc, the window losing focus) opens the UI view; capturing again closes the layers.
   useEffect(() => subscribePause(() => setLayer(l => l ?? "ui")), []);
-  useEffect(() => { if (captured === "captured") setLayer(null); }, [captured]);
+  useEffect(() => { if (captured === "captured") { setLayer(null); setPhoneUp(false); } }, [captured]);
   // The island map is the village's (the minimap and M). At HQ (Alice shows you the map there, row 312) it opens with you
   // at HQ's door; the minimap stays outdoors.
   const mapHere = !inside && !atHome && site !== "ruins";
   const mapOpenable = mapHere || (inside === "hq" && site === "village");
   const mapPlayer = useMemo(() => ({ current: new THREE.Vector3(hqDoor?.[0] ?? 0, 0, hqDoor?.[1] ?? 0) }), [hqDoor]);
-  // The dock's counts: friend requests waiting, and who's on the island while you're with the others.
-  const friends = useFriends(), roster = useRoster(), netStatus = useNetStatus();
   // Hold the HUD key (H) for the full HUD.
   useEffect(() => {
     const key = wheelKeys.hud;
@@ -1373,13 +1499,16 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (menu === "openWallet") setSheet("wallet");
       if (!menu && event.key.toLowerCase() === "j") setSheet("journal");
       if (menu === "openMail") setSheet("letters");
+      // X: the phone up over play, or away again (with the UI view, if that brought it). Decorating, X puts the piece
+      // away; in the ruins an ability slot on the key wins.
+      if (menu === "openPhone" && !decor.decorating && !(site === "ruins" && Object.values(abilityKeys).includes(event.key.toLowerCase()))) togglePhone.current();
       // The Esc that ended mouse-look is the browser's (it opened the UI view); a later one closes what's open, then
       // steps through the Esc layers, indoors too (playtest round 1: a room is left by its door; lib/game/sceneGate.ts).
       if (event.key === "Escape") {
-        const open = !!sheet || bagOpen || donateOpen || decor.decorating || !!(reveal && inside === "oracle") || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
+        const open = !!sheet || bagOpen || phoneUp || donateOpen || decor.decorating || !!(reveal && inside === "oracle") || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
         const locked = capture.state === "captured" && !!document.pointerLockElement;
         const esc = escapeAction({ captureEnded: escapeEndedCapture(), locked, fading, open });
-        if (esc === "close") { setSheet(null); if (decor.selected) decor.cancel(); }
+        if (esc === "close") { if (!sheet && !bagOpen) setPhoneUp(false); setSheet(null); if (decor.selected) decor.cancel(); }
         // An Escape that came through with the mouse still held lets it go: the end of the lock opens the UI view.
         if (esc === "layer") { if (locked) document.exitPointerLock(); else setLayer(nextLayer); }
       }
@@ -1389,7 +1518,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [act, near, inside, atHome, decor, identity.settings, welcoming, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading, mapOpenable]);
+  }, [act, near, inside, atHome, decor, identity.settings, welcoming, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading, mapOpenable, layer, phoneUp]);
   // Development only (the old wrench panel, hud-first-login §4): Settings' Dev tab shows or hides it; it stays mounted
   // (the class playtest's harness and slow motion run from it) and stands on the left, clear of the minimap.
   const devTools = DEV ? <>
@@ -1405,21 +1534,22 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         camera={{ position: [0, 10.2, -21], fov: BASE_FOV, near: 0.1, far: 120 }} shadows={castShadows ? "percentage" : false} frameloop={creatorOpen ? "never" : "always"}
         onCreated={({ gl }) => { gl.info.autoReset = false; gl.toneMapping = THREE.NeutralToneMapping; gl.outputColorSpace = THREE.SRGBColorSpace; }}>
         <Suspense fallback={null}>
-          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom} player={player}
+          {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={camZoom} player={player}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} glider={peaceful.glider} />
             : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} talking={sheet === "oracle"} light={light} player={player} onNear={n => setNear(n)} ceremony={reveal} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
             : inside === "shop" ? <ShopInterior frozen={fading || sheet === "counter" || sheet === "shopkeeper" || sheet === "fitting"} talking={sheet === "counter" || sheet === "shopkeeper"} light={light} playerPosRef={player}
               onNearestStation={s => setNear(s?.id === "counter" ? "counter" : s?.id === "exit" ? "exit" : s?.id.startsWith("fitting") ? "fitting" : null)} />
             : inside === "museum" ? <MuseumInterior wings={museumWings} frozen={fading || donateOpen} talking={donateOpen} light={light} player={player} onNear={n => setNear(n === "donate" ? "curator" : n)} />
-            : inside === "hq" ? <HqInterior light={light} player={player} frozen={fading} talking={sheet === "showcase" || hq.card !== null || (talking && talkNow.slug === WREN.slug)} member={peaceful.member} onNearestStation={hqStation} />
+            : inside === "hq" ? <HqInterior light={light} player={player} frozen={fading} talking={hq.card !== null || (talking && talkNow.slug === WREN.slug)} member={peaceful.member} onNearestStation={hqStation} />
             : inside === "house" ? <HomeInterior layout={layout} phase={phase} light={light} frozen={fading} player={player} onNear={(n: HouseNear) => setNear(n)}
               decorating={decor.decorating} selected={decor.selected} onPlace={decor.place} onPickUp={decor.pickUp} />
-            : atHome ? <HomeIslandScene held={eating || trip.active ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={devZoom}
+            : atHome ? <HomeIslandScene held={eating || trip.active ? null : held} identity={identity} level={level} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={camZoom}
               overview={overview} returned={returned} player={player} onNear={(n: HomeNear) => setNear(n)} outdoor={layout.outdoor}
               decorating={decor.decorating} selected={decor.selected} onPlace={item => decor.place("outdoor", item)} onPickUp={item => decor.pickUp("outdoor", item)} />
             : <IslandScene held={eating || trip.active ? null : held} identity={identity} level={level} devAt={devAt} exitFrom={exitFrom} peaceful={peaceful} fishSpot={fishSpot} fishing={fishing} chapter={chapterFlags} questPosts={main.posts} fromBoat={fromBoat} progression={progressionWorld} ceremony={ceremony} event={islandEvent} traditions={traditions} fogNight={fogNight}
-              arriving={welcoming} hintKeys={hintKeys} campfireHour={campfireHour} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={devZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} onBar={setAtBar} />}
+              arriving={welcoming} hintKeys={hintKeys} campfireHour={campfireHour} talking={talking} phase={scenePhase} light={light} look={look} weather={sceneWeather} overview={overview} zoom={camZoom} reset={reset} returned={returned} liteMode={liteMode} castShadows={castShadows} player={player} onNear={setNear} onBar={setAtBar} onBiome={setBiome}
+              ring={!!near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !fishing} />}
           {/* Classes v2: the subclass's aura replaces the family's once its kit exists (§1.9). */}
           {DROPS.classes && identity.aura && (classAura ? <Suspense fallback={null}><SubclassAura player={player} kit={classAura.kit} mastery={classAura.mastery} colour={classAura.colour} /></Suspense>
             : identity.family && <Suspense fallback={null}><FamilyAura player={player} color={FAMILIES[identity.family].light} /></Suspense>)}
@@ -1441,31 +1571,30 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
           {photo.open && <PhotoCamera player={player} />}
         </Suspense>
       </Canvas>
-      <header className={styles.heading} data-fading={fading || !ready || hudCinematic || ((!full || compact) && headingFlash === null)} data-clean={full && !compact ? undefined : ""}>
+      <header className={styles.heading} data-fading={fading || !ready || hudCinematic || headingFlash === null}>
         <h1>{heading.title}</h1>
         {heading.subtitle && <p>{heading.subtitle}</p>}
       </header>
       <AudioController phase={ambientPhase} weather={weather} season={season.season} />
       {/* Top right (playtest round 1, decision 3; design bible UI 8b): while you play, the quest line left of the minimap,
-          the time under it; the UI view (Esc 1) grows the minimap, adds the level and the gear left of the quest line and
-          the wallet (coins and gems) under the time, which also slides in at rest when they change. */}
+          the time under it; the UI view (Esc 1) grows the minimap and adds the wallet (coins and gems) under the time, which also slides in at rest when they change. */}
       {/* In a volleyball match the court's HUD is the stage (VolleyHud): the island's top right steps aside. */}
-      <div className={styles.hudRight} data-hud-right="" data-hidden={hudCinematic || inMatch || undefined}>
-        <div className={styles.hudLead} data-new={objectiveNew || undefined}>
-          <TopCluster className={styles.rightCluster} full={full} buttons={uiView} hidden={hudCinematic}>
-            <button className={hudButton} onClick={() => setSheet("settings")} aria-label="Settings" title="Settings"><Settings size={18} aria-hidden /></button>
-          </TopCluster>
+      <div className={styles.hudRight} data-hud-right="" data-hidden={hudCinematic || inMatch || undefined} style={tourWaits("hud") ? UNSEEN : undefined}>
+        <div className={styles.hudLead} data-new={objectiveNew || undefined} data-hud-quest="">
           {/* Bram's walk-along, then the HQ visit with Alice and a tool's little quest (row 312), then the chapter. */}
           <QuestTracker className={styles.questSlot} quests={quests} hidden={tutorialQuest || hq.quest ? false : holdObjective} onOpen={() => setSheet("journal")}
             guidable={main.quest && !inside ? [main.quest.id] : []} guided={main.guided} onGuide={main.guide} />
         </div>
         <div className={styles.hudColumn} data-minimap data-new={objectiveNew || undefined}>
-          {((mapHere && !holdObjective) || tourShown.has("map")) && <MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} />}
-          <HudClock weather={weather} phase={phase} />
+          {((mapHere && !holdObjective) || touring) && <Unseen when={tourWaits("map")}><MiniMap playerPosRef={player} plot={objectivePlot} big={uiView} onOpen={() => setMapOpen(true)} /></Unseen>}
+          {/* The biome tag sits under the time, both under the minimap (round 7). */}
+          <div className={styles.clockRow}><HudClock weather={weather} phase={phase} />{(biome.water || biome.place) && !inside && site === "village" && <BiomeTag water={biome.water} place={biome.place} />}</div>
           <HudWallet full={full} showcase={showcase}
             onWallet={() => setSheet(value => (value === "wallet" ? null : "wallet"))} walletKey={keyName(identity.settings.key_bindings.openWallet)} />
         </div>
       </div>
+      {/* The meal's buff, faint on the right edge, well under the time column (the minimap, the time and its biome tag, the wallet). */}
+      {!hudCinematic && !inMatch && <HudBuff className={styles.buffSlot} />}
       {DEV && <section id="island-options" className={styles.panel} data-open={devPanel} aria-label="Developer view options" onKeyDown={(event) => {
         if (devPanel && event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDevPanel(false); }
       }}>
@@ -1489,18 +1618,24 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         </details>
         <button className={styles.return} onClick={() => setDevPanel(false)}>Close the dev panel</button>
       </section>}
-      {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(reveal && inside === "oracle") && (CLOSED.includes(near)
+      {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(reveal && inside === "oracle") && !(barSeated && near === "stool") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
-        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "stool" && seated ? "Leave the bar" : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
+        : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
+      {/* Seated at the bar (tasting-book round 4, David: "remove menu and leave bar button, have menu be on the table, and character
+          look down and press e to open"): looking down at the menu on the counter, E (a tap) reads it; moving gets you up. */}
+      {barSeated && !sheet && !cinematic && !talking && (barLook
+        ? <button className={styles.interact} onClick={() => setSheet("sushi")}><kbd>{touch ? "Tap" : "E"}</kbd>Read the menu</button>
+        // The reminder while you sit, quiet (round 5, David: "make reminder less bold and in your face"): small, faint, gone after a few seconds.
+        : <p className={styles.seatHint} role="status">{touch ? "Drag down to read the menu · the stick to get up" : "Look down to read the menu · move to get up"}</p>)}
       {/* The held item's use (specs/game-ui.md §2): what left click does with it here, or the tool something in reach wants. Touch presses the prompt. */}
       {!sheet && !cinematic && !talking && !fishing && !inside && site !== "ruins" && (toolAction && (toolAction.target && (toolNear || toolAction.verb === "eat"))
         ? <button className={styles.interact} data-use onPointerDown={e => { if (e.pointerType !== "mouse" || capture.state !== "captured") applyTool(); }}><kbd>{touch ? "Tap" : "Click"}</kbd>{toolAction.label}</button>
         : needTool && <p className={styles.interact} data-closed="true" role="status"><kbd>{touch ? "Wheel" : keyName(wheelKeys.wheel)}</kbd>Take out your {needTool === "rod" ? "fishing rod" : needTool}</p>)}
-      <MemberFishing rod={held?.kind === "rod" && held.tier ? rig(rodByTier(held.tier), peaceful.tackle) : peaceful.rod} onActiveChange={setFishing} />
+      <MemberFishing rod={withMeal(held?.kind === "rod" && held.tier ? rig(rodByTier(held.tier), peaceful.tackle) : peaceful.rod, meal)} onActiveChange={setFishing} />
       {fishBosses() && !fishing && !inside && <RaidCall />}
       <ToolWheel items={wheelItems} held={heldState.held} wheelKey={wheelKeys.wheel} touch={touch} onEquip={holdItem} onSwap={() => swapHeld(wheelItems)}
-        enabled={ready && !inMatch && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
-      <EmoteWheel emoteKey={wheelKeys.emote} touch={touch} onPlay={entry => playWheelEntry(entry, player.current)}
+        enabled={ready && !inMatch && !inside && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView) && !barSeated} />
+      <EmoteWheel emoteKey={wheelKeys.emote} touch={touch && !compact} onPlay={entry => playWheelEntry(entry, player.current)}
         enabled={ready && !inMatch && site !== "ruins" && !fishing && !sheet && !bagOpen && !cinematic && !talking && !fading && !decor.decorating && !(touch && uiView)} />
       <DonateSheet open={donateOpen} onClose={() => setDonateOpen(false)} onDonated={loadMuseum} />
       <MuseumDrive open={driveOpen} onClose={() => setDriveOpen(false)} onGiven={loadMuseum} />
@@ -1520,17 +1655,15 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <CraftingSheet />
       <CollectionBook open={bagOpen} onClose={() => setBagOpen(false)} keys={identity.settings.key_bindings.openJournal} />
       {/* The Bag shows only as a pickup flies into it; a touch screen's menu button opens the UI view (it has no Esc). */}
-      {/* The player's bars (specs/design-bible.md UI 8): health and XP always on, stamina while it's used. */}
-      <HudBars className={styles.hudBars} hidden={hudCinematic} full={uiView} />
+      {/* The player's level ring and vitals, top left (specs/design-bible.md UI 8). */}
+      <Unseen when={tourWaits("hud")}><HudBars className={styles.hudBars} hidden={hudCinematic} /></Unseen>
       <div className={styles.bagButtons}>
-        {touch && !hudCinematic && <button className={styles.menuButton} onClick={() => setLayer(l => (l ? null : "ui"))} aria-expanded={uiView} aria-label={uiView ? "Close the menu" : "Menu"}><Menu size={20} aria-hidden /></button>}
+        {touch && !hudCinematic && <button className={styles.menuButton} onClick={() => setLayer(l => (l ? null : "ui"))} aria-expanded={uiView} aria-label={uiView ? "Put the phone away" : "Phone"}><Smartphone size={20} aria-hidden /></button>}
         <BagButton full={tourShown.has("bag")} keyLabel={keyName(identity.settings.key_bindings.openBag)} onOpen={() => setSheet("bag")} />
       </div>
-      {/* The UI view's dock (Esc 1): the menu entries over the live game. Their sheets close back to it. */}
-      {(uiView || tourDock.size > 0) && <MenuDock touch={touch} unread={progression.unreadLetters} asking={friends.asking} people={netStatus.kind === "joined" ? roster.length : null} only={uiView ? undefined : tourDock}
-        keys={{ map: keyName(identity.settings.key_bindings.openMap), journal: "J", bag: keyName(identity.settings.key_bindings.openBag), collection: keyName(identity.settings.key_bindings.openJournal), mail: keyName(identity.settings.key_bindings.openMail) }}
-        onMap={mapOpenable ? () => setMapOpen(true) : null} onJournal={() => setSheet("journal")} onBag={() => setSheet("bag")} onCollection={() => setBagOpen(true)}
-        onFriends={() => setNetSheet("friends")} onPeople={() => setNetSheet("people")} onMail={() => setSheet("letters")} />}
+      {/* The phone (round 9): bottom right, its apps the menus; their sheets close back to it. */}
+      <Phone open={phoneOn} apps={touring ? tourApps : phoneApps} away={appOpen && !touring} pixelated={graphics.pixelated} touch={touch} onClose={() => { setPhoneUp(false); setLayer(null); }}
+        hint={touch ? undefined : keyName(binds.openPhone)} />
       {/* Esc 2: the system menu. Resume asks for the mouse again; Escape (or ✕) goes back to the game. */}
       <SystemMenu open={layer === "system" && !hudCinematic} signedIn={identity.signedIn} name={identity.display_name} onClose={() => setLayer(null)}
         onResume={() => { setLayer(null); requestResume(); }} onSettings={() => setSheet("settings")} />
@@ -1543,13 +1676,12 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         onFinish={(key, value) => decor.setRoomFinish(roomAt(player.current.x, layout.rooms.length), key, value)} onShop={() => toShop("More furniture")} />}
       <NoticeSheet open={sheet === "notice"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <BoardSheet open={sheet === "vboard"} onClose={() => setSheet(null)} me={identity.display_name} />
-      {/* The HQ visit's cards (row 312): your island ID, where the check-in code goes, the Founder's plaque, the fly cards. */}
-      <IdCard open={hq.card === "id"} name={identity.signedIn ? identity.display_name : null} signedIn={identity.signedIn} friendCode={friends.view?.code ?? null} onDone={() => hqEvent("signed")} />
+      {/* The HQ visit's cards (row 312): where the check-in code goes, the Founder's plaque, the fly cards. */}
       <FlyCard target={hq.fly} onDone={() => hqEvent("flown")} />
       <CheckInCard open={hq.card === "checkin"} onDone={() => hqEvent("checkin")} />
       <PlaqueCard open={sheet === "plaque"} onClose={() => setSheet(null)} />
       <LoreOverlay open={hq.card === "lore"} onDone={() => hqEvent("lore")} />
-      <KeyboardTour open={touring} keys={tourKeys} onShow={showPiece} onDone={() => hqEvent("tour")} />
+      <KeyboardTour open={touring} keys={tourKeys} onShow={showPiece} onStep={setTourStep} onDone={() => hqEvent("tour")} />
       <ShopkeeperChoice open={sheet === "shopkeeper"} onClose={() => setSheet(null)} onChoose={section => {
         setShopSection(section);
         if (section === "merch") window.dispatchEvent(new CustomEvent("tsi:shopkeeper-say", { detail: { line: MERCH_LINE, clip: "Chat" } }));
@@ -1563,8 +1695,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <TaskBoardSheet open={sheet === "tasks"} onClose={() => setSheet(null)} keys={STATION_KEY} />
       <TackleCounterSheet open={sheet === "tackle"} onClose={() => setSheet(null)} onRods={() => setSheet("rods")} keys={STATION_KEY} />
       <ChefOrderDialog open={sheet === "chef"} onClose={() => setSheet(null)} keys={STATION_KEY} />
-      <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} />
-      {barSeated && sheet === null ? <div className={styles.barMenu}><DarkButton onClick={() => setSheet("sushi")}>Menu</DarkButton></div> : null}
+      <MenuPickup open={sheet === "sushi"} onClose={() => setSheet(null)} waters={catchWaters} />
+      <TankSheet open={sheet === "tank"} onClose={() => setSheet(null)} />
       <CatchBoardSheet open={sheet === "outnow"} onClose={() => setSheet(null)} keys={STATION_KEY} waters={catchWaters} hour={peaceful.moment.hour} weather={conditions.weather} season={season.season} soon={peaceful.moment.soon} phase={phase} />
       <ShopOverlay open={sheet === "rods"} title="Rod shop" section="rods" onClose={() => setSheet(null)} keys={STATION_KEY} />
       <WalletSheet open={sheet === "wallet"} onClose={() => setSheet(null)} keys={identity.settings.key_bindings.openWallet} />
@@ -1575,8 +1707,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {pathView && DROPS.classes && <PathSheet open={sheet === "path"} view={pathView} onClose={() => setSheet(null)} onChanged={() => setPathTick(n => n + 1)} />}
       <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} detectedTier={detectedTier} dev={devTools} />
       <FamilyReveal open={!!reveal && inside === "oracle"} family={reveal?.family ?? null} type={reveal?.type ?? ""} onContinue={() => setReveal(null)} />
-      <TrophySheet open={sheet === "trophies"} onClose={() => setSheet(null)} />
-      <ShowcaseSheet open={sheet === "showcase"} onClose={() => setSheet(null)} />
       <MissionBoardSheet open={sheet === "missions"} onClose={() => setSheet(null)} gateNote={gate.open ? null : gate.reason} />
       <TourneySheet open={sheet === "tourney"} onClose={() => setSheet(null)} />
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />
@@ -1586,9 +1716,9 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       {DEV && site === "ruins" && <PlaytestHud />}
       {/* Clear of the minimap (left) and the audio widget (bottom right). */}
       {/* A touch screen's UI view is for its menus: the stick and buttons step aside for the dock. */}
-      {touch && !hudCinematic && !uiView && sheet !== "sushi" && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe"} />}
+      {touch && !hudCinematic && !uiView && sheet !== "sushi" && (!inside || inside === "cafe") && <TouchControls left="var(--hud-stick-left)" bottom="var(--hud-stick-bottom)" walkOnly={inside === "cafe" || barSeated} />}
       {(!compact || (headingFlash !== null && !hudCinematic)) && <p className={styles.touchControls} data-flash={compact ? headingFlash ?? undefined : undefined}>Tap the ground to move · two fingers turn the camera</p>}
-      {captured === "free" && !touch && !hudCinematic && <p className={styles.lookHint} role="status">Click to look around</p>}
+      {captured === "free" && !touch && !hudCinematic && !barSeated && <p className={styles.lookHint} role="status">Click to look around</p>}
       {captured === "captured" && site === "ruins" && <svg className={styles.crosshair} viewBox="-10 -10 20 20" aria-hidden="true"><circle r="5.5" /><circle r="1.2" /></svg>}
       {captured === "captured" && site !== "ruins" && !inside && !hudCinematic && !photo.open && <AimDot />}
       <div className={styles.fade} data-active={fading} aria-hidden="true" />

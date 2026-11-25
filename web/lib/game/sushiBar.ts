@@ -69,6 +69,23 @@ export interface BarView { eye: { x: number; y: number; z: number }; look: { x: 
 export const BAR_MUSIC_IN = 8, BAR_MUSIC_OUT = 10;
 
 /**
+ * Tells `report` when the player comes within earshot of the bar while it's open, and when they leave. `release` is
+ * the unmount: it tells the listener "not near" and forgets what it knew, so a remount (React's strict-mode effect
+ * replay: a spawn at the bar has its first frame before its effects run) reports again instead of leaving the
+ * listener on "not near" for as long as the player stands there.
+ */
+export function barEarshot(report: (near: boolean) => void) {
+  let near = false;
+  return {
+    frame(distance: number, open: boolean) {
+      const now = open && (near ? distance < BAR_MUSIC_OUT : distance < BAR_MUSIC_IN);
+      if (now !== near) { near = now; report(now); }
+    },
+    release() { near = false; report(false); },
+  };
+}
+
+/**
  * The staff at work behind the counter (cafe.ts ownerAt on the world clock; facing the guests is yaw 0; David, round 3:
  * "refine sushi cooking movements"; their clips, build_clips.py `-- staff`). The chef (David's "Bancha": cool and
  * focused, he rarely talks) works his two boards on the ledge behind the fish case in turn: he slices the block of fish
@@ -234,6 +251,26 @@ export function stoolAt(bar: Bar, x: number, z: number): number {
 export function seatView(lx: number): { eye: [number, number, number]; look: [number, number, number] } {
   return { eye: [lx, STOOL_TOP + 1.1, STOOL_Z + 0.4], look: [lx * 0.85, STOOL_TOP + 0.45, -2.5] };
 }
+
+/**
+ * The menu lying on the counter before your stool (tasting-book round 4, David: "remove menu and leave bar button, have
+ * menu be on the table, and character look down and press e to open"; round 6: "more prominent in the center of the
+ * table"): where it lies in the bar's frame (on the counter's top, the builder's TOP_Y, square in the middle of your
+ * place, between the fish case and your chopsticks, the soy dish to its left and the tea to its right), how far the seated view tilts down per unit
+ * of the orbit's tilt (SEAT_TILT_DOWN: the full tilt down centres it), and how far past the orbit's middle tilt looking
+ * down reads as looking at it (MENU_LOOK: the E prompt shows; back up to the middle puts it down).
+ */
+export const menuAt = (lx: number) => [lx, 0.84, 1.32] as const;
+export const SEAT_TILT_DOWN = 2.3, MENU_LOOK = 0.1;
+/**
+ * The counter's menu on the screen while you sit (round 7, David: "make click and view animation transition smoother
+ * where you look down, briung book closer to you and you open it"): SushiBar writes where it is each frame (CSS px,
+ * `seen` once its model is in), the menu picked up (SushiSheets MenuPickup) rises from exactly there, and while it's
+ * `held` the counter's copy is hidden.
+ */
+export const counterMenu = { x: 0, y: 0, w: 0, h: 0, seen: false, held: false };
+/** Seated, whether the orbit's tilt `pitch` (over its middle `mid`) looks down at the menu; `was` the last answer (it holds till the middle). */
+export const looksAtMenu = (pitch: number, mid: number, was: boolean) => pitch - mid > (was ? 0 : MENU_LOOK);
 
 /**
  * The seated view with the menu picked up (David, 2026-10-28: "you can pick it up first person"): at `k` 1 you lean in

@@ -1,34 +1,38 @@
-import SmoothScroll from "@/components/SmoothScroll";
-import HomeHero from "@/components/sections/HomeHero";
-import TextRevealSection from "@/components/sections/TextRevealSection";
-import CaseStudies from "@/components/sections/CaseStudies";
-import ImpactStats from "@/components/sections/ImpactStats";
-import TeamSection from "@/components/sections/TeamSection";
-import PathwayCards from "@/components/sections/PathwayCards";
-import DotNav from "@/components/ui/DotNav";
-import type { DotNavSection } from "@/components/ui/DotNav";
+import "./home.css";
+import HeroDive from "@/components/site/home/HeroDive";
+import Numbers from "@/components/site/home/Numbers";
+import WhoAreYou from "@/components/site/home/WhoAreYou";
+import Dates from "@/components/site/home/Dates";
+import GenesisHome from "@/components/site/home/GenesisHome";
+import Team from "@/components/site/home/Team";
+import Closing from "@/components/site/home/Closing";
+import GlyphSeam from "@/components/site/GlyphSeam";
+import DotNav from "@/components/site/DotNav";
 
-const SECTIONS: DotNavSection[] = [
-  { id: "hero", label: "Home" },
-  { id: "about", label: "Mission" },
-  { id: "work", label: "Work" },
-  { id: "impact", label: "Impact" },
-  { id: "team", label: "Team" },
-  { id: "pathways", label: "Get Started" },
+const SECTIONS = [
+  { id: "hero", label: "Tethos" },
+  { id: "numbers", label: "In numbers" },
+  { id: "audiences", label: "Who are you" },
+  { id: "dates", label: "The year" },
+  { id: "genesis", label: "GENESIS" },
+  { id: "team", label: "The people" },
+  { id: "join", label: "Join" },
 ];
 
 export default function HomePage() {
   return (
-    <SmoothScroll>
-      <main className="min-h-screen">
-        <DotNav sections={SECTIONS} />
-        <HomeHero />
-        <TextRevealSection />
-        <CaseStudies />
-        <ImpactStats />
-        <TeamSection />
-        <PathwayCards />
-      </main>
-    </SmoothScroll>
+    <>
+      <DotNav sections={SECTIONS} />
+      <HeroDive />
+      <Numbers />
+      <GlyphSeam from="light" to="dark" seed={1} />
+      {/* Dark from here to the one white section at the end, the call to join. */}
+      <WhoAreYou />
+      <Dates />
+      <GenesisHome />
+      <Team />
+      <GlyphSeam from="dark" to="light" seed={5} />
+      <Closing />
+    </>
   );
 }

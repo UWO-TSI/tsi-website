@@ -43,3 +43,13 @@ export function weeklyBoard(me: string, now = new Date(), store: Store | null = 
     .sort((a, b) => b.wins - a.wins || Number(b.you) - Number(a.you));
   return { rows: all.slice(0, TOP).map((r, i) => ({ ...r, rank: i + 1 })), sample: true };
 }
+
+/** How the sheet lays a board out: the podium (the top three), a few rows under it, and your place if it's further down. */
+export const BOARD_ROWS = 3;
+export function boardView(b: Board): { podium: BoardRow[]; rows: BoardRow[]; you: BoardRow | null } {
+  const podium = b.rows.filter(r => r.rank <= 3), rows = b.rows.filter(r => r.rank > 3 && r.rank <= 3 + BOARD_ROWS);
+  return { podium, rows, you: b.rows.find(r => r.you && r.rank > 3 + BOARD_ROWS) ?? null };
+}
+
+/** A player's look seed from their world name (the sample players' looks stay the same every time). */
+export const nameSeed = (name: string) => { let h = 2166136261; for (let i = 0; i < name.length; i++) h = Math.imul(h ^ name.charCodeAt(i), 16777619); return h >>> 0; };

@@ -8,6 +8,7 @@
  */
 import { Suspense, useMemo } from "react";
 import { useGLTF, useTexture } from "@react-three/drei";
+import { gltfsOf } from "@/lib/game/gltfsOf";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -93,7 +94,7 @@ function ModelItem({ item, s }: { item: ShopDisplayItem; s: DisplaySlot }) {
  */
 function MergedItems({ items }: { items: { item: ShopDisplayItem; s: DisplaySlot }[] }) {
   const urls = useMemo(() => [...new Set(items.map(x => x.item.spec.url))], [items]);
-  const gltfs = useGLTF(urls) as unknown as { scene: THREE.Object3D }[];
+  const gltfs = gltfsOf(urls);
   const meshes = useMemo(() => {
     const groups = new Map<string, { material: THREE.Material; geometries: THREE.BufferGeometry[]; shadows: boolean }>();
     const loose: THREE.Object3D[] = [];

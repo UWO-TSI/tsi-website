@@ -10,8 +10,7 @@
  */
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Lock } from "lucide-react";
-import { Button, Slider } from "@/components/gui";
-import { useGuiVariant } from "@/components/gui/variant";
+import { Slider } from "@/components/gui";
 import { IconRail, NUDGE_GRID, useNudge } from "@/components/gui/flat";
 import { iconUrl } from "@/lib/icons/keys";
 import { customHairUnlocked, dyeRef, FACE, FACE_ATLAS_URLS, FACE_ATLAS2_URLS, FREE_HAIR, HAIR_THUMB_URL, hairAccentHex, hairHex, NATURAL_HAIR, naturalHex, PALETTE, PART_BY_ID, PLACE_PARTS, PLACE_STEPS, partColor, SKIN_PICKS, unlockRef,
@@ -21,7 +20,7 @@ import { PLACE_RANGE } from "@/lib/game/character/face";
 import ColourWheel from "./ColourWheel";
 import CreatorIcon from "./CreatorIcon";
 import { prioritiseThumbs, thumbJob, useThumb } from "./CreatorStage";
-import styles from "./CharacterCreator.module.css";
+import { useStudio } from "./creatorStudio";
 
 const SLIDERS: { i: 0 | 1 | 2 | 3; label: string; say: (v: number) => string }[] = [
   { i: 0, label: "Down – Up", say: v => (v ? `${Math.abs(v)} ${v > 0 ? "up" : "down"}` : "centred") },
@@ -32,20 +31,20 @@ const SLIDERS: { i: 0 | 1 | 2 | 3; label: string; say: (v: number) => string }[]
 
 /**
  * The rail of category tiles: arrows move along it (and open the category), Home and End jump to its ends.
- * `orientation` is what assistive tech is told; the layout is the stylesheet's. In the flat creator (the flat GUI
- * variant) it is the kit's `IconRail`: icons only, the chosen one's dot sliding to the next, a press that dips.
+ * `orientation` is what assistive tech is told; the layout is the stylesheet's. In the game it is the kit's `IconRail`:
+ * icons only, the chosen one's dot sliding to the next, a press that dips; the applicant island's studio keeps its tiles.
  */
 export function CategoryRail({ cats, cat, onOpen, className, orientation = "vertical" }: {
   cats: readonly Category[]; cat: Category; onOpen: (c: Category, focus?: boolean) => void; className?: string; orientation?: "vertical" | "horizontal";
 }) {
-  const flat = useGuiVariant() === "flat";
+  const { styles, applicant } = useStudio();
   const step = (by: number) => onOpen(cats[(cats.indexOf(cat) + by + cats.length) % cats.length], true);
   const railKey = (e: React.KeyboardEvent) => {
     const by = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
     if (by) { e.preventDefault(); step(by); }
     else if (e.key === "Home" || e.key === "End") { e.preventDefault(); onOpen(e.key === "Home" ? cats[0] : cats[cats.length - 1], true); }
   };
-  if (flat) return <IconRail tabs label="Categories" value={cat.id} onChange={id => onOpen(cats.find(c => c.id === id)!)} onKeyDown={railKey}
+  if (!applicant) return <IconRail tabs label="Categories" value={cat.id} onChange={id => onOpen(cats.find(c => c.id === id)!)} onKeyDown={railKey}
     className={className ?? styles.rail} orientation={orientation}
     items={cats.map(c => ({ id: c.id, label: c.label, icon: c.itemIcon
       // eslint-disable-next-line @next/next/no-img-element
@@ -78,8 +77,9 @@ export function CreatorOptions({ cat, look, setLook, mode, owned, onShop, onChan
   member?: boolean;
 }) {
   const [lastAccessory, setLastAccessory] = useState<string | null>(null);
-  // The flat creator's tiles move as the kit's cards do (a hover grows one, the worn ones stay out).
-  const flat = useGuiVariant() === "flat";
+  // The game's tiles move as the kit's cards do (a hover grows one, the worn ones stay out).
+  const { styles, Button, applicant } = useStudio();
+  const flat = !applicant;
   const nudge = useNudge('[aria-pressed="true"]');
   const [lockNote, setLockNote] = useState<{ cat: string; text: string } | null>(null);
   const note = lockNote?.cat === cat.id ? lockNote.text : null;
@@ -283,6 +283,7 @@ function PartArt({ id, look }: { id: string; look: CharacterLook }) {
 }
 
 function BakedArt({ id, look, iconFailed, onIconFail }: { id: string; look: CharacterLook; iconFailed: boolean; onIconFail: () => void }) {
+  const { styles } = useStudio();
   const bake = needsBake(id) || iconFailed;
   const job = useMemo(() => (bake ? thumbJob(id, look) : null), [bake, id, look]);
   const src = useThumb(job);
@@ -296,6 +297,7 @@ function BakedArt({ id, look, iconFailed, onIconFail }: { id: string; look: Char
 const MIN_SPAN = { eyes: 0.5, mouth: 0.3, extras: 0.62 } as const;
 /** A face part as it sits on the face: its atlas cells at their anchors (both sides for paired parts), on the skin. */
 function FaceArt({ layer, id, look }: { layer: "eyes" | "mouth" | "extras"; id: string; look: CharacterLook }) {
+  const { styles } = useStudio();
   const L = FACE.layers, A = FACE.anchors;
   const pieces: { cell: FaceCell; anchor: [number, number]; mirror: boolean }[] = [];
   if (layer === "eyes") {

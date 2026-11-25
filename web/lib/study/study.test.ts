@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { memoryStudyStore } from "./memoryStore";
 import { advance, blockBonus, coinsFor, heartbeat, leave, start, takeBreak, resume, type StudySession } from "./rules";
 import { beat, board, breakNow, endNow, getState, lock, myStats, resumeNow, sit, startSession, topStudiers } from "./service";
@@ -187,6 +187,9 @@ describe("shared hook plumbing", () => {
     expect([formatClock(1500), formatClock(59), formatClock(null)]).toEqual(["25:00", "00:59", "--:--"]);
   });
   it("demo scenarios land in the phase they claim (same service as the API)", async () => {
+    // Mid-week: the demo replays the last hour, so near Monday 00:00 the "ended" session falls in last week's stats.
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-28T18:00:00Z") });
+    onTestFinished(() => { vi.useRealTimers(); });
     const { studyDemo } = await import("./demo");
     const focus = await (await studyDemo("focus")).state();
     expect(focus.session).toMatchObject({ phase: "focus", cycle: 1 });

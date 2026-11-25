@@ -30,16 +30,16 @@
 !realtime/fixtures/**/*.json
 realtime/dist/
 
-# Catalogue data that ships with the art and the sky textures
+# Catalogue data that ships with the art
 !art/characters/base/face_variants.json
 !art/characters/base/ref18_measurements.json
 !art/characters/v7/face/face_v7.json
 !art/characters/hair/hair_catalog.json
 !art/characters/character_catalog.json
 !art/characters/palette.json
-!web/public/assets/sky/layers/manifest.json
 # The Vanguard weapons' solved grips (art/props-enemies/solve_vanguard_grips.py): the wraps are built from them.
 !art/props-enemies/vanguard_grips.json
+!art/pipeline/concepts/**/*.blueprint.json
 .vercel
 *.jpeg
 .playwright-mcp/
@@ -55,3 +55,14 @@ specs/tools/*/dist/
 
 # Meshy output never ships raw (art/meshy/meshy.mjs)
 art/meshy/raw/
+
+# SFX library (game/sfx-library): downloads stay out of the repo; candidates are built from them
+art/audio/staging/
+specs/evidence/sfx-library/r1/*.ogg
+specs/evidence/sfx-library/r2/*.ogg
+specs/evidence/sfx-library/r3/*.ogg
+!web/data/sfx-library.json
+!web/data/talk-voices.json
+specs/evidence/sfx-library/r4/
+specs/evidence/sfx-library/r5/
+art/audio/final/

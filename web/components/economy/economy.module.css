@@ -8,7 +8,7 @@
 /* The item's icon on a butter well, like the kit's selected slot. */
 .art { height: 72px; border-radius: var(--gui-r-blob); background: var(--gui-paper-warm); display: grid; place-items: center; }
 .art img { width: 58px; height: 58px; object-fit: contain; }
-.dye { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--gui-paper-hi); box-shadow: 0 2px 0 rgb(114 92 78 / 0.2); }
+.dye { width: 36px; height: 36px; border-radius: 50%; border: 3px solid var(--gui-paper-hi); box-shadow: 0 2px 0 color-mix(in srgb, var(--ui-shadow-paper) 20%, transparent); }
 .chip { justify-self: start; text-transform: capitalize; }
 .sale { position: absolute; top: 8px; right: 8px; z-index: 1; padding: 2px 9px; border-radius: var(--gui-r-tag); background: var(--gui-coral); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 900; transform: rotate(4deg); }
 .price { color: var(--gui-ink-strong); font-weight: 800; font-size: var(--gui-text-md); font-variant-numeric: tabular-nums; }
@@ -33,7 +33,7 @@
    earned and spent moves by day. */
 .wallet { display: grid; gap: 12px; }
 .purse { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: var(--gui-r-paper); background: var(--gui-confetti) var(--gui-butter); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px var(--gui-paper-edge); }
-.purseCoin { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--gui-paper-hi); box-shadow: 0 3px 0 rgb(114 92 78 / 0.18); }
+.purseCoin { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--gui-paper-hi); box-shadow: 0 3px 0 color-mix(in srgb, var(--ui-shadow-paper) 18%, transparent); }
 .purseText { display: grid; gap: 1px; min-width: 0; }
 .purseText b { color: var(--gui-ink-strong); font-size: var(--gui-text-3xl, 34px); font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .gems { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 10px 14px; border-radius: var(--gui-r-card); background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px var(--gui-paper-edge); color: var(--gui-ink); font-weight: 700; font-size: var(--gui-text-sm); }

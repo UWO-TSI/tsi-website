@@ -4,7 +4,7 @@ import { supabaseCollectionsStore } from "@/lib/collections/supabaseStore";
 import { getShowcase, setShowcase } from "@/lib/collections/service";
 import { jsonResult, withStore } from "@/lib/server/memberContext";
 
-// GET /api/collections/showcase[?member=<uuid>]: a member's 3 showcased items (profile / phone).
+// GET /api/collections/showcase[?member=<uuid>]: a member's show-off (the one slot on their ID: a fish, sea creature or bug).
 export async function GET(request: Request) {
   const ctx = await withStore(supabaseCollectionsStore);
   if (ctx instanceof NextResponse) return ctx;
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   return jsonResult(await getShowcase(ctx.store, member ?? ctx.userId), "showcase");
 }
 
-// PUT /api/collections/showcase { items: [key|null, key|null, key|null] } (only things you've found).
+// PUT /api/collections/showcase { items: [key|null] } (only a fish, sea creature or bug you've found).
 export async function PUT(request: Request) {
   const ctx = await withStore(supabaseCollectionsStore);
   if (ctx instanceof NextResponse) return ctx;

@@ -41,9 +41,12 @@ export function contactBeat(how: ContactKind, timing: Timing, speed: number): { 
   const sp = Math.min(1, speed / 24);
   if (how === "spike") return { shake: soft ? 0.25 : 0.55 + 0.4 * sp, punch: soft ? 0 : perfect ? 6 : 3.5, stop: soft ? 0 : perfect ? 0.08 : 0.05, slow: perfect ? 0.45 : 0 };
   if (how === "serve") return { shake: soft ? 0.12 : 0.3 + 0.3 * sp, punch: soft ? 0 : perfect ? 4 : 2, stop: perfect ? 0.05 : 0, slow: perfect ? 0.35 : 0 };
-  if (how === "block") return { shake: 0.5, punch: perfect ? 3 : 1.5, stop: 0.05, slow: 0 };
-  if (how === "dig") return { shake: 0.25, punch: 1.5, stop: 0, slow: 0 };
-  return { shake: soft ? 0 : 0.1, punch: 0, stop: 0, slow: 0 };
+  // A block is a wall: the hardest stop of all, a heavy shake, and a stuffed ball hangs a beat.
+  if (how === "block") return { shake: 0.75, punch: perfect ? 5 : 3, stop: 0.1, slow: perfect ? 0.3 : 0 };
+  // A dig off the sand is a save: a clutch slow-mo beat.
+  if (how === "dig") return { shake: 0.3, punch: 2.5, stop: 0.04, slow: soft ? 0 : 0.4 };
+  // A bump and a set: a soft thump you feel (round 3: "make it feel juicy").
+  return { shake: soft ? 0.05 : 0.18, punch: soft ? 0 : perfect ? 2 : 1, stop: perfect ? 0.03 : 0, slow: 0 };
 }
 
 /** The ball's heat through a rally (touches): 0 cold, 1 at full heat; it catches fire from `fireAt`. */
@@ -88,12 +91,14 @@ export const CHARGE_MOTE: Recipe = { sprite: "glow", count: [1, 1], life: [0.28,
 /** A dive's spray arc and its dust cloud. */
 export const DIVE_SPRAY: Recipe = { sprite: "sandBurst", count: [6, 8], life: [0.5, 0.7], size: [0.45, 0.65], grow: 1.2, speed: [2.2, 3.8], spread: 0.7, up: [1.6, 2.8], gravity: 8, drag: 1.5, wind: 0.2, spin: 3, alpha: 1, face: B, rise: [0.05, 0.12] };
 export const DIVE_CLOUD: Recipe = { sprite: "dust", count: [5, 7], life: [0.7, 1], size: [0.7, 0.95], grow: 1.7, speed: [0.6, 1.4], spread: 1.2, up: [0.2, 0.5], gravity: 0, drag: 3, wind: 0.5, lift: 0.25, alpha: 0.85, face: B, rise: [0.1, 0.25] };
-/** A skid mark the slide dive leaves (on the ground, fading). */
+/** A skid mark the dive leaves along its lunge (on the ground, fading). */
 export const SKID: Recipe = { sprite: "scuff", count: [1, 1], life: [2.4, 2.8], size: [0.55, 0.65], grow: 1, aspect: 1.6, speed: [0, 0], spread: 0, up: [0, 0], gravity: 0, drag: 0, wind: 0, alpha: 0.7, face: FACE.ground, fadeIn: 50 };
 /** Confetti: petals in the team's colour, tumbling down. */
 export const CONFETTI: Recipe = { sprite: "petal", count: [18, 22], life: [1.6, 2.2], size: [0.36, 0.48], grow: 1, speed: [1.4, 3.2], spread: Math.PI, up: [3.5, 5.5], gravity: 3.2, drag: 1.4, wind: 0.6, spin: 6, fps: 14, alpha: 1, face: B, rise: [0.4, 0.8] };
 /** A firework's shell bursting: painted sparks falling. */
 export const FIREWORK: Recipe = { sprite: "sparkle", count: [22, 28], life: [1.1, 1.5], size: [0.7, 0.95], grow: 0.4, speed: [5, 7], spread: Math.PI, up: [-5, 6], gravity: 2.4, drag: 1.2, wind: 0.2, alpha: 1, face: B };
+/** A clean spike's crack: a star of short streaks flung out from the hand (round 4: "more animation vfx juice"). */
+export const HIT_STREAKS: Recipe = { sprite: "streak", count: [9, 11], life: [0.12, 0.18], size: [0.8, 1.2], grow: 1.15, aspect: 0.13, speed: [8, 12], spread: Math.PI, up: [-3, 3], gravity: 0, drag: 7, wind: 0, alpha: 1, face: FACE.streak };
 /** A whiff: a little swish of air. */
 export const SWISH: Recipe = { sprite: "swirl", count: [1, 1], life: [0.26, 0.3], size: [0.6, 0.7], grow: 1.3, speed: [0.4, 0.4], spread: 0, up: [0, 0], gravity: 0, drag: 3, wind: 0, alpha: 0.6, face: B };
 
@@ -104,14 +109,33 @@ export interface ContactPlan {
   flash: boolean; pulse: boolean;
   /** Sand at the feet, sparkles, a glint, speed lines, a shield ripple at the net, a dive's spray. */
   sand: boolean; sparkles: boolean; glint: boolean; lines: boolean; shield: boolean; spray: boolean;
-  /** The stamp over the action for this contact, if any (VolleyStamps). */
-  stamp: "Perfect!" | "Good" | "Early" | "Late" | "BLOCK!" | "SAVED!" | null;
+  /** A perfect spike or serve sets the ball on fire for its flight (round 3, David: "fire trail or smth"). */
+  fire: boolean;
+  /** The small call at the touch, if any (VolleyStamps): every block's, your grade, your team's saves. */
+  stamp: "Perfect" | "Good" | "Early" | "Late" | "Saved" | "Block" | null;
+  /** An anime impact frame (VolleyStamps): your perfect spike's one frame. */
+  impact: boolean;
+  /** Your dive's dig: your character flashes white for a beat (BLINK), the character only. */
+  blink: boolean;
 }
+
+/**
+ * The impact frame (round 4, David: "a 1 frame impact frame for perfect spikes"): how many rendered frames it holds, and
+ * the least time between two (s), so they never come back to back.
+ */
+export const IMPACT = { frames: 1, gap: 1.2 } as const;
+/**
+ * How many rendered frames your diving character stays white after the dig (round 5: "just a white flash on the
+ * charater"): counted like the impact frame, so the dig's slow-mo beat doesn't stretch it (about 0.13 s at 60 fps).
+ */
+export const BLINK = 8;
+/** Whether an impact frame may flash now: not too soon after the last, and never with reduced motion or flashing. */
+export const impactOk = (clock: number, lastAt: number, calm: boolean) => !calm && clock - lastAt >= IMPACT.gap;
 
 /** The plan for one contact: its kind's pieces in its grade's look. `mine`: your touch (the timing tags are yours only). */
 export function contactPlan(how: ContactKind, timing: Timing, mine: boolean, myTeam: boolean): ContactPlan {
   const look = GRADE_LOOK[timing], clean = timing === "perfect" || timing === "good";
-  const tag = mine ? (timing === "perfect" ? "Perfect!" : timing === "good" ? "Good" : timing === "early" ? "Early" : "Late") : null;
+  const tag = mine ? (timing === "perfect" ? "Perfect" : timing === "good" ? "Good" : timing === "early" ? "Early" : "Late") : null;
   return {
     look,
     flash: clean || how === "spike" || how === "serve" || how === "block",
@@ -122,6 +146,9 @@ export function contactPlan(how: ContactKind, timing: Timing, mine: boolean, myT
     lines: how === "spike" && clean,
     shield: how === "block",
     spray: how === "dig",
-    stamp: how === "block" ? "BLOCK!" : how === "dig" && myTeam ? "SAVED!" : tag,
+    fire: timing === "perfect" && (how === "spike" || how === "serve"),
+    stamp: how === "block" ? "Block" : how === "dig" && myTeam ? "Saved" : tag,
+    impact: mine && how === "spike" && timing === "perfect",
+    blink: mine && how === "dig",
   };
 }

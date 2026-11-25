@@ -51,7 +51,7 @@ export function HexRadar({ axes, max = 100, label, size = 440, className, testId
   const shape = (vs: readonly number[]) => vs.map((v, i) => at(i, v).map(c => c.toFixed(1)).join(",")).join(" ");
   const based = axes.some(a => a.base !== undefined && a.base !== a.value);
   const spoken = axes.map(a => `${a.label} ${a.value}${based && a.base !== undefined && a.base !== a.value ? ` (${a.base} without add-ons)` : ""}`).join(", ");
-  return <figure className={`${f.radar} ${className ?? ""}`} style={{ maxWidth: size }} data-testid={testId}>
+  return <figure className={`${f.radar} ${className ?? ""}`} style={{ maxWidth: size }} data-testid={testId} data-built={based || undefined}>
     <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="img" aria-label={`${label}: ${spoken}, out of ${max}`}>
       {[0.25, 0.5, 0.75, 1].map(k => <polygon key={k} className={f.radarRing} points={axes.map((_, i) => at(i, max * k).join(",")).join(" ")} />)}
       {axes.map((_, i) => { const [x, y] = at(i, max); return <line key={i} className={f.radarRing} x1={0} y1={0} x2={x} y2={y} />; })}

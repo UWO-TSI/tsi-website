@@ -9,8 +9,8 @@
  *
  *   node web/scripts/pack-glbs.mjs <file.glb>...
  *
- * Packed: the GLBs the island loads before you can move (specs/perf/entry-trace.mjs's JSON lists them), but the
- * characters' (scripts/sync-character-assets.mjs copies those from art/characters as they are).
+ * Packed: the GLBs the island loads before you can move (specs/perf/entry-trace.mjs's JSON lists them), and the
+ * characters' (scripts/sync-character-assets.mjs calls packGlbBytes on its copies from art/characters).
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";

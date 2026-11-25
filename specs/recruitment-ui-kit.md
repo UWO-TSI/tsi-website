@@ -1,5 +1,7 @@
 # Tethos recruitment village UI
 
+> Recruitment only (ledger row 334): this kit (`components/recruit/ui`) is recruitment's and the applicant island's own. The member game, the portal and the companion use the flat kit (`components/gui`; design bible, UI).
+
 Updated 2026-09-16. Local implementation, not deployed.
 
 ## Direction and references

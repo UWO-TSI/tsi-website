@@ -6,6 +6,8 @@ import * as THREE from "three";
 import { GLBProp } from "./NatureModels";
 import InstancedGLB, { MergedModels, type ModelPlacement } from "./InstancedNature";
 import { STREETLAMP_URL } from "@/lib/game/propModels";
+import { breath, glowTexture } from "@/lib/game/glow";
+import { ACTIVE_WORLD_BEND, ACTIVE_WORLD_BEND_SIDE } from "@/lib/game/curvedWorld";
 
 /** Seconds-ish a lamp takes to come up to full (or go out): an ease, never a switch (living-village §5). */
 const LAMP_RATE = 0.9;
@@ -106,11 +108,7 @@ export function lampLight(p: readonly [number, number, number], yaw: number, [lx
   return [p[0] + lx * c + lz * s, p[1] + ly, p[2] - lx * s + lz * c];
 }
 
-/**
- * A flame's breath (David, 2026-10-26: "lights should breath like fire, glow should grow and shrink like real lamps"):
- * a slow swell, a quicker waver and a flutter, uneven, each lamp at its own phase. LampGlow's shaders run the same sum.
- */
-export const breath = (t: number, phase: number) => 0.84 + 0.09 * Math.sin(t * 1.9 + phase) + 0.05 * Math.sin(t * 4.7 + phase * 1.3) + 0.02 * Math.sin(t * 11 + phase * 0.7);
+/** lib/game/glow.ts breath, in GLSL. */
 const BREATH_GLSL = "(0.84 + 0.09 * sin(uTime * 1.9 + ph) + 0.05 * sin(uTime * 4.7 + ph * 1.3) + 0.02 * sin(uTime * 11.0 + ph * 0.7))";
 /** A lamp's phase from where it stands. */
 export const lampPhase = (x: number, z: number) => x * 1.7 + z * 2.3;
@@ -147,21 +145,6 @@ export function LampPool({ points, intensity, reach, player, count = 4 }: {
   return <>{Array.from({ length: count }, (_, k) => <pointLight key={k} ref={l => { lights.current[k] = l; }} color="#FFA040" intensity={0} distance={reach} />)}</>;
 }
 
-/** A soft round glow, white in the middle fading to nothing at the rim (the halos' and the pools' alpha). */
-let glowTex: THREE.Texture | null = null;
-function glowTexture(): THREE.Texture {
-  if (glowTex) return glowTex;
-  const c = document.createElement("canvas");
-  c.width = c.height = 64;
-  const g = c.getContext("2d")!, grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.35, "rgba(255,255,255,0.45)");
-  grad.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 64, 64);
-  return (glowTex = new THREE.CanvasTexture(c));
-}
-
 type GlowUniforms = { uTime: { value: number }; uOn: { value: number } };
 /** A glow's shader breathing: `at` (GLSL) where its lamp stands, for its phase; its alpha by the breath and `uOn`. */
 function breathe(shader: THREE.WebGLProgramParametersWithUniforms, uniforms: GlowUniforms, at: string) {
@@ -170,8 +153,7 @@ function breathe(shader: THREE.WebGLProgramParametersWithUniforms, uniforms: Glo
     vec3 glowAt = ${at};
     float ph = glowAt.x * 1.7 + glowAt.z * 2.3;
     vBreath = ${BREATH_GLSL};`);
-  // The points' map is read in map_particle_fragment, the pools' in map_fragment.
-  shader.fragmentShader = "uniform float uOn;\nvarying float vBreath;\n" + shader.fragmentShader.replace(/#include <map(_particle)?_fragment>/, m => `${m}\n  diffuseColor.a *= uOn * vBreath;`);
+  shader.fragmentShader = "uniform float uOn;\nvarying float vBreath;\n" + shader.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>\n  diffuseColor.a *= uOn * vBreath;");
 }
 /** The frame (module scope: the react compiler forbids writing through hook values): the time, the ease in and out. */
 function glowFrame(u: GlowUniforms, objects: readonly THREE.Object3D[], on: boolean, t: number, dt: number) {
@@ -181,10 +163,54 @@ function glowFrame(u: GlowUniforms, objects: readonly THREE.Object3D[], on: bool
 }
 
 /**
+ * A lamp's halo (sky-ambient rounds 2 and 4; David, the title's round 4: the lights "should look kinda real likes where
+ * it molds around the light source, and also it isnt a hard cut off, rather the glow fades very softly"; round 5: "the
+ * clow is still so circular"): a quad facing the camera, lifted toward it past the lamp's head so the glass never cuts
+ * it. The glow is measured from the glass, a small upright pane (`uGlass`), not from a point: a hot core hugging the
+ * pane, then light falling off with the distance from it (two exponentials, so it has no rim and no circle), the quad's
+ * own edge faded out in a square far below where the light still shows. Dithered, breathing with the flame. One
+ * instanced draw for every lamp.
+ */
+const HALO_VERT = /* glsl */ `
+uniform float uTime;
+uniform vec2 uSize;
+uniform float uLift;
+varying vec2 vUv;
+varying float vBreath;
+void main() {
+  vec3 at = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  float ph = at.x * 1.7 + at.z * 2.3;
+  vBreath = ${BREATH_GLSL};
+  vec4 mv = viewMatrix * vec4(at, 1.0);
+  mv.xyz += normalize(-mv.xyz) * uLift;
+  mv.y -= mv.z * mv.z * ${ACTIVE_WORLD_BEND.toFixed(6)} + mv.x * mv.x * ${ACTIVE_WORLD_BEND_SIDE.toFixed(6)};
+  mv.xy += position.xy * uSize * (0.8 + 0.4 * vBreath);
+  vUv = position.xy * 2.0;
+  gl_Position = projectionMatrix * mv;
+}`;
+const HALO_FRAG = /* glsl */ `
+uniform float uOn;
+uniform vec3 uCore;
+uniform vec3 uEdge;
+uniform vec2 uGlass;
+varying vec2 vUv;
+varying float vBreath;
+void main() {
+  vec2 q = max(abs(vUv) - uGlass, 0.0);
+  float dist = length(q);
+  float core = exp(-dist * dist / 0.003), glow = 0.6 * exp(-dist * 9.0) + 0.4 * exp(-dist * 3.6);
+  vec2 edge = 1.0 - smoothstep(0.55, 1.0, abs(vUv));
+  glow *= edge.x * edge.y;
+  float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+  float a = max(0.0, glow * uOn * vBreath + dither / 255.0);
+  gl_FragColor = vec4(mix(uEdge, uCore, core), a);
+}`;
+
+/**
  * The new world's lamps at night, cheaply (terrain v3 R2d; David, R2c: "should have like a glow homey feel and it should
- * light up larger area"): a warm halo round every lamp's light and a warm pool on the ground under it, every one
- * breathing like a flame at its own phase (the shader, from one time uniform). Two draws for all of them: the halos are
- * points, the pools one instanced disc. `on` (0 to 1) eases them in and out with the lamps.
+ * light up larger area"): a warm halo round every lamp's light (above) and a warm pool on the ground under it, every
+ * one breathing like a flame at its own phase (the shader, from one time uniform). Two draws for all of them: the halos
+ * and the pools, each one instanced quad. `on` (0 to 1) eases them in and out with the lamps.
  */
 export function LampGlow({ points, ground, on, halo = 2.6, pool = 5.5, color }: {
   points: readonly (readonly [number, number, number])[]; ground: (x: number, z: number) => number; on: boolean;
@@ -195,18 +221,18 @@ export function LampGlow({ points, ground, on, halo = 2.6, pool = 5.5, color }: 
 }) {
   const uniforms = useMemo((): GlowUniforms => ({ uTime: { value: 0 }, uOn: { value: 0 } }), []);
   const halos = useMemo(() => {
-    const geometry = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(points.flat(), 3));
-    const material = new THREE.PointsMaterial({ color: color ?? "#ffb35c", map: glowTexture(), size: halo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
-    material.onBeforeCompile = shader => {
-      breathe(shader, uniforms, "position");
-      // The halo grows and shrinks with the flame.
-      shader.vertexShader = shader.vertexShader.replace("gl_PointSize = size;", "gl_PointSize = size * (0.75 + 0.5 * vBreath);");
-    };
-    material.customProgramCacheKey = () => "lamp-halo-v1";
-    const p = new THREE.Points(geometry, material);
-    p.frustumCulled = false;
-    p.renderOrder = 2;
-    return p;
+    const edge = new THREE.Color(color ?? "#ff9a40"), core = color ? new THREE.Color(color).lerp(new THREE.Color(1, 1, 1), 0.5) : new THREE.Color("#fff1d6");
+    const material = new THREE.ShaderMaterial({
+      vertexShader: HALO_VERT, fragmentShader: HALO_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { ...uniforms, uSize: { value: new THREE.Vector2(halo, halo * 1.15) }, uLift: { value: halo * 0.3 }, uCore: { value: core }, uEdge: { value: edge },
+        // The glass, in the quad's half sizes: a small upright pane (the fountain's jet a taller one).
+        uGlass: { value: color ? new THREE.Vector2(0.05, 0.2) : new THREE.Vector2(0.045, 0.085) } },
+    });
+    const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), material, points.length), m = new THREE.Matrix4();
+    points.forEach(([x, y, z], i) => mesh.setMatrixAt(i, m.makeTranslation(x, y, z)));
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 2;
+    return mesh;
   }, [points, halo, color, uniforms]);
   const pools = useMemo(() => {
     const geometry = new THREE.CircleGeometry(pool, 24).rotateX(-Math.PI / 2);

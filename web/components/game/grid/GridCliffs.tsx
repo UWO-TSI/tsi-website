@@ -21,7 +21,7 @@
  */
 
 import { useEffect, useMemo } from "react";
-import { useGLTF } from "@react-three/drei";
+import { gltfsOf } from "@/lib/game/gltfsOf";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { type IslandMap, listChunks, cliffPieceFor, cellToWorldX, cellToWorldZ } from "@/lib/game/grid";
@@ -77,7 +77,7 @@ function kitMaterial(own: THREE.Material | undefined, mesh: THREE.Mesh, ground: 
 export default function GridCliffs({ map, grass, drape, ground = "dump" }: { map: IslandMap; grass?: THREE.Material; drape?: THREE.Material; ground?: GroundSet }) {
   const byFile = useCliffPlacements(map);
   const files = useMemo(() => [...byFile.keys()], [byFile]);
-  const gltfs = useGLTF(files.map(f => CLIFF_DIR + f)) as unknown as { scene: THREE.Object3D }[];
+  const gltfs = gltfsOf(files.map(f => CLIFF_DIR + f));
   const meshes = useMemo(() => cliffBlocks(map, files, gltfs.map(g => g.scene), byFile, (own, mesh) => kitMaterial(own, mesh, ground, grass, drape), GROUND_UV),
     [map, files, gltfs, byFile, grass, drape, ground]);
   useEffect(() => () => meshes.forEach(m => m.geometry.dispose()), [meshes]);

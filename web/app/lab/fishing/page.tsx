@@ -13,9 +13,9 @@
 import { useMemo, useRef, useState } from "react";
 import { popBang } from "@/components/game/character/hookBang";
 import { AudioManager } from "@/lib/game/audio";
-import { ReelMinigame } from "@/components/game/FishingOverlay";
-import FishReveal from "@/components/game/FishReveal";
-import FishingOverlay from "@/components/game/FishingOverlay";
+import { ReelMinigame } from "@/components/recruit/FishingOverlay";
+import FishReveal from "@/components/recruit/FishReveal";
+import FishingOverlay from "@/components/recruit/FishingOverlay";
 import MemberFishing, { MemberCatchCard } from "@/components/game/fishing/MemberFishing";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import FishPreview from "@/components/lab/FishPreview";
@@ -94,7 +94,7 @@ export default function FishingBench() {
     setReelOpen(false);
     if (success) {
       const size = rollSize(selected.sizeCm);
-      celebrate(selected.rarity, RARITY_META[selected.rarity].color);
+      celebrate(selected.rarity, [RARITY_META[selected.rarity].color, "#ffffff"]);
       setLastResult(`CAUGHT — ${selected.name}, ${size} cm`);
     } else {
       setLastResult("ESCAPED — it swam off");
@@ -289,7 +289,7 @@ export default function FishingBench() {
               Cast (the whole loop)
             </button>
             <button
-              onClick={() => celebrate(selected.rarity, RARITY_META[selected.rarity].color)}
+              onClick={() => celebrate(selected.rarity, [RARITY_META[selected.rarity].color, "#ffffff"])}
               style={btn()}
             >
               Catch confetti ({REVEAL[selected.rarity].confetti} bursts)

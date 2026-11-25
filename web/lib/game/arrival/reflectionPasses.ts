@@ -42,7 +42,7 @@ export interface PassRenderer {
  * The mirror pass then the frame pass, both of the one scene: only the water is left out of the mirror's. While a wave
  * sweeps a new look in (`you.old`: the look it replaces, null otherwise), the old look's reflection is drawn too, into
  * `reflOld`, for the water to show ahead of the crest; and the frame is drawn twice, the old you over the side in `frame`
- * and the new one in `frameNew`, for the composite to dissolve one into the other (playtest 2026-10-29: the back of the
+ * and the new one in `frameNew`, for the composite to fade one into the other (playtest 2026-10-29: the back of the
  * head no longer pops). Afterwards the new you is shown and the old one hidden.
  */
 export function renderReflection(gl: PassRenderer, scene: THREE.Object3D, water: THREE.Object3D | null, cam: THREE.Camera, mirror: THREE.Camera,

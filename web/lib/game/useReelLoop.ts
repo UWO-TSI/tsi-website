@@ -62,7 +62,7 @@ export function useReelLoop({ fish, boss, raidId, rig, initialInput, focus, onFr
       if (paused) { raf = requestAnimationFrame(step); return; }
       const events = advanceFishingReel(sim, dt, holding, weatherMods(reelWeather(liveIslandWeather())).dartChanceMul, Math.random, rig?.tensionMul, rig?.fillMul);
       // The fight in the world: the fish pulls the bobber across, the line tightens, the reel cranks while held.
-      live.pull = sim.fishPosition * 2 - 1; live.tension = sim.tension; live.reeling = holding; live.reeled = sim.boss ? 1 - sim.boss.stamina : sim.progress;
+      live.pull = sim.drawnFish * 2 - 1; live.tension = sim.tension; live.reeling = holding; live.reeled = sim.boss ? 1 - sim.boss.stamina : sim.progress;
       let raid: RaidView | null = null;
       if (sim.boss?.shared && raidId) {
         // The room's fish: its stamina is the server's, the landing and the escape too; this reel reports its wear.

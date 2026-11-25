@@ -237,8 +237,9 @@ export function supabaseProgressionStore(db: SupabaseClient, flags: DropFlags = 
       const ids = [...new Set(rows.flatMap((r) => [r.sender_id, r.recipient_id]).filter(Boolean).map(String))];
       const names = new Map<string, string>();
       if (ids.length) {
-        const { data: profiles } = await db.from("profiles").select("id, display_name").in("id", ids);
-        for (const p of (profiles ?? []) as Row[]) names.set(String(p.id), String(p.display_name ?? "Member"));
+        // World names, never profile names (real names never show in game).
+        const { data: identities } = await db.from("member_identity").select("member_id, world_name").in("member_id", ids);
+        for (const p of (identities ?? []) as Row[]) if (p.world_name) names.set(String(p.member_id), String(p.world_name));
       }
       // A resident's friendship letter is from them, by name (d-friends).
       const friendOf = (r: Row) => (r.kind === "system" && String(r.broadcast_key ?? "").startsWith("friend:") ? String(r.broadcast_key).split(":")[1] : null);

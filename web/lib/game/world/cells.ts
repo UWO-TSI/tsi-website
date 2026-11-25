@@ -6,7 +6,7 @@
  * the coast (grid.ts terrainOf), the water classes (fishingSpots.ts) and the node ids (islandNodes.ts) read, so the server's village gives exactly the client's casts and nodes.
  */
 import { Surface, createMap, isWater, type IslandMap, type MapAnnotation } from "../grid";
-import { villageOf, type MapObject, type Village } from "../villageMap";
+import { standing, villageOf, type MapObject, type Village } from "../villageMap";
 
 export interface WorldCells { width: number; depth: number; originX: number; originZ: number; rows: string[] }
 
@@ -56,5 +56,5 @@ export function villageOfCells(c: WorldCells, objects: readonly MapObject[], ann
   const map = cellsMap(c), dig = Uint8Array.from(map.surfaces);
   for (let i = 0; i < map.surfaces.length; i++) if (map.surfaces[i] === Surface.Sand || map.surfaces[i] === Surface.Soil) map.surfaces[i] = Surface.Grass;
   const digSurface = (cx: number, cz: number) => (cx >= 0 && cz >= 0 && cx < c.width && cz < c.depth ? dig[cz * c.width + cx] : Surface.Grass);
-  return { ...villageOf(map, objects), rivers: riverCells(annotations), digSurface };
+  return { ...villageOf(map, standing(objects)), rivers: riverCells(annotations), digSurface };
 }

@@ -11,7 +11,8 @@ import { Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { CircleDot, Clover, Link, Magnet, MoveHorizontal, RefreshCw, Timer, Worm } from "lucide-react";
+import { CircleDot, Worm } from "lucide-react";
+import { STAT_ICON } from "./statIcons";
 import { GearSlot, HexRadar } from "@/components/gui/flat";
 import { prepareModel } from "@/lib/game/modelMaterials";
 import { worldModel } from "@/lib/game/world/active";
@@ -32,9 +33,6 @@ export const gainsText = (t: Tackle) => STAT_KEYS.flatMap(k => (t.gains[k] ? [`+
 /** "Rare rod · hooks up to epic". */
 export const rodLine = (r: RodTier) => `${RARITY_LABEL[r.rarity]} rod · hooks up to ${RARITY_LABEL[hookCap(r.rarity)].toLowerCase()}`;
 
-const STAT_ICON: Record<RodStat, ReactNode> = {
-  luck: <Clover />, bite: <Timer />, strength: <Link />, reel: <RefreshCw />, lure: <Magnet />, control: <MoveHorizontal />,
-};
 const axis = (k: RodStat, value: number, base?: number) => ({ label: STAT_INFO[k].label, hint: STAT_INFO[k].does, icon: STAT_ICON[k], value, base });
 
 /** A rod's radar: the rod alone, or (`tackle`) the build with its add-ons over the rod alone. */
@@ -62,9 +60,10 @@ export function RodSlots({ rows, busy, onEquip }: { rows: readonly InventoryRow[
 }
 
 /** How far the tackle hangs below the tip, and each piece's size (stage units: the rod spans 1.7). */
-const LINE = 0.34, LEADER = 0.1, SIZE: Record<TackleSlot, number> = { bobber: 0.2, bait: 0.12 };
-const lineMat = new THREE.MeshBasicMaterial({ color: 0x3a3a3a });
-const lineGeo = new THREE.CylinderGeometry(0.006, 0.006, 1, 5).translate(0, -0.5, 0);
+const LINE = 0.34, LEADER = 0.1, SIZE: Record<TackleSlot, number> = { bobber: 0.13, bait: 0.1 };
+// A light, fine line (David 10-29: "make the line not black and thinner more subtle").
+const lineMat = new THREE.MeshBasicMaterial({ color: 0xb4bcc4 });
+const lineGeo = new THREE.CylinderGeometry(0.0035, 0.0035, 1, 5).translate(0, -0.5, 0);
 // The low-poly tackle loads with the stage, so fitting one never blinks the rest out while it loads.
 for (const t of TACKLE) useGLTF.preload(worldModel(t.model));
 

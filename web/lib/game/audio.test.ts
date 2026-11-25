@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AudioManagerImpl } from "./audio";
+import { AudioManagerImpl, footstepRate, pickVariant, pitchJitter } from "./audio";
 
 class FakeAudio extends EventTarget {
   static all: FakeAudio[] = [];
@@ -57,8 +57,8 @@ describe("world audio lifecycle", () => {
     expect(FakeAudio.all.at(-1)?.src).toBe("/audio/ambient/applicant-willow-tree.ogg");
     expect(FakeAudio.all.at(-1)?.volume).toBeCloseTo(0.7 * 0.6 * 0.18);
     expect(manager.getState().volumes).toEqual({ master: 0.7, ambient: 0.6, music: 0.55, sfx: 0.8 });
-    manager.setAmbience({ phase: "day" }); // the member island's ambience: nothing to play, so the applicant track stops
-    expect(FakeAudio.all.every(track => track.paused)).toBe(true);
+    manager.setAmbience({ phase: "day" }); frame(1600); // the member island's ambience: its own bed takes over from the applicant track
+    expect(FakeAudio.all.filter(track => !track.paused).map(track => track.src)).toEqual(["/audio/ambient/bed-day.ogg"]);
     manager.stop();
   });
   it("keeps the applicant soundtrack muted across HQ transitions", () => {
@@ -122,7 +122,9 @@ describe("world audio lifecycle", () => {
     const manager = new AudioManagerImpl(); manager.enable();
     manager.playSFX("blip3", { rate: 0.6, gain: 0.5 });
     const sound = FakeAudio.all[0] as FakeAudio & { playbackRate?: number; defaultPlaybackRate?: number; preservesPitch?: boolean };
-    expect([sound.playbackRate, sound.defaultPlaybackRate, sound.preservesPitch]).toEqual([0.6, 0.6, false]);
+    expect(sound.playbackRate).toBe(sound.defaultPlaybackRate);
+    expect(sound.preservesPitch).toBe(false);
+    expect(sound.playbackRate).toBeGreaterThanOrEqual(0.6 * 0.92); expect(sound.playbackRate).toBeLessThanOrEqual(0.6 * 1.08); // the rate times the pitch jitter
     expect(sound.volume).toBeCloseTo(0.7 * 0.8 * 0.5);
     manager.setMuted(true); expect(sound.volume).toBe(0);
     manager.setMuted(false); expect(sound.volume).toBeCloseTo(0.7 * 0.8 * 0.5);
@@ -144,5 +146,52 @@ describe("loop layers on the world clock (the campfire's drums)", () => {
     expect(loopOffset(-500, 4)).toBeCloseTo(3.5);
     // A 4 s layer and an 8 s layer started at any instant stay on the same bar.
     for (const t of [1234, 98_765, 1_791_931_346_000]) expect(loopOffset(t, 8) % 4).toBeCloseTo(loopOffset(t, 4));
+  });
+});
+
+describe("footsteps follow walking speed (SFX library r2)", () => {
+  it("plays a step at walk speed as recorded, faster when running, within the library's range", () => {
+    expect(footstepRate(1)).toBe(1);
+    expect(footstepRate(1.7)).toBeCloseTo(1.2);
+    expect(footstepRate(0.9)).toBeCloseTo(0.97);
+    expect(footstepRate(5)).toBe(1.2);
+    expect(footstepRate(0)).toBe(0.9);
+  });
+});
+
+describe("sound takes (SFX audit, David 2026-11-20)", () => {
+  it("plays the left foot's -l take and the right foot's -r take by variant", () => {
+    const grass = ["/audio/sfx/footstep-grass-l.ogg", "/audio/sfx/footstep-grass-r.ogg"];
+    expect(grass[pickVariant(grass, 0)]).toBe(grass[0]);
+    expect(grass[pickVariant(grass, 1)]).toBe(grass[1]);
+    const manager = new AudioManagerImpl(); manager.enable();
+    manager.playSFX("footstep-grass", { variant: 0 });
+    manager.playSFX("footstep-grass", { variant: 1 });
+    expect(FakeAudio.all.map(a => a.src)).toEqual(grass);
+    manager.stop();
+  });
+  it("never plays the same random take twice in a row", () => {
+    const forage = ["/audio/sfx/forage-1.ogg", "/audio/sfx/forage-2.ogg", "/audio/sfx/forage-3.ogg", "/audio/sfx/forage-4.ogg"];
+    for (let i = 0; i < 50; i++) {
+      const first = pickVariant(forage, undefined, undefined);
+      const second = pickVariant(forage, undefined, first);
+      expect(second).not.toBe(first);
+    }
+    const manager = new AudioManagerImpl(); manager.enable();
+    for (let i = 0; i < 50; i++) {
+      manager.playSFX("forage");
+      manager.playSFX("forage");
+      const [a, b] = FakeAudio.all.slice(-2);
+      expect(a.src).not.toBe(b.src);
+    }
+    manager.stop();
+  });
+});
+
+describe("pitchJitter", () => {
+  it("stays within 0.92 to 1.08", () => {
+    expect(pitchJitter(() => 0)).toBeCloseTo(0.92);
+    expect(pitchJitter(() => 1)).toBeCloseTo(1.08);
+    for (let i = 0; i < 200; i++) { const v = pitchJitter(); expect(v).toBeGreaterThanOrEqual(0.92); expect(v).toBeLessThanOrEqual(1.08); }
   });
 });

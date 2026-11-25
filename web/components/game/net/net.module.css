@@ -6,8 +6,8 @@
 .plateAt { position: absolute; top: 0; left: 0; pointer-events: none; user-select: none; will-change: transform; }
 .plate { transform: translate(-50%, -50%); transition: opacity 0.3s ease; }
 /* Development (?lod=1): the player's render tier beside the name. */
-.plate[data-tier]::after { content: attr(data-tier); margin-left: 4px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #bfe3cf; }
-.plate[data-tier="Reduced"]::after { color: #ffd28a; }
+.plate[data-tier]::after { content: attr(data-tier); margin-left: 4px; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ui-tier-good); }
+.plate[data-tier="Reduced"]::after { color: var(--ui-tier-warn); }
 .plate .phone[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .plate { transition: none; } }
 
@@ -22,7 +22,7 @@
 /* The status pill (and a touch screen's chat button): bottom right, clear of the minimap and the tracker (playtest round 1). */
 .hud { position: absolute; right: var(--hud-edge, 16px); bottom: var(--hud-floor, 16px); z-index: 13; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; zoom: var(--tsi-text-scale, 1); }
 .hud > * { pointer-events: auto; }
-.status { display: flex; align-items: center; gap: 8px; padding: 5px 6px 5px 6px; border-radius: var(--gui-r-pill); background: rgb(255 251 231 / 0.96); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); }
+.status { display: flex; align-items: center; gap: 8px; padding: 5px 6px 5px 6px; border-radius: var(--gui-r-pill); background: color-mix(in srgb, var(--ui-hud-pill) 96%, transparent); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); }
 .status > :first-child { font-size: var(--gui-text-xs); font-weight: 800; }
 .beads { display: inline-flex; gap: 3px; margin-right: 2px; }
 .beads i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: bead 0.9s ease-in-out infinite; }
@@ -30,7 +30,7 @@
 .beads i:nth-child(3) { animation-delay: 0.3s; }
 @keyframes bead { 0%, 100% { transform: translateY(0); opacity: 0.5; } 50% { transform: translateY(-3px); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .beads i { animation: none; } }
-:global(html[data-contrast="high"]) .status { background: #ffffff; color: #000000; box-shadow: inset 0 0 0 2px #000000; }
+:global(html[data-contrast="high"]) .status { background: var(--ui-on-scrim); color: var(--ui-contrast-ink); box-shadow: inset 0 0 0 2px var(--ui-contrast-ink); }
 
 /* The people list. */
 .group + .group { margin-top: 14px; }

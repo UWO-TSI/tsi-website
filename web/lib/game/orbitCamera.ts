@@ -159,6 +159,9 @@ export function nextCapture(s: CaptureState, e: CaptureEvent): CaptureStep {
   }
 }
 
+/** In a seat's own view (the sushi bar's stools; the follow camera sets it): the mouse looks round with no click, one finger drags the view (useOrbitInput). */
+export const seated = { on: false };
+
 /** The live capture state, for the HUD (the hint, the crosshair) and the Esc guard. */
 export const capture = { state: "off" as CaptureState, /** When the lock last ended (ms, performance.now). */ unlockedAt: -Infinity };
 const captureListeners = new Set<() => void>();

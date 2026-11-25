@@ -3,13 +3,15 @@
 /**
  * Your friends (specs/v1-drop.md §3): who's on the island and where (Join puts you in their shard), requests to answer
  * or take back, your friend code to share and a box to add someone by theirs (people who aren't online), and the
- * players you've blocked (unblock). A paper sheet through the one dialog system. World names only (row 222).
+ * players you've blocked (unblock). A paper sheet through the one dialog system. World names only (row 222). While
+ * you're with the others, "Who's on the island" opens everyone here (round 8: the Esc dock's "Here (n)" folded in).
  */
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, Copy, HeartHandshake, LogIn } from "lucide-react";
+import { Check, Copy, HeartHandshake, LogIn, Users } from "lucide-react";
 import { Button, Empty, List, ListRow, Sheet, Tabs, toast } from "@/components/gui";
 import { chatStore } from "@/lib/net/chat";
-import { useNetStatus } from "@/lib/net/netStore";
+import { useNetStatus, useRoster } from "@/lib/net/netStore";
+import { setNetSheet } from "./sheets";
 import { formatFriendCode } from "@/lib/world/friendCode";
 import { blockList, unblockWorld } from "@/lib/world/api";
 import { addFriend, answer, joinFriend, refreshFriends, unfriend, useFriends, whereOf } from "./friendActions";
@@ -71,7 +73,7 @@ function AddByCode({ code }: { code: string | null }) {
 }
 
 export default function FriendsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const f = useFriends(), status = useNetStatus();
+  const f = useFriends(), status = useNetStatus(), roster = useRoster();
   const [tab, setTab] = useState<Tab>("friends");
   // Opening reads the list again and starts on your friends (or on the requests, when someone is asking).
   const asking = f.asking > 0;
@@ -87,6 +89,8 @@ export default function FriendsSheet({ open, onClose }: { open: boolean; onClose
   const here = friends.filter(x => online.has(x.member_id)).length;
   return <Sheet open={open} onClose={onClose} size="sm" icon={<HeartHandshake size={20} />} testId="friends-sheet" title="Friends"
     eyebrow={v ? `${friends.length} friend${friends.length === 1 ? "" : "s"} · ${here} on the island` : "Your friends"}>
+    {status.kind === "joined" && <Button size="sm" variant="secondary" onClick={() => setNetSheet("people")} data-testid="friends-people">
+      <Users size={15} aria-hidden /> Who&apos;s on the island ({roster.length})</Button>}
     <Tabs label="Friends" value={tab} onChange={setTab} tabs={[
       { id: "friends", label: "Friends" }, { id: "requests", label: "Requests", badge: f.asking || undefined }, { id: "add", label: "Add" }, { id: "blocked", label: "Blocked" },
     ]} />

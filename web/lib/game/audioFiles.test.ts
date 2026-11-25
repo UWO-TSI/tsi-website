@@ -37,10 +37,11 @@ describe("audio requests only files on disk", () => {
     for (const name of MUSIC_FILES) expect(onDisk(`/assets/audio/music/${name}`), name).toBe(true);
   });
 
-  it("a listed variant is tried first", () => {
+  it("a listed variant is tried first, then the weather's bed, then the time of day's", () => {
     expect(ambientCandidates({ phase: "day", weather: "rain", season: "autumn" }, new Set(["day-rain", "day-autumn"])))
-      .toEqual(["/audio/ambient/day-rain.ogg", "/audio/ambient/day-autumn.ogg"]);
+      .toEqual(["/audio/ambient/day-rain.ogg", "/audio/ambient/day-autumn.ogg", "/audio/ambient/bed-rain.ogg", "/audio/ambient/bed-day.ogg"]);
     expect(ambientCandidates({ phase: "day", weather: "rain", season: "autumn" }, new Set(["day-autumn"])))
-      .toEqual(["/audio/ambient/day-autumn.ogg"]);
+      .toEqual(["/audio/ambient/day-autumn.ogg", "/audio/ambient/bed-rain.ogg", "/audio/ambient/bed-day.ogg"]);
+    expect(ambientCandidates({ phase: "night", weather: "clear" }, new Set())).toEqual(["/audio/ambient/bed-night.ogg"]);
   });
 });

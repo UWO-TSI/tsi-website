@@ -37,6 +37,8 @@ export const OBJECT_KINDS = [
   "prop",
   // A 4 u square of wooden deck boards on the ground (terrain v3: the wharf's deck; lib/game/wharf.ts deckPieces).
   "deck",
+  // The fish market's chalkboards (lib/game/wharf.ts boardsOf): id "catch" (what bites now) and "tasks" (the fishing tasks).
+  "board",
 ] as const;
 export type ObjectKind = (typeof OBJECT_KINDS)[number];
 
@@ -45,7 +47,13 @@ export type ObjectKind = (typeof OBJECT_KINDS)[number];
  * schedules and study tables reference anchor and table ids). `x`/`z` are world
  * coordinates; `yaw` radians about +y; `seed` picks a nature variant; `model`
  * names the variant where a kind has several (rock model, study furniture, bug
- * biome, fence variant).
+ * biome, fence variant). `lift` raises a prop or a board off the ground under it
+ * (negative sinks it). What David placed, moved or deleted in the world editor is
+ * `pin`ned, and the generator's re-layout keeps it (lib/game/world/generate.ts
+ * layoutObjects): `of` is where the generator had put it (so the re-layout knows
+ * which of its own objects this one replaces, ids being positions in its lists),
+ * `gone` a deletion, kept so the generator doesn't put the object back; no world
+ * shows a gone object (`standing`).
  */
 export interface MapObject {
   id: string;
@@ -56,11 +64,15 @@ export interface MapObject {
   scale?: number;
   seed?: number;
   model?: string;
+  lift?: number;
+  pin?: true;
+  of?: [number, number];
+  gone?: true;
 }
 
 /** The on-disk shape: the terrain document plus the object layer. */
 export interface VillageDoc extends IslandMapDoc {
-  objects?: { id: string; kind: string; x: number; z: number; yaw?: number; scale?: number; seed?: number; model?: string }[];
+  objects?: { id: string; kind: string; x: number; z: number; yaw?: number; scale?: number; seed?: number; model?: string; lift?: number; pin?: boolean; of?: number[]; gone?: boolean }[];
 }
 
 const KINDS = new Set<string>(OBJECT_KINDS);
@@ -95,10 +107,17 @@ export function parseObjects(list: VillageDoc["objects"]): MapObject[] {
       ...(Number.isFinite(o.scale) && o.scale !== 1 ? { scale: o.scale } : {}),
       ...(Number.isFinite(o.seed) ? { seed: o.seed } : {}),
       ...(typeof o.model === "string" ? { model: o.model } : {}),
+      ...(Number.isFinite(o.lift) && o.lift ? { lift: o.lift } : {}),
+      ...(o.pin === true ? { pin: true as const } : {}),
+      ...(Array.isArray(o.of) && o.of.length === 2 && o.of.every(Number.isFinite) ? { of: [o.of[0], o.of[1]] as [number, number] } : {}),
+      ...(o.gone === true ? { gone: true as const } : {}),
     });
   }
   return objects;
 }
+
+/** The objects a world shows: all but those David deleted in the world editor (kept as `gone` for the generator). */
+export const standing = (objects: readonly MapObject[]): MapObject[] => objects.filter(o => !o.gone);
 
 /** The whole document, as the painter exports it. Legacy cell markers are not carried. */
 export function serialiseVillage(map: IslandMap, objects: readonly MapObject[], annotations: MapAnnotation[] = []): VillageDoc {

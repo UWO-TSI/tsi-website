@@ -13,7 +13,7 @@ import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerE
 import { Lock } from "lucide-react";
 import { Slider } from "@/components/gui";
 import { hexToHsv, hsvToHex, wheelPick, wheelPoint, type Hsv } from "@/lib/game/character/colour";
-import styles from "./CharacterCreator.module.css";
+import { useStudio } from "./creatorStudio";
 
 const HEX_INPUT = /^#?[0-9a-fA-F]{6}$/;
 
@@ -28,6 +28,7 @@ export default function ColourWheel({ value, active, locked = false, onShop, onC
   onShop?: () => void;
   onChange: (hex: string) => void;
 }) {
+  const { styles } = useStudio();
   // The wheel's own last pick, while the look still wears it (it keeps a grey's hue and the exact saturation); a preset
   // picked elsewhere moves the wheel to that colour, at the last hue for a grey.
   const [own, setOwn] = useState<{ hsv: Hsv; hex: string } | null>(null);

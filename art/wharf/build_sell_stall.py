@@ -2,13 +2,13 @@
 after specs/references/terrain/fish-shop-2026-10-26/sell-stall-fisk.jpg and sell-cart-coco.jpg: "barrel front of fish
 shop to sell"). It replaces wharf-art2's lone sell barrel under the same name, so the world's placement and the sell
 interaction keep working. A wooden display crate on legs tipped toward the buyer, heaped with bright fish, a crab, an
-octopus and a starfish, a net slung under its front; a barrel with a lantern on it and a tub of fish on the left; a
-barrel with a coil of rope and a life ring on the right; behind, a frame of two posts carrying a coral SELL board (the
+octopus and a starfish, a net slung under its front; a tub of fish on the left (round 8 took the barrel with a lantern
+on it away, David: "remove the landern barral"); a barrel with a coil of rope and a life ring on the right; behind, a frame of two posts carrying a coral SELL board (the
 cart's colour), a net sagging under it, a fish hung off one end and a lantern off the other, two gulls on the top bar.
 
   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P art/wharf/build_sell_stall.py [-- review <dir> [az:el ...]]
 
-Writes game/wharf/sell-barrel.glb in game units at scale 1: the origin on the ground at the crate's middle, the front
+Writes game/wharf/sell-barrel.glb, and the three fish that flop on top of the heap as game/wharf/sell-fish.glb (round 6), in game units at scale 1: the origin on the ground at the crate's middle, the front
 (the buyer's side) +z. Wood is the fish market's painted grain (M_DecorWood, so the two merge), everything else plain
 P_Paint under COLOR_0, the lanterns' panes the path lamps' glowing M_Glass. Seeded: a rebuild writes the same model.
 """
@@ -163,6 +163,28 @@ def tub(k, Mw, Mp):
              flat=(-math.sin(a), 0, math.cos(a)))
 
 
+# The catch heaped on the ice, in the tray's frame: x, y, z, the way its tail points (yaw), its length and colour.
+HEAP = ((-0.3, 0.09, 0.17, 0.15, 0.55, "#4f8fd8"), (0.26, 0.09, 0.19, -0.2, 0.55, "#9a63d1"), (-0.26, 0.09, -0.16, 3.0, 0.5, "#35b3a6"),
+        (0.27, 0.09, -0.17, 2.9, 0.52, "#f08a3c"), (0.0, 0.1, 0.0, 1.4, 0.5, "#f2c84b"), (-0.06, 0.15, 0.13, 0.4, 0.6, "#6fa8e8"),
+        (0.2, 0.15, 0.0, -2.6, 0.5, "#e8566b"), (-0.28, 0.15, -0.05, 2.4, 0.45, "#9a63d1"))
+# The three on top flop now and then (fishing-depth round 6, David: "i wand the fish in the sell bin to flop around"): each
+# its own object in game/wharf/sell-fish.glb, its tail along its +x, so the game can flip it (CatchBoard.tsx SellBinFish).
+FLOPPERS = ((0.02, 0.21, -0.12, 0.2, 0.46, "#4f8fd8"), (0.1, 0.22, 0.12, -0.5, 0.52, "#35b3a6"), (-0.12, 0.27, -0.02, 2.9, 0.5, "#f08a3c"))
+
+
+def floppers(Mp):
+    """The flopping fish, each round its own middle, turned and tipped to where it lies in the tray."""
+    obs = []
+    for i, (x, y, z, yaw, L, col) in enumerate(FLOPPERS):
+        k = K.Kit(f"flop-{i}")
+        fish(k, Mp, (0.0, 0.0, 0.0), (1.0, 0.0, 0.0), L * 1.1, col)
+        ob = k.finish(smooth_deg=45, name=f"flop-{i}")
+        rot = Matrix.Rotation(TILT, 3, "X") @ K.game_rot(yaw=-yaw)
+        ob.matrix_world = Matrix.Translation(K.G(*tray_pt((x, y, z)))) @ (K.P @ rot @ K.P.inverted()).to_4x4()
+        obs.append(ob)
+    return obs
+
+
 def tray(k, Mw, Mp):
     """The display crate's tray in its own frame (floor at y 0, the buyer +z): a plank floor, a low front and a tall
     back, a bed of ice, and the catch heaped on it."""
@@ -178,10 +200,7 @@ def tray(k, Mw, Mp):
             k.rbox((sx * 0.625, (y0 + y1) / 2, (z0 + z1) / 2), (0.05, y1 - y0, z1 - z0), 0.012, Mw,
                    mix(WOOD, WOOD_DARK, rng.uniform(0.1, 0.5)), segs=1, v_axis=2)
     k.blob((0, 0.02, 0), (0.58, 0.05, 0.38), Mp, "#dff0f3", segs=12, rings=4, seed=4, lumpy=0.25, flat_bottom=-0.01)
-    heap = ((-0.3, 0.09, 0.17, 0.15, 0.55, "#4f8fd8"), (0.26, 0.09, 0.19, -0.2, 0.55, "#9a63d1"), (-0.26, 0.09, -0.16, 3.0, 0.5, "#35b3a6"),
-            (0.27, 0.09, -0.17, 2.9, 0.52, "#f08a3c"), (0.0, 0.1, 0.0, 1.4, 0.5, "#f2c84b"), (-0.06, 0.15, 0.13, 0.4, 0.6, "#6fa8e8"),
-            (0.2, 0.15, 0.0, -2.6, 0.5, "#e8566b"), (-0.28, 0.15, -0.05, 2.4, 0.45, "#9a63d1"), (0.02, 0.21, -0.12, 0.2, 0.46, "#4f8fd8"), (0.1, 0.22, 0.12, -0.5, 0.52, "#35b3a6"), (-0.12, 0.27, -0.02, 2.9, 0.5, "#f08a3c"))
-    for x, y, z, yaw, L, col in heap:
+    for x, y, z, yaw, L, col in HEAP:
         fish(k, Mp, (x, y, z), (math.cos(yaw), 0.0, math.sin(yaw)), L * 1.1, col)
     placed(k, K.game_rot(yaw=0.35), (-0.3, 0.2, 0.2), lambda: crab(k, Mp))
     placed(k, K.game_rot(yaw=-0.25), (0.33, 0.17, -0.15), lambda: octopus(k, Mp))
@@ -262,9 +281,7 @@ def sell_stall(Mw, Mp):
     lip = lambda u: tray_pt((-0.6 + 1.2 * u, 0.02, 0.45))
     net(k, Mp, lip, lambda u: (-0.56 + 1.12 * u, 0.32 + 0.1 * abs(math.sin(math.pi * 3 * u)), front + 0.06), 6, 2, 0.05)
     sign(k, Mw, Mp)
-    # Left: a barrel with a lantern on it, a tub of fish before it, a float. Right: a barrel with a coil of rope, a life ring.
-    placed(k, K.game_rot(yaw=0.4), (-0.98, 0.0, -0.14), lambda: barrel(k, Mw, Mp, 1))
-    placed(k, Matrix.Identity(3), (-0.98, 0.72, -0.14), lambda: iron_lantern(k, LANTERN, (0, 0, 0), 0.95))
+    # Left: a tub of fish, a float. Right: a barrel with a coil of rope, a life ring.
     placed(k, K.game_rot(yaw=1.1), (-0.86, 0.0, 0.36), lambda: tub(k, Mw, Mp))
     k.blob((-1.2, 0.08, 0.3), (0.09, 0.075, 0.09), Mp, "#f2c84b", segs=7, rings=5)
     placed(k, K.game_rot(yaw=-0.7), (0.98, 0.0, -0.12), lambda: barrel(k, Mw, Mp, 4))
@@ -285,6 +302,7 @@ def build():
     ob = sell_stall(wood, paint)
     K.export([ob], "game/wharf/sell-barrel.glb")
     report(ob)
+    K.export(floppers(paint), "game/wharf/sell-fish.glb")
     return ob
 
 

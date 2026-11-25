@@ -1,7 +1,7 @@
 /**
  * One cast from the wind-up to the card (the fishing overlays' shared rules; specs/polish/fishing.md, specs/launch/
  * v1-gameplay.md "Fish tiers and fights"): the state machine both overlays drive, the applicant island's
- * (components/game/FishingOverlay.tsx) and the member island's (components/game/fishing/MemberFishing.tsx), so neither
+ * (components/recruit/FishingOverlay.tsx) and the member island's (components/game/fishing/MemberFishing.tsx), so neither
  * owns a copy. It listens for `tsi:fish-start` from the world's E handler at a fishing spot, then runs
  *
  *   charging (the cast meter) → casting → waiting (2-6 s) → bite (the hook window) → [surfacing] → reeling → revealing
@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioManager } from "./audio";
 import { castLine, claimRaid, collect, landCatch, localCollections, localRecord, mergeWithLocal, type CatchAnswer } from "./collections";
-import { rodByTier, type RodTier } from "./rods";
+import { BITE_WINDOW_MS, rodByTier, type RodTier } from "./rods";
 import { rollFishFor } from "./peaceful";
 import type { WaterType } from "./fishingSpots";
 import { punchZoom, setAimZoom, setTensionZoom, shakeCamera } from "./cameraJuice";
@@ -29,7 +29,6 @@ import { friendsStore } from "@/lib/net/friends";
 
 export type FishingPhase = "idle" | "charging" | "casting" | "waiting" | "bite" | "surfacing" | "reeling" | "revealing" | "missed";
 
-const BITE_WINDOW_MS = 1400;
 /** The catch card arrives this long after the reel is won: the world's beat first (the fish out of the water and into your hands). */
 const REVEAL_DELAY_MS = 520;
 /** A boss catch's (legendary, divine) card waits for its landing in the world (fishing/BossCreature.tsx). */
@@ -433,6 +432,8 @@ export function useFishingSession({ onActiveChange, collectionScope, zoneOverrid
 
   return {
     phase, fish, caughtSize, wasNew, newRecord, learned, buddy, missNote, device, maxCast, bossMode, raidId, rod,
+    /** The water this cast went into (the world names it at tsi:fish-start), or null where it didn't say. */
+    water: waterRef.current,
     /** Species this player has caught (a first catch shows ??? on the reel). */
     owned: ownedRef.current,
     /** The input held from the hook into the reel. */

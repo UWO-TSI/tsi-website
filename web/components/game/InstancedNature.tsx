@@ -26,6 +26,7 @@
 
 import { Suspense, useEffect, useLayoutEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
+import { gltfsOf } from "@/lib/game/gltfsOf";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -343,7 +344,7 @@ const CULL_BLOCK = 32;
  */
 export function MergedModels({ items, emissiveIntensity, cull }: { items: readonly ModelPlacement[]; emissiveIntensity?: number; cull?: boolean }) {
   const urls = useMemo(() => [...new Set(items.map(i => i.url))], [items]);
-  const gltfs = useGLTF(urls) as unknown as GLTF[];
+  const gltfs = gltfsOf(urls);
   const images = useMemo(() => gltfs.reduce((out, gltf) => imageKeys(gltf, out), new Map<THREE.Texture, string>()), [gltfs]);
   const models = useMemo(() => urls.map((url, i) => prepareModel(gltfs[i].scene, url, emissiveIntensity, shadowClassFor(url))), [gltfs, urls, emissiveIntensity]);
   useEffect(() => {

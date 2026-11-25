@@ -103,7 +103,7 @@ export default function OracleQuizSheet({ open, onClose, onResult, onPath, embed
   const lastUnsent = reading ? Object.keys(answered).filter(id => !sent.has(id)).pop() : undefined;
   const next = status?.next_reading;
   // E at the altar opens it and E closes it; the Oracle keeps its lavender (tone) in the kit's paper.
-  return <IslandSheet open={open} title="The Oracle" onClose={onClose} embedded={embedded} className={embedded ? styles.oracleEmbedded : undefined} testId="oracle-quiz" keys="e" tone="oracle">
+  return <IslandSheet open={open} title="The Oracle" onClose={onClose} embedded={embedded} className={embedded ? styles.oracleEmbedded : undefined} testId="oracle-quiz" keys="e">
     <div className={styles.keeperLine}><span className={styles.keeperFace} aria-hidden="true" /><p role="status">{note ? <SignInText text={note} /> : !reading && status?.family ? `You're ${status.family}. The light remembers.` : keeper}</p></div>
     {ties && reading ? <>
       {ties.map(t => <fieldset key={t.id} className={styles.tieBreaker}><legend>{t.prompt}</legend>
