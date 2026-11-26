@@ -147,6 +147,21 @@ const SEA_CREATURES: FishRow[] = [
  */
 export const RAW_TURN_X = -Math.PI / 2;
 
+/**
+ * A landed catch's length in your hands (m): small fish read small, the big ones big, all holdable. Sized on the
+ * 1.36 m body it was tuned on and scaled with `body` (the 2 m body, ledger row 346, passes its own height). The rarer
+ * catch is held up bigger, so an epic reads as a trophy (fish-models round 4, David on the Muskellunge: "its gotta be
+ * huge to justify it being a epic"): rare x1.15 up to 1.25 m, epic x1.45 up to 1.9 m; legendary and Divine are bosses,
+ * never held.
+ */
+const HOLD_RARITY: Record<Rarity, [grow: number, cap: number]> = {
+  common: [1, 1.1], uncommon: [1, 1.1], rare: [1.15, 1.25], epic: [1.45, 1.9], legendary: [1.45, 1.9], divine: [1.45, 1.9], contraband: [1, 1.1],
+};
+export function heldCatchLength(cm: number | null, rarity: Rarity = "common", body = 1.36): number {
+  const [grow, cap] = HOLD_RARITY[rarity];
+  return (body / 1.36) * Math.min(cap, Math.max(0.5, (0.45 + 0.05 * Math.sqrt(cm ?? 30)) * grow));
+}
+
 /** A reel row: its rarity, size, habitat and hours are the roster's (lib/collections/roster.ts), the one place they're set. */
 export type FishRow = Omit<FishDef, "rarity" | "sizeCm" | "zone" | "when" | "whenLabel">;
 const SPECIES = new Map(ROSTER.map((s) => [s.key, s]));

@@ -39,7 +39,7 @@ describe("worldModel", () => {
   });
   it("draws our fish in the game's frame, none raw", () => {
     const ours = FISH.filter(f => f.model.startsWith("/assets/game/remodel/"));
-    expect(ours.length).toBe(81);
+    expect(ours.length).toBe(85); // the 81 remodelled, + the fish list's first four (art/fish/build_meshy_fish.py)
     expect(ours.filter(f => f.raw)).toEqual([]);
   });
   it("hangs a raw export (head +z, back +y) head up with its back toward -z (the sea creatures)", () => {
