@@ -30,7 +30,8 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 
 ### 2. The village
 - The existing village quest steps fit here: the museum donation, the net, the shovel, the rod challenge, the museum goal and the pickaxe (`specs/lanes/main-quest.md`, m1 to m6).
-- **Open:** what opens the mountain path.
+- **What opens the mountain (David, 2026-11-26):** "village quest line finish, the mountain path is repaired because the guy there wants sushi from bachi which you need to get from bachi quest, then the does cutscene to clear the path". The village quest line ends with Bancha's (the sushi chef's) quest. Its sushi goes to the resident at the mountain path, and his cutscene clears the path.
+- **The nudge when stuck (David):** "if youre stuck for too long or like dont know how to progress, you will get a cutscene of like you sensing something at the top of the moutain, liek of a cuz scene of someone whispering in your ear and you look around and noones there and it shows you slowly panned and looking at the top of the mountain, and youll be like it feels like someone is watching me kinda thing to nudge them to explore". A short Studio cutscene: a whisper, the character looks round, nobody is there, then a slow pan up to the summit, and a line like "it feels like someone is watching me". **Open:** how long counts as stuck.
 
 ### 3. The mountain (obby)
 - A platforming climb.
@@ -39,12 +40,13 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 - **Open:** where on the mountain combat unlocks, and whether the climb has fights.
 
 ### 4. The Oracle and the vision
-- The temple is reached at the end of the climb.
+- **The temple is at the mountain summit (David, 2026-11-26).** The obby leads to it. The village temple moves up there.
 - **First person:** the camera moves into first person and you stare into the crystal ball. The pull into the vision is a cutscene authored in Roblox Studio (standing rule: all cutscenes, cameras and VFX are made in Studio).
 - **The wasteland minigame:** 5 to 10 minutes in a barren dystopian wasteland. It watches how you play and what you decide, and gives you one of the 16 classes. `classes/design-sheet.md` holds the 16 subclasses.
 - It foreshadows the outside world.
 - **You come back with a new power and a weapon:** your class's kit and its weapon. The design sheet's ceremony, with the weapon forming in the subclass colour, fits here.
 - **This replaces the Oracle quiz** (MBTI questions, `oracle-identity.md`, `ux-oracle-v2.md`) and the level-10 subclass choice (ledger row 22). The quiz's type-to-subclass table can seed how the minigame's readings map to classes.
+- **What the vision is (David, 2026-11-26):** both a possible future of the world and a fragment of your lost memory: "both 2 and 3, i want you to plan with me that ties in the story of the game better and the ending". The story spine is being planned with David.
 - **Open, needs its own planning pass with David:**
   - What the minigame measures, and how that maps to 16 classes.
   - Whether the player can see or change the result.
@@ -74,8 +76,14 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 ### 9. The crossing
 - **Build the ship:** "good enough" suggests the ship's quality affects the sailing. **Open:** whether the build is a crafting checklist or a ship editor.
 - **The sailing minigame** goes into the unknown.
-- **On a crash:** back to the opening cutscene, but you remember this time.
-  - **Open:** what carries over between attempts (items, the ship, the player's level), and what "remember" means in play. For example: new dialogue, skipped tutorials, residents who notice.
+- **On a crash (David, 2026-11-26):** "what if it feels like you restarted and the character loses their memory but you get like flashes of your past memory, and because the player remembers stuff like they dont have to restart from the very beginning, like idk help me think, and also because you restarted you will improve the ship the second time which makes it possilbe to cross, but you will go do the parkour again and talk to oracle, its just that like your skills poitns are still there kidna thing, also make the npc initial dialogue talk to you like they kinda met you already like ambiguous, so that its not the first tuime youre back"
+  - The character wakes on the beach with their memory gone again, but gets flashes of the past run.
+  - The player remembers, so the road goes faster.
+  - Skill points stay.
+  - You climb the obby and see the Oracle again.
+  - Residents' first lines are ambiguous, as if they have met you before.
+  - The second ship is better, which is what makes the crossing possible.
+  - **Open:** what else stays or resets (items, home, class, the village quest steps); whether the first crossing always fails by design.
 - You keep trying until you reach the dystopian world.
 
 ### 10. The dystopian world
@@ -109,15 +117,16 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 
 ## Open questions for David
 
-1. What opens the mountain from the village?
+1. ~~What opens the mountain~~ (answered: Bancha's sushi for the path resident).
 2. The vision minigame:
    - what it measures;
    - how it reaches one of 16 classes;
    - whether you can see or redo the result.
    This needs its own planning pass.
-3. Is the wasteland the real outside or a possible future? (Lore ambiguity.)
+3. ~~Real outside or possible future~~ (answered: both a possible future and your lost memory; story spine being planned).
 4. What is a fishing mob?
 5. Does a small part of cooking open before the forest, or nothing until then?
 6. The ship: a checklist of parts, or an editor where the build changes how it sails?
-7. What carries over after a crash, and what "you remember" changes in play.
-8. Where the temple sits: at the top of the mountain, or elsewhere with the climb leading to it.
+7. After a crash: what resets besides memory (items, home, class, quest steps); does the first crossing always fail?
+8. ~~Where the temple sits~~ (answered: the summit).
+9. How long counts as stuck before the summit-whisper nudge plays.
