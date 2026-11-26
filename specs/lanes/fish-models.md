@@ -9,6 +9,19 @@ Worktree `.claude/worktrees/fish-list`, branch `game/fish-list` (shared with the
 3. Legendary heroes: one hero concept for L1 to L12, D1, D2, from section 4's text (no references). Aura only in the hero. David marks them up before any views or Meshy.
 4. Two review pages (not published; the coordinator publishes): `specs/evidence/fish-models/page-pilot/index.html`, `page-legendary/index.html`.
 
+## Round 4 (2026-11-26): upside-down fix, huge Muskellunge, rare Brown Trout, Imugi rig note
+
+David's marks on Fish pilot 3 (https://claude.ai/artifact/8r52wzRXSnBzvEbSSqmy5G): approved fp3-list, fp3-paddle, fp3-shiner, fp3-imugi. Notes: fp3-shiner "wh yare all the fish upside down"; fp3-imugi "looks good, when rigging you need to have its movements like snake"; redo fp3-muskie "its gotta be huge to justify it being a epic"; redo fp3-trout "this look more like a uncommon to me, nothing baout this is rare".
+
+Done:
+- **Upside down, root cause:** the fishing bench's preview (`web/components/lab/FishPreview.tsx`) turned fish with its own rotations from the village's frames; every fish since the remodel is head +y, back -z, and those turns showed it belly up. The GLBs, the held catch (FishingRig HOLD), the tanks and the icons (levelFish) were right. Fix: the preview lays fish with `levelFish` (exported `previewFish`), turned like the icons. `components/game/peaceful/fishFrame.test.ts` holds levelFish and the preview to back up. `buildFishStage` stays only for the old `/lab/icon` stage.
+- **Held size:** `heldCatchLength(cm, rarity, body = 1.36)` in `web/lib/game/fishing.ts` (tests `lib/game/heldCatch.test.ts`) replaces FishingRig's `catchLength`: common and uncommon as before (0.5 to 1.1 m), rare x1.15 to 1.25 m, epic x1.45 to 1.9 m, scaled by body height (pass 2 when the 2 m body of ledger row 346 lands; it is a dev switch on game/character-run, not in main's code). FishingRig finds the rarity by model URL. All epics are held bigger: on the page as a call for David.
+- **Sizes:** Muskellunge 110-180 cm (was 70-140), Brown Trout 45-80 (was 30-60); migration `20261126073423_catalogue_seed.sql` (gen-seeds), added to the smoke chain.
+- **Brown Trout rare look:** `rare_look` pass in `art/fish/build_meshy_fish.py` (gold flank, vivid red spots with pale halos, bolder black spots), rebuilt, packed, icon re-rendered. The move-to-uncommon option is its own card, not done.
+- **Imugi rig note:** in `specs/fish-list.md` section 9 (via the template) and here.
+- **Evidence** `specs/evidence/fish-models/r4/`; page `page-pilot-4/index.html` published at https://claude.ai/artifact/FxSFtwMF8iRgawDg1xuZHC with db + comments.
+- **Gates:** tsc clean; vitest lib/game, lib/collections, seedMigrations, lib/icons, components/game/peaceful, components/lab: 246 files passed; eslint clean on touched files; SQL smoke passes (its "the rest" world-chat error and the missing tasting-book and genesis migrations are other lanes').
+
 ## Round 3 (2026-11-25): the 4 fish in the game, the Imugi raw model
 
 David's marks on "Fish pilot 2" (via the coordinator): all four game models approved, the fierce Imugi hero approved; the legendary page still unmarked (the other 13 untouched). 1024 textures kept (approved as shown).
@@ -36,7 +49,7 @@ Done:
 
 ## Status
 
-Round 3 done (2026-11-25; above), rounds 2 and 1 below. Head SHA: `git log -1` on `game/fish-list`.
+Round 4 done (2026-11-26; above), rounds 3, 2 and 1 below. Head SHA: `git log -1` on `game/fish-list`.
 
 - **ElevenLabs:** 26 generations (budget about 30): 12 pilot views (side 338 credits each, top and front edits 412 each) and 14 heroes (338 each). About 9,800 ElevenLabs credits.
 - **Meshy:** 4 runs, 120 credits (balance was 725, now 605), meshy-7.1 + meshy-7, standard, 2K, image_enhancement false:
@@ -50,16 +63,17 @@ Round 3 done (2026-11-25; above), rounds 2 and 1 below. Head SHA: `git log -1` o
 
 ## David's decisions
 
+- 2026-11-25, Fish pilot 3 marks: list, paddle, shiner and the Imugi raw model approved; "wh yare all the fish upside down"; Imugi "when rigging you need to have its movements like snake"; Muskellunge redo "its gotta be huge to justify it being a epic"; Brown Trout redo "this look more like a uncommon to me, nothing baout this is rare".
 - 2026-11-25, "Fish pilot 2" marks (via the coordinator): the four game models approved, the fierce Imugi hero approved; keep the 1024 textures.
 - 2026-11-25, pilot page marks (via the coordinator): the 4 raw Meshy fish approved, "looks good, now time to model and convert into triangles". Imugi hero redo: "make it more fearsome looking with fangs, look scarier like a seaserpant."
 - 2026-11-25 (via the coordinator): every model goes concept views (ElevenLabs image) -> Meshy multi_image_to_3d -> David approves the RAW Meshy model -> Blender hand edit (replaces section 9's "no Meshy, Blender only"). Fish style: stylised realistic (real anatomy, clean painted scales and fins, readable silhouettes; not cartoon-cute, not bevelled hard-surface). Pilot 5 as above, the remodel fish as house scale. Legendaries: text concepts first, never web references; gold aura for legendaries, holo shimmer for Divine, electric arcs for Megabyte, in the hero concept only. Bosses are rigged and animated in Roblox Studio later (not this lane).
 
 ## Next
 
-1. The coordinator publishes `page-pilot-3`, merges, and applies `20261125191541_catalogue_seed.sql` to production with the code.
-2. David's marks on the Imugi raw model; on approval, the boss edit in Blender (a lane script like `build_meshy_fish.py`: reduce, bake, the gold aura added in the game) for rigging in Roblox Studio later.
-3. The legendary page's marks (13 creatures), then views and Meshy per creature the same way.
-4. The next fish from the list through the same pipeline (views -> Meshy -> raw approval -> `build_meshy_fish.py` -> wiring as round 3).
+1. David's marks on Fish pilot 4: the epic held-size rule (all epics or the Muskellunge only), the Brown Trout rare look versus the uncommon option.
+2. The coordinator merges and applies `20261125191541` and `20261126073423` to production with the code.
+3. The Imugi boss edit in Blender after the raw is approved for it; the rig (serpentine S-wave down a spine chain) in Roblox Studio later.
+4. The legendary page's marks, then the next fish through the pipeline.
 
 ## Tools and gotchas
 
@@ -70,4 +84,5 @@ Round 3 done (2026-11-25; above), rounds 2 and 1 below. Head SHA: `git log -1` o
 - Pages: `python3 ~/Developer/claudebrain-tools/review-page/mkpage.py <spec.json>` (specs were in the session scratchpad; the page embeds the images, so delete the `.webp` copies and `files.json` it leaves next to `index.html`). Render check: `~/.claude/skills/gstack/browse/dist/browse goto file://...` then `screenshot`, under `withlock.sh devserver`.
 - The top views are not fed to Meshy for fish (the image model draws median fins as side pairs from above); for a finless serpent the top view is fine.
 - In-game shots: gstack browse runs SwiftShader and can't make the WebGL context the 3D preview needs; use Playwright from `/opt/homebrew/lib/node_modules` with `--use-angle=metal` (as `scripts/render-icons.mjs`), headless, dev server on port 3192 under the devserver lock. The member catch card is up about 1.6 s after "Preview the catch card".
+- Held-catch shots without playing the reel: `hold.mjs` (round 4, session scratchpad; built from reel-cam's `specs/evidence/fish-tiers/ui-world/shoot.mjs`) loads `/lab/island` signed out and fires the avatar's own beats (`tsi:fish-start`, `-cast`, `-bite`, `-hooked`, `-caught` with `{model, sizeCm}`), then shoots ~3 s after the landing; camera via `tsi.camera.v1` (zoom 0.42, pitch 0.32). Real casts from that script no longer start (the click and E both did nothing on the pier).
 - `node scripts/gen-seeds.mjs` writes the seed migration; add it to `specs/evidence/launch-fixes/sql-smoke.sh` and fix the smokes' species counts.

@@ -5,11 +5,13 @@
  * for the /lab/fishing bench detail pane. Slow turntable, drag to orbit,
  * scroll to zoom.
  *
- * buildFishStage is the shared clone→calibrate→normalize pipeline (also
- * used by /lab/icon): SkeletonUtils clone (dump fish are SkinnedMeshes and
- * a plain clone stays bound to the original skeleton), GAME_CALIBRATION
- * for raw exports, skinning-aware bounds, centered at origin, side profile
- * facing the camera.
+ * The fish is laid level by levelFish (TankFish), the one path the tank, the trophy case, the HQ aquarium and the
+ * icons share, then turned nose left as the icons are (fish-models round 4, David: "wh yare all the fish upside down":
+ * this pane used its own turns, written for the village's frames, and showed every fish in the game's frame, head +y
+ * and back -z, belly up).
+ *
+ * buildFishStage stays for /lab/icon (the old head-up icon stage): SkeletonUtils clone, the raw calibration,
+ * skinning-aware bounds, centred.
  */
 
 import { Suspense, useMemo } from "react";
@@ -17,6 +19,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { levelFish } from "@/components/game/peaceful/TankFish";
 
 export function buildFishStage(scene: THREE.Object3D, raw: boolean, fit: number): THREE.Group {
   const clone = cloneSkeleton(scene);
@@ -57,16 +60,18 @@ export function buildFishStage(scene: THREE.Object3D, raw: boolean, fit: number)
   return holder;
 }
 
+/** A species laid level (head first, back up), `length` long, centred, turned nose left: the bench's side profile. */
+export function previewFish(scene: THREE.Object3D, url: string, raw: boolean, length = 2.3): THREE.Group {
+  const g = new THREE.Group();
+  g.add(levelFish(scene, { model: url, raw }, length));
+  g.rotation.y = -Math.PI / 2;
+  return g;
+}
+
 function Model({ url, raw }: { url: string; raw: boolean }) {
   const { scene } = useGLTF(url);
-  const group = useMemo(() => buildFishStage(scene, raw, 2.3), [scene, raw]);
-  // Lay the fish horizontal, nose left (aquarium view): raw dump models come
-  // out of calibration nose-down, repo-native models nose-up.
-  return (
-    <group rotation-z={raw ? -Math.PI / 2 : Math.PI / 2}>
-      <primitive object={group} />
-    </group>
-  );
+  const group = useMemo(() => previewFish(scene, url, raw), [scene, url, raw]);
+  return <primitive object={group} />;
 }
 
 export default function FishPreview({ model, raw }: { model: string; raw?: boolean }) {

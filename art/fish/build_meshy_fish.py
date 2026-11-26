@@ -36,7 +36,7 @@ TEX = 1024
 # colour nudge toward the concept (0..1), the concept's short name, jaw slimming.
 FISH = {
     "common-shiner": dict(length=0.62, tris=900, fins=[(0.18, 0.33, 0.076)], nudge=0.0, short="shiner"),
-    "brown-trout": dict(length=0.95, tris=1200, fins=[(0.19, 0.33, 0.071)], nudge=0.85, short="trout"),
+    "brown-trout": dict(length=0.95, tris=1200, fins=[(0.19, 0.33, 0.071)], nudge=0.85, short="trout", rare_look=True),
     "paddlefish": dict(length=2.3, tris=1600, fins=[(0.37, 0.475, 0.06)], nudge=0.6, short="paddle", jaw=(0.17, 0.38, 0.9, 0.86)),
     "muskellunge": dict(length=1.7, tris=1400, fins=[(0.21, 0.33, 0.052), (0.47, 0.55, 0.049)], nudge=0.0, short="muskie"),
 }
@@ -177,6 +177,57 @@ def concept_stats(short):
     return px.mean(0), px.std(0)
 
 
+def rgb_to_hsv(rgb):
+    mx, mn = rgb.max(-1), rgb.min(-1); d = mx - mn
+    h = np.zeros_like(mx)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    nz = d > 1e-6
+    rm = nz & (mx == r); gm = nz & (mx == g) & ~rm; bm = nz & ~rm & ~gm
+    h[rm] = ((g - b)[rm] / d[rm]) % 6; h[gm] = (b - r)[gm] / d[gm] + 2; h[bm] = (r - g)[bm] / d[bm] + 4
+    return np.stack([h * 60, np.where(mx > 0, d / np.maximum(mx, 1e-6), 0), mx], -1)
+
+
+def hsv_to_rgb(hsv):
+    h, s, v = hsv[..., 0] % 360 / 60, np.clip(hsv[..., 1], 0, 1), np.clip(hsv[..., 2], 0, 1)
+    i = np.floor(h).astype(int) % 6; f = h - np.floor(h)
+    p, q, u = v * (1 - s), v * (1 - s * f), v * (1 - s * (1 - f))
+    out = np.stack([np.choose(i, [v, q, p, p, u, v]), np.choose(i, [u, v, v, q, p, p]), np.choose(i, [p, p, u, v, v, q])], -1)
+    return out
+
+
+def grow(mask, n):
+    for _ in range(n):
+        m = mask.copy()
+        for ax in (0, 1):
+            m |= np.roll(mask, 1, ax) | np.roll(mask, -1, ax)
+        mask = m
+    return mask
+
+
+def rare_look(rgb, covered):
+    """The Brown Trout's rare finish (David: "this look more like a uncommon to me, nothing baout this is rare"): the
+    flank pushed to a rich gold, the red spots vivid with a pale blue-white halo, the black spots bolder. The species'
+    own markings, only stronger; nothing new painted."""
+    hsv = rgb_to_hsv(rgb)
+    h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    flank = covered & (h > 25) & (h < 70) & (v > 0.35)
+    hsv[..., 0] = np.where(flank, h + (42 - h) * 0.75, h)
+    hsv[..., 1] = np.where(flank, s * 1.7 + 0.08, s)
+    hsv[..., 2] = np.where(flank, v * 1.16, v)
+    red = covered & ((h < 22) | (h > 340)) & (s > 0.3) & (v > 0.25)
+    red = grow(red, 3)
+    hsv[..., 0] = np.where(red, 10, hsv[..., 0])
+    hsv[..., 1] = np.where(red, np.maximum(s, 0.85), hsv[..., 1])
+    hsv[..., 2] = np.where(red, np.maximum(v, 0.78), hsv[..., 2])
+    dark = covered & (v < 0.3) & ~red
+    hsv[..., 2] = np.where(grow(dark, 2) & ~red & ~grow(red, 2), np.minimum(hsv[..., 2], v * 0.4 + 0.02), hsv[..., 2])
+    out = hsv_to_rgb(hsv)
+    halo = grow(red, 2) & ~red & covered
+    out[halo] = out[halo] * 0.25 + np.array([0.88, 0.93, 0.98]) * 0.75
+    print(f"  rare look: flank {flank.mean():.3f}, red {red.mean():.4f}, halo {halo.mean():.4f}, dark {dark.mean():.4f}")
+    return out
+
+
 def finish_texture(img, slug, cfg):
     px = D.pixels(img)  # sRGB floats, as the concept PNG reads
     rgb, alpha = px[..., :3], px[..., 3]
@@ -189,6 +240,8 @@ def finish_texture(img, slug, cfg):
         moved = (rgb - tm) * (cs / np.maximum(ts, 1e-4)) + cm
         rgb = rgb + (moved - rgb) * cfg["nudge"]
         print(f"  nudge {slug}: mean {tm.round(3)} -> {cm.round(3)} (k {cfg['nudge']})")
+    if cfg.get("rare_look"):
+        rgb = rare_look(np.clip(rgb, 0, 1), m)
     px[..., :3] = rgb; px[..., 3] = 1.0
     D.set_pixels(img, px)
 

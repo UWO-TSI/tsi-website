@@ -40,7 +40,7 @@ import { rodTip } from "@/lib/game/rodTip";
 import { bobberBobs, bobberLands, bobberNibbled, fishBites, fishFlees, fishLeaps, reelWake } from "@/lib/game/fx/fishingFx";
 import type { ParticlePool } from "@/lib/game/fx/particles";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
-import { RAW_TURN_X } from "@/lib/game/fishing";
+import { FISH, RAW_TURN_X, heldCatchLength } from "@/lib/game/fishing";
 import { heldTemplate } from "@/lib/game/character/heldMesh";
 import { LABEL_PRIORITY, worldLabels } from "@/lib/game/labelLayout";
 import { liveWind, useMoveParticles } from "../movement/moveFx";
@@ -64,8 +64,8 @@ const CATCH_FLY_S = 0.45, TUCK_S = 0.32;
  * so this lays the length across the hands (x), the back up, the flank to the camera.
  */
 const HOLD = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, -1, 0)));
-/** A catch's length in the world by its size: small fish read small, the giants big, all of them holdable. */
-const catchLength = (cm: number | null) => Math.min(1.1, Math.max(0.5, 0.45 + 0.05 * Math.sqrt(cm ?? 30)));
+/** Each species' rarity by its model (the world's model URL), for the held size (heldCatchLength). */
+const RARITY_BY_MODEL = new Map(FISH.map(f => [f.model, f.rarity]));
 
 interface Rig {
   bobber: THREE.Object3D; line: THREE.Mesh; linePos: THREE.BufferAttribute; lineNormal: THREE.BufferAttribute; curve: Float32Array;
@@ -357,7 +357,7 @@ function showCatch(r: Rig, m: Readonly<CharacterMotion> | null, hands: { R: THRE
   if (landed && !r.fishOut) { r.fishOut = true; r.fishFrom.copy(r.at).setY(f.waterY); }
   headGroup.getWorldQuaternion(facing);
   headGroup.getWorldPosition(head);
-  const len = catchLength(f.catchCm), scale = len / r.fishLength;
+  const len = heldCatchLength(f.catchCm, RARITY_BY_MODEL.get(r.fishUrl ?? "")), scale = len / r.fishLength;
   if (f.showOff) {
     // Between the hands at the chin, a little out in front, laid across them with its flank to the camera.
     hands.R.getWorldPosition(handR); hands.L.getWorldPosition(handL);
