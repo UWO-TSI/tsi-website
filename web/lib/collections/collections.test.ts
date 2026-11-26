@@ -85,7 +85,7 @@ describe("journal pages", () => {
     const r = await journal(m.store, A, "fish", noon);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.data).toMatchObject({ total: 81, discovered: 1 });
+    expect(r.data).toMatchObject({ total: 85, discovered: 1 }); // 81, + the fish list's first four (fish-models)
     expect(r.data.entries[0]).toMatchObject({ discovered: true, key: "fish_dace", best_size_cm: 14.2, museum: { donated: false } });
     const unknown = JSON.stringify(r.data.entries.filter((e) => !e.discovered)).toLowerCase();
     for (const s of ROSTER.filter((x) => x.category === "fish" && x.key !== "fish_dace")) {
@@ -136,7 +136,7 @@ describe("museum donations (rows 67, 202)", () => {
   });
   it("lists wings without naming empty cases", () => {
     const wings = museumWings(ROSTER, [{ species_key: "bug_firefly", donor_id: A, donor_name: "Maya", donated_at: "2026-09-24T00:00:00Z", size_cm: null }]);
-    expect(wings.map((w) => [w.wing, w.total, w.donated])).toEqual([["aquarium", 93, 0], ["insect_hall", 20, 1], ["nature_room", 23, 0]]); // with seven buried finds and the broken sudo
+    expect(wings.map((w) => [w.wing, w.total, w.donated])).toEqual([["aquarium", 97, 0], ["insect_hall", 20, 1], ["nature_room", 23, 0]]); // with seven buried finds and the broken sudo
     expect(wings[1].exhibits.filter((e) => !e.donated).every((e) => e.key === null && e.name === null)).toBe(true);
   });
   it("keeps discovery records separate from donated stock", async () => {

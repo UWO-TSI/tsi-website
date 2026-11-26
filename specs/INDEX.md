@@ -100,6 +100,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `llm-npc-system.md` | LLM-driven NPC design | reference
 `peaceful-loop.md` | Fishing, bugs, foraging, journal, museum | reference
 `polish/fishing.md` | Fishing polish | reference
+`fish-list.md` | Every fish: water, season, odds per rod, purposes, materials, new fish, modelling | draft for David (fish-list r1)
 `polish/forage-craft-museum.md` | Foraging, crafting, museum, shop polish | reference
 `polish/living-village.md` | Living village polish | reference
 `polish/reachability.md` | Reachability, resident talk, companion | reference

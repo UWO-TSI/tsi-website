@@ -7,7 +7,7 @@
  * Our own models where an item had none (art/props-enemies/build_items.py, build_tools.py). `iconFor` maps an item to
  * its icon for sprite_url and the roster.
  */
-import { BURIED_FINDS, EVENT_SPECIES, LAUNCH_ROSTER, REEL_FISH } from "@/lib/collections/roster";
+import { BURIED_FINDS, EVENT_SPECIES, FISH_LIST_FISH, LAUNCH_ROSTER, REEL_FISH } from "@/lib/collections/roster";
 import { MATERIALS } from "@/lib/crafting/recipes";
 import { TREATS } from "@/lib/collections/treats";
 import { WEAPONS } from "@/lib/combat/weapons";
@@ -100,7 +100,7 @@ const partSpec = (id: string): IconSpec | null => {
 export function iconSpecs(shop: readonly Pick<CatalogueEntry, "slug" | "catalogue_ref" | "category">[]): IconSpec[] {
   const out = new Map<string, IconSpec>();
   const add = (s: IconSpec | null) => { if (s && !out.has(s.key)) out.set(s.key, s); };
-  for (const sp of [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...BURIED_FINDS, ...MATERIALS, ...TREATS]) add(speciesSpec(sp.key, sp));
+  for (const sp of [...LAUNCH_ROSTER, ...EVENT_SPECIES, ...REEL_FISH, ...BURIED_FINDS, ...FISH_LIST_FISH, ...MATERIALS, ...TREATS]) add(speciesSpec(sp.key, sp));
   for (const t of TOOLS) add({ key: t.key, view: "diagonal", url: t.model });
   // An awakened rod's own model (rods.ts awakenedLook): its icon and its stage, keyed <rod key>_a<n>.
   for (const r of RODS) r.awakenings.forEach((a, i) => add(a.model ? { key: `${r.key}_a${i + 1}`, view: "diagonal", url: a.model } : null));
