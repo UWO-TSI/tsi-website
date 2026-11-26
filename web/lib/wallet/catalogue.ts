@@ -40,12 +40,37 @@ const e = (slug: string, display_name: string, category: ShopCategory, price: nu
 });
 const furniture = (ref: string, name: string, price: number) => e(`furn-${ref}`, name, "furniture", price, { catalogue_ref: ref, stackable: true, special_pool: true });
 
+/** A row at its own position, out of the running order (`e` counts it, this gives the count back), so no other
+ * row's position moves: rows added since launch. */
+const own = (position: number, row: CatalogueEntry): CatalogueEntry => { pos--; return { ...row, position }; };
+const rodRow = (slug: string, display_name: string, price: number, tier: Tier, description: string, position: number): CatalogueEntry => withIcon({
+  slug, display_name, category: "tool", description, price_coins: price, price_gems: null, tier, slot: "rod", special_pool: false, stackable: false, stock: null,
+  catalogue_ref: slug.replace("-", "_"), sprite_url: null, position });
+
 export const CATALOGUE: CatalogueEntry[] = [
-  // Tools (row 127: basic rod ~100, mid ~400)
+  // Tools (row 127). Rods are priced by the hours of fishing they take with the rod before (David 2026-11-04: "more
+  // expensive, price rods properly"): a cast to its card is about 30 s, so about 80 fish an hour, which sell for about
+  // 1,000 coins an hour on a common rod, 1,250 on an uncommon and 1,900 on a rare. Precision is an hour on the Flimsy,
+  // Cedar and Carrot two and a half to three hours on a common, Glass five hours on an uncommon.
   e("rod-basic", "Basic rod", "tool", 100, { tier: "basic", slot: "rod", description: "A sturdy starter rod." }),
-  e("rod-cedar", "Cedar rod", "tool", 400, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
-  e("rod-glass", "Glass rod", "tool", 1200, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite." }),
+  e("rod-cedar", "Cedar rod", "tool", 2500, { tier: "mid", slot: "rod", catalogue_ref: "rod_cedar", description: "Lighter, and a little lucky." }),
+  e("rod-glass", "Crystal rod", "tool", 6000, { tier: "premium", slot: "rod", catalogue_ref: "rod_glass", description: "The pier regulars' favourite. Clear as water, and about as tough." }),
+  // Round 4's rods (David 2026-11-02; lib/game/rods.ts): their own positions, so no other row's moves. The Training and
+  // Tempest rods are never sold (FOUND_ONLY): their prices are only their nominal value.
+  rodRow("rod-precision", "Precision rod", 1000, "basic", "A wide catch bar and a long bite window.", 1001),
+  rodRow("rod-carrot", "Carrot rod", 3000, "mid", "A thick carrot of a rod. Fish can't help but nibble.", 1002),
+  rodRow("rod-training", "Training rod", 2500, "mid", "Gary's trade for your Flimsy. Plain for now, with potential: the more you fish with it, the more it grows.", 1003),
+  rodRow("rod-tempest", "Tempest rod", 16000, "premium", "An epic rod that comes with a storm. Never sold.", 1004),
   e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +20 luck, so rarer fish bite more often." }),
+  // The tackle shop's baits and bobbers (David, 2026-11-19): the wharf's rod shop becomes the tackle shop, with a Rods,
+  // a Bait and a Bobbers shelf (lib/game/rods.ts TACKLE has their gains). Their own positions (after the rods), so no
+  // live row's position moves; the Sweet bait follows them so the Bait shelf keeps its order.
+  own(1005, e("bobber-cork", "Cork bobber", "tool", 200, { tier: "basic", slot: "bobber", catalogue_ref: "bobber_cork", description: "A slightly wider catch bar." })),
+  own(1006, e("bobber-float", "Striped float", "tool", 400, { tier: "mid", slot: "bobber", catalogue_ref: "bobber_float", description: "Easier to hook and to hold." })),
+  own(1007, e("bobber-brass", "Brass bobber", "tool", 900, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_brass", description: "The line holds when a fish pulls." })),
+  own(1008, e("bobber-pearl", "Pearl bobber", "tool", 1800, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_pearl", description: "Luckier casts and a steadier bar." })),
+  own(1009, e("bait-worms", "Worms", "tool", 60, { tier: "basic", slot: "bait", stackable: true, catalogue_ref: "bait_worms", description: "Booster: bites come sooner." })),
+  own(1010, e("bait-glow", "Glow bait", "tool", 450, { tier: "mid", slot: "bait", stackable: true, catalogue_ref: "bait_glow", description: "Targeter: works best at night and in bad weather." })),
   e("net-basic", "Bug net", "tool", 100, { tier: "basic", slot: "net" }),
   e("net-mid", "Wide net", "tool", 400, { tier: "mid", slot: "net" }),
   e("shovel-basic", "Shovel", "tool", 100, { tier: "basic", slot: "shovel" }),
@@ -97,7 +122,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     description: "Holographic, in light or dark: the GENESIS ASCII art and GEN_26. Pick up at HQ on campus." }),
     sprite_url: "/assets/game/items/merch-genesis-sticker-light-sprite.webp" },
   // Bait for the rod's bait slot (lib/game/rods.ts TACKLE; David 2026-10-27 x-shop). Last, so no earlier row moves.
-  e("bait-sweet", "Sweet bait", "tool", 300, { tier: "mid", slot: "bait", catalogue_ref: "bait_sweet", description: "Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner." }),
+  own(1011, e("bait-sweet", "Sweet bait", "tool", 300, { tier: "mid", slot: "bait", catalogue_ref: "bait_sweet", description: "Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner." })),
 ];
 
 // ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──
@@ -193,13 +218,15 @@ export const TAUGHT_TOOL_SLUGS = ["net-basic", "shovel-basic", "pickaxe-basic"];
 /** Tools that did nothing in the shop (David 2026-10-27, v1-gameplay "some shop items did nothing"): the basic rod
  * (no tool behind it: the flimsy rod is everyone's) and the tier 2 net and shovel (no tier effect yet). Off sale. */
 export const HOLLOW_TOOLS = ["rod-basic", "net-mid", "shovel-mid"];
+/** Rods off the shelf: the Training rod (traded for, lib/game/rods.ts TRAINING) and the Tempest rod (a quest or event, not built yet). Off sale; owners keep them. */
+export const FOUND_ONLY = ["rod-training", "rod-tempest"];
 /** The placeholder tote and sticker pack, which aren't real merch (David, 2026-10-22: "Take both off sale"). */
 export const PLACEHOLDER_MERCH = ["merch-sticker-pack", "merch-tote"];
 /** Hairstyles David removed from the game (2026-10-27: Messy with headset, Fluffy boy, Wavy half-up): their shop rows go off sale. */
 export const REMOVED_HAIR = ["hair_wavy_half_up"];
-/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), the taught tools and the hollow ones; and the placeholder merch. Off sale. */
+/** Shop rows with no character part: the pre-ownership outfits, the wardrobe cut's (CUT_WEARABLES), the taught tools, the hollow ones and the found rods; and the placeholder merch. Off sale. */
 export const RETIRED = ["outfit-sage-overalls", "outfit-cream-knit", "outfit-wharf-raincoat", "outfit-club-tee", "hair-chestnut", "hair-sea-glass", "hair-sunset", "acc-straw-hat", "acc-round-glasses", "acc-bandana",
-  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...HOLLOW_TOOLS, ...PLACEHOLDER_MERCH];
+  ...CUT_WEARABLES.map((c) => wearSlug(c.id)), ...REMOVED_HAIR.map(wearSlug), ...TAUGHT_TOOL_SLUGS, ...HOLLOW_TOOLS, ...FOUND_ONLY, ...PLACEHOLDER_MERCH];
 /** Sold, as opposed to only granted: starter clothes stay off sale. */
 export const onSale = (c: CatalogueEntry) => !RETIRED.includes(c.slug) && !(c.category !== "furniture" && c.catalogue_ref !== null && STARTER_REFS.has(c.catalogue_ref));
 

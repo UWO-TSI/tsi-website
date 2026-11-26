@@ -45,6 +45,9 @@
   --ui-focus: #a8722f;
   --ui-scrim: rgb(64 52 36 / 0.3);
   --ui-shade: 114 92 78;
+  /* A big moment's backdrop (an awakening), the world nearly gone, and its light (the glow, the flash). */
+  --ui-scrim-deep: rgb(36 28 20 / 0.88);
+  --ui-glow: #ffffff;
   /* The fishing reel's water (components/gui/flat/reel): the track, and its ripples and edge. */
   /* The phone's screen (bible UI 8d; components/gui/flat/phoneScreen.ts): the home screen is today's UI on a pale
      green glass with green highlights (screen, glow, glow-soft; round 14, David: "keep it old"); the moments drawn on

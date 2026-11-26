@@ -12,6 +12,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `lane-rules.md` | Rules for every coordinator lane | live
 `terrain-law.md` | ACNH grid law for terrain, water, cliffs, placement | live
 `design-bible.md` | The one canon for UI, art and models (UI and Models set 2026-10-28; Art in progress) | canon
+`vfx-library.md` | The VFX library: auras (energy, sun glint, pulse) and effects (water, electricity, embers, petals, gather, lightning and more) on any holder, their rules (no circle or ring glows) | live
 `design-principles.md` | Project vision and design principles, partly superseded | reference
 `launch/v1-launch.md` | v1 launch run sheet: freeze Oct 24, launch Oct 31 (row 317) | stale: no launch date (2026-10-27)
 `v1-drop.md` | v1 Arrival (Halloween) plan, scope, lane split | stale: superseded by row 318 and v1-gameplay

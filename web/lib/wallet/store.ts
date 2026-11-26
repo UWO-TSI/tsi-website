@@ -4,7 +4,7 @@ import { DomainError } from "@/lib/result";
 export type EconomyErrorCode =
   | "unavailable" | "insufficient" | "not_found" | "not_for_sale" | "already_owned" | "bad_qty" | "bad_price" | "sold_out"
   | "not_sellable" | "insufficient_items" | "too_many_open" | "already_resolved" | "forbidden" | "not_owned" | "no_slot" | "locked" | "failed"
-  | "not_requested" | "already_filled" | "not_rare_enough" | "not_done" | "already_claimed" | "already_in_book" | "not_learned";
+  | "not_requested" | "already_filled" | "not_rare_enough" | "not_done" | "already_claimed" | "already_in_book" | "not_learned" | "not_ready";
 export class EconomyError extends DomainError<EconomyErrorCode> {}
 
 export interface LedgerEntry {
@@ -61,6 +61,14 @@ export interface EconomyStore {
   ledger(memberId: string, limit: number): Promise<LedgerEntry[]>;
   catalogue(): Promise<ShopItem[]>;
   inventory(memberId: string): Promise<InventoryRow[]>;
+  /** Fish landed with each rod (rod_catches: the rod card's count), rod key to count. */
+  rodCatches(memberId: string): Promise<Record<string, number>>;
+  /**
+   * Atomic (rod_training_trade): the rod seller's quest. With TRAINING.quest.catches fish landed on the Flimsy rod, the
+   * Training rod comes into the inventory in its place (owning it is what retires the starter, rods.ts ownsRod);
+   * `traded` false when it's already yours. Too few fish: not_ready.
+   */
+  tradeForTraining(memberId: string): Promise<{ traded: boolean }>;
   /** The free starters, once per account (economy_grant_starters). */
   grantStarters(memberId: string): Promise<{ granted: boolean }>;
   buy(memberId: string, itemId: string, qty: number, priceEach: number, key: string): Promise<{ balance: number; owned: number; replayed: boolean }>;

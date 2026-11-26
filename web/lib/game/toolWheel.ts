@@ -14,9 +14,14 @@ import { TREATS } from "@/lib/collections/treats";
 import { WEAPONS } from "@/lib/combat/weapons";
 import { GLIDER_REF } from "./glider";
 import { TOOLS, bestTool, ownsTool, type Tool, type ToolKind } from "./tools";
+import { awakened, awakenedLook, rodByKey } from "./rods";
 
 export type WheelKind = ToolKind | "glider" | "weapon" | "pin";
-export interface WheelItem { id: string; kind: WheelKind; key: string; name: string; icon: string; tier?: number }
+export interface WheelItem {
+  id: string; kind: WheelKind; key: string; name: string; icon: string; tier?: number;
+  /** What it looks like in the hand when that isn't its tool's own model: an awakened rod's (rods.ts awakenedLook). */
+  model?: string;
+}
 export const WHEEL_SLOTS = 8;
 export const MAX_PINS = 2;
 export type WheelSite = "village" | "home" | "ruins";
@@ -43,9 +48,14 @@ export interface WheelContext {
   stock: Readonly<Record<string, number>>;
   /** This member's tools are taught (row 312): the tier-1 net and shovel only once a resident has given them (tools.ts). */
   taught?: boolean;
+  /** Fish landed with each rod (rod key: count): an awakened rod shows its awakened model and icon. */
+  catches?: Readonly<Record<string, number>>;
 }
 
-const toolItem = (t: Tool): WheelItem => ({ id: `${t.kind}:${t.key}`, kind: t.kind, key: t.key, name: t.name, icon: t.icon, tier: t.tier });
+function toolItem(t: Tool, catches?: Readonly<Record<string, number>>): WheelItem {
+  const rod = t.kind === "rod" ? rodByKey(t.key) : null, look = rod && awakenedLook(awakened(rod, catches?.[t.key] ?? 0));
+  return { id: `${t.kind}:${t.key}`, kind: t.kind, key: t.key, name: t.name, icon: look ? itemIcon(look.icon) : t.icon, tier: t.tier, ...(look && { model: look.model }) };
+}
 const weaponItem = (key: string): WheelItem => ({ id: `weapon:${key}`, kind: "weapon", key, name: WEAPON.get(key)?.name ?? key, icon: itemIcon(key), tier: WEAPON.get(key)?.tier });
 export const pinItem = (key: string): WheelItem => ({ id: `pin:${key}`, kind: "pin", key, name: SPECIES.get(key)?.name ?? key, icon: itemIcon(key) });
 const GLIDER: WheelItem = { id: `glider:${GLIDER_REF}`, kind: "glider", key: GLIDER_REF, name: "Leaf glider", icon: itemIcon(GLIDER_REF) };
@@ -71,7 +81,7 @@ export function wheelWeapons(weapons: readonly string[], defaultWeapon: string |
 export function wheelContents(ctx: WheelContext): WheelItem[] {
   const pins = ctx.pins.filter(k => (ctx.stock[k] ?? 0) > 0).slice(0, MAX_PINS).map(pinItem);
   if (ctx.site === "ruins") return wheelWeapons(ctx.weapons, ctx.defaultWeapon, true).slice(0, WHEEL_SLOTS).map(weaponItem);
-  const tools = (["rod", "net", "shovel", "pickaxe"] as const).flatMap(k => { const t = wheelTool(k, ctx.owned, ctx.chosen?.[k], ctx.taught); return t ? [toolItem(t)] : []; });
+  const tools = (["rod", "net", "shovel", "pickaxe"] as const).flatMap(k => { const t = wheelTool(k, ctx.owned, ctx.chosen?.[k], ctx.taught); return t ? [toolItem(t, ctx.catches)] : []; });
   if (ctx.owned.includes(GLIDER_REF)) tools.push(GLIDER);
   const room = WHEEL_SLOTS - tools.length - pins.length;
   const weapons = ctx.armed ? wheelWeapons(ctx.weapons, ctx.defaultWeapon, false).slice(0, room).map(weaponItem) : [];

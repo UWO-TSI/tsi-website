@@ -4,13 +4,13 @@
  * them atomically. Clients name only what they want, never a price.
  */
 import { fnv1a } from "@/lib/game/weatherSystem";
-import { RODS, TACKLE, onShopShelf } from "@/lib/game/rods";
+import { RODS, TACKLE, onShopShelf, ownsRod } from "@/lib/game/rods";
 import { CRAFTED_ITEMS } from "@/lib/crafting/recipes";
 import { dailySpecials, effectivePrice, isOnSale, ownedCounts, speciesClass, sellRows, TAB_OF, type SellEntry, torontoDay, type ShopItem, type Special, chefOrder, fishingTasks, tastingWater, type FishingTask, type FishRequest } from "./rules";
 import { toFailure, type Result } from "@/lib/result";
 import { EconomyError, type DailyGift, type EconomyStore, type InventoryRow, type LedgerEntry, type Reservation, type ActiveBuff, type TastingSlot } from "./store";
-import { boxPool, welcomeDay, SUSHI_MENU, TASTING, type Dish, type MealBuff } from "./catalogue";
-import { shopIcon } from "@/lib/icons/keys";
+import { CATALOGUE, boxPool, welcomeDay, SUSHI_MENU, TASTING, type Dish, type MealBuff, type Slot } from "./catalogue";
+import { iconUrl, shopIcon } from "@/lib/icons/keys";
 import type { WaterType } from "@/lib/game/fishingSpots";
 import { seasonBlend, type Season } from "@/lib/game/season";
 import { weekStart } from "@/lib/collections/logic";
@@ -37,6 +37,7 @@ const ERR: Record<string, [number, string]> = {
   already_filled: [409, "You've already brought that one in today."],
   not_done: [409, "Catch it first, then claim it."],
   already_claimed: [409, "Already claimed."],
+  not_ready: [409, "Land a few more fish on your Flimsy rod first."],
   not_rare_enough: [422, "Bancha only cooks an epic or legendary fish into a feast."],
   already_in_book: [409, "That fish already has its slot in your book."],
   not_learned: [409, "Bancha hasn't learnt that one yet. Give him its fish first."],
@@ -74,6 +75,8 @@ export interface ShopEntry {
   category: string;
   description: string;
   tier: string | null;
+  /** The gear slot it goes in (rod, bait, bobber, net…): the tackle shop shelves by it. */
+  slot: Slot | null;
   currency: "coins" | "gems";
   price: number;
   base_price: number;
@@ -84,14 +87,16 @@ export interface ShopEntry {
   sprite_url: string | null;
   /** What it unlocks: character part id, `hair:<i>`, homes piece or finish. */
   catalogue_ref: string | null;
-  /** A rod the shop shows but doesn't sell: everyone's from the start, or made at the workbench (never `can_buy`). */
-  made?: "starter" | "workbench";
+  /** A rod the shop shows but doesn't sell: everyone's from the start, made at the workbench, or found (never `can_buy`). */
+  made?: "starter" | "workbench" | "found";
 }
 export interface ShopView {
   day: string;
   coins: number;
   gems: number;
   tabs: Record<"tools" | "outfits" | "furniture" | "specials" | "merch", ShopEntry[]>;
+  /** Fish landed with each rod (rod key: count), for the rod cards. */
+  catches: Record<string, number>;
 }
 
 function entry(it: ShopItem, specials: Special[], owned: Map<string, number>, w: { coins: number; gems: number }): ShopEntry {
@@ -99,7 +104,7 @@ function entry(it: ShopItem, specials: Special[], owned: Map<string, number>, w:
   const have = owned.get(it.id) ?? 0;
   const soldOut = it.stock !== null && it.stock < 1;
   return {
-    id: it.id, slug: it.slug, name: it.display_name, category: String(it.category), description: it.description ?? "", tier: it.tier,
+    id: it.id, slug: it.slug, name: it.display_name, category: String(it.category), description: it.description ?? "", tier: it.tier, slot: it.slot,
     currency: p.currency, price: p.price, base_price: (it.price_coins ?? it.price_gems)!, special: p.special, stock: it.stock, owned: have,
     can_buy: !soldOut && (it.stackable || have === 0) && (p.currency === "coins" ? w.coins : w.gems) >= p.price, sprite_url: it.sprite_url, catalogue_ref: it.catalogue_ref,
   };
@@ -108,7 +113,7 @@ function entry(it: ShopItem, specials: Special[], owned: Map<string, number>, w:
 export const getShop = (store: EconomyStore, m: string, now: Date) =>
   run<ShopView>(async () => {
     const day = torontoDay(now);
-    const [items, inv, w] = await Promise.all([store.catalogue(), store.inventory(m), store.wallet(m)]);
+    const [items, inv, w, catches] = await Promise.all([store.catalogue(), store.inventory(m), store.wallet(m), store.rodCatches(m)]);
     const onSale = items.filter((i) => isOnSale(i, now)).sort((a, b) => a.position - b.position);
     const specials = dailySpecials(onSale, day);
     const owned = new Map(inv.map((r) => [r.item.id, r.qty]));
@@ -119,25 +124,35 @@ export const getShop = (store: EconomyStore, m: string, now: Date) =>
       if (e.special) tabs.specials.push(e);
     }
     tabs.tools = rodShelf(tabs.tools, inv);
-    return { day, ...w, tabs };
+    return { day, ...w, tabs, catches };
   });
 
 /**
- * The tools shelf as the rod shop (David 2026-10-27, v1-gameplay m4): the rods up to rare by tier (the starter and the
- * workbench ones shown, not sold; rarer rods stay off the shelf, David 2026-10-28), then the add-ons, then the rest.
+ * The tools shelf as the rod shop (David 2026-10-27, v1-gameplay m4): the rods up to rare, weakest first (the starter and
+ * the workbench ones shown, not sold; rarer rods stay off the shelf, David 2026-10-28; the starter only until it's
+ * traded), then the add-ons, then the rest. A found rod you don't have is a teaser (David 2026-11-04): "???", "Unique
+ * scenario required", nothing about it given away.
  */
+const MADE = { starter: "starter", crafted: "workbench", found: "found" } as const;
+export const TEASER = { name: "???", description: "Unique scenario required" } as const;
 function rodShelf(tools: ShopEntry[], inv: InventoryRow[]): ShopEntry[] {
-  const have = new Set(inv.map((r) => r.item.catalogue_ref));
-  const crafted = new Map(CRAFTED_ITEMS.map((c) => [c.catalogue_ref, c]));
-  const rods = RODS.filter(onShopShelf).map((r): ShopEntry => tools.find((e) => e.catalogue_ref === r.key) ?? {
-    id: `rod:${r.key}`, slug: crafted.get(r.key)?.slug ?? r.key, name: r.name, category: "tool", tier: crafted.get(r.key)?.tier ?? "basic",
-    description: crafted.get(r.key)?.description ?? "Everyone's first rod. Light, forgiving and a little wobbly.",
-    currency: "coins", price: 0, base_price: 0, special: false, stock: null, owned: r.source === "starter" || have.has(r.key) ? 1 : 0, can_buy: false,
-    sprite_url: `/assets/icons/${r.key}.webp`, catalogue_ref: r.key, made: r.source === "starter" ? "starter" : "workbench",
+  const have = inv.flatMap((r) => r.item.catalogue_ref ?? []);
+  const listed = new Map([...CATALOGUE, ...CRAFTED_ITEMS].map((c) => [c.catalogue_ref, c]));
+  const rods = RODS.filter((r) => onShopShelf(r) && (r.source !== "starter" || ownsRod(r, have))).map((r, i): ShopEntry => {
+    const teaser = r.source === "found" && !have.includes(r.key);
+    return tools.find((e) => e.catalogue_ref === r.key) ?? {
+      id: teaser ? `rod:teaser:${i}` : `rod:${r.key}`, slug: teaser ? `rod:teaser:${i}` : listed.get(r.key)?.slug ?? r.key, name: teaser ? TEASER.name : r.name, category: "tool", tier: listed.get(r.key)?.tier ?? "basic", slot: "rod",
+      description: teaser ? TEASER.description : listed.get(r.key)?.description ?? "Everyone's first rod. Light, forgiving and a little wobbly.",
+      currency: "coins", price: 0, base_price: 0, special: false, stock: null, owned: ownsRod(r, have) ? 1 : 0, can_buy: false,
+      sprite_url: iconUrl(r.key), catalogue_ref: teaser ? null : r.key, made: MADE[r.source as keyof typeof MADE] ?? "workbench",
+    };
   });
   const tackle = TACKLE.flatMap((t) => tools.filter((e) => e.catalogue_ref === t.key));
   return [...rods, ...tackle, ...tools.filter((e) => !rods.includes(e) && !tackle.includes(e))];
 }
+
+/** The rod seller's quest (rods.ts TRAINING): your Flimsy rod for the Training rod, once. */
+export const tradeForTraining = (store: EconomyStore, m: string) => run(() => store.tradeForTraining(m));
 
 export async function buy(store: EconomyStore, m: string, input: { item_id: string; qty: number; idempotency_key: string }, now: Date): Promise<Result<{ balance: number; owned: number; replayed: boolean; price_each: number; currency: "coins" | "gems" }>> {
   return run(async () => {
@@ -278,14 +293,17 @@ export const serveFish = (store: EconomyStore, m: string, input: { fish: string;
 
 export interface InventoryView {
   groups: Record<string, InventoryRow[]>;
+  /** Fish landed with each rod (rod key: count), for the rod cards and the Training rod's level. */
+  catches: Record<string, number>;
 }
 /** First look at the bag grants the free starters (idempotent, once per account). */
 export const getInventory = (store: EconomyStore, m: string) =>
   run<InventoryView>(async () => {
     await store.grantStarters(m);
     const groups: Record<string, InventoryRow[]> = {};
-    for (const r of await store.inventory(m)) (groups[TAB_OF[String(r.item.category)] ?? "outfits"] ??= []).push(r);
-    return { groups };
+    const [rows, catches] = await Promise.all([store.inventory(m), store.rodCatches(m)]);
+    for (const r of rows) (groups[TAB_OF[String(r.item.category)] ?? "outfits"] ??= []).push(r);
+    return { groups, catches };
   });
 
 /** Catalogue refs the member owns (starters granted first): what a look save or a home save is checked against. */

@@ -30,6 +30,7 @@ import { DESIGN_U, materialName, mergeLook, refCache, skinnedPrimitives, type Pi
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { heldTemplate } from "@/lib/game/character/heldMesh";
+import { heldScale } from "@/lib/game/tools";
 import { addContact } from "../ContactShadows";
 import { addGrassBender } from "@/lib/game/grassBenders";
 import { frameStats } from "@/lib/game/perf/frameStats";
@@ -37,6 +38,7 @@ import { createHairAtlas } from "@/lib/game/character/hairAtlas";
 import { MOVE_TUNING } from "@/lib/game/movement/sim";
 import FishingRig from "./FishingRig";
 import LanternGlow, { LANTERN_URL } from "./LanternGlow";
+import RodAura, { rodFxUrl } from "./RodAura";
 
 export type { CharacterMotion, ClipName } from "@/lib/game/character/clips";
 /** v6 is 1.045 m tall; at 1.3 a character stands ~1.36 world units, a little over one tile (ACNH). */
@@ -847,7 +849,9 @@ function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet
     return m;
   }, [scene, url, hold, fit]);
   const casters = useMemo(() => meshesOf(model), [model]);
-  const grip = HELD_GRIPS[hold];
+  const fxUrl = hold === "rod" ? rodFxUrl(model) : null;
+  // A rod drawn bigger in the hand (rods.ts ROD_SCALE) keeps its grip: the hold's scale times the rod's own.
+  const grip = useMemo(() => { const g = HELD_GRIPS[hold], k = heldScale(url); return k === 1 ? g : { ...g, scale: (g.scale ?? 1) * k }; }, [hold, url]);
   const age = useRef(0);
   useEffect(() => {
     age.current = 0;
@@ -865,6 +869,8 @@ function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet
   return <>
     {hold === "rod" && !remote && <FishingRig motion={motion} rod={model} hands={puppet.sockets} />}
     {url === LANTERN_URL && <LanternGlow rod={model} root={puppet.root} clip={puppet} />}
+    {/* A rare or epic rod's glow, aura and idle animation (RodAura), named by its own GLB. */}
+    {fxUrl && <Suspense fallback={null}><RodAura rod={model} url={fxUrl} /></Suspense>}
   </>;
 }
 /** Module scope (the react compiler forbids writing through hook values): pop out, hide where put away, ease to the use grip. */

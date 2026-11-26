@@ -20,12 +20,12 @@ import { Badge, Banner, Button, Card, ConfirmDialog, Counter, Dialogue, Empty, E
   RarityBadge, Sheet, Slider, Tabs, TextArea, Toggle, Tooltip } from "@/components/gui";
 import { iconUrl } from "@/lib/icons/keys";
 import { RARITIES, RARITY_LABEL } from "@/lib/rarity";
-import { RODS, TACKLE } from "@/lib/game/rods";
+import { RODS, TACKLE, rodByKey } from "@/lib/game/rods";
 import { RodRadar, TackleRadar } from "@/components/economy/RodGear";
 import { useSearch } from "@/lib/game/useMediaQuery";
 import { ChevronLeft, CircleDot, Sparkles, UserRound, Waves, Worm } from "lucide-react";
 import { CatchCard, CatchTag, LineGauge, PowerMeter, ReelPanel, ReelTags, ReelTrack, StatusChip } from "@/components/gui/flat/reel";
-import { ActionBar, ActionIcon, BarRows, CHART, ChartCard, Columns, Delta, Heatmap, Segmented, StatTile, TimeChart, CallTag, CardOverlay, DarkButton, FlatField, FlatSlider, FlatToggle, FlyHome, FlyIn, GearSlot, GhostButton, ItemCard, KEYWORD_KINDS, KEYWORD_LIBRARY, KeyBoard, Keyword, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, flyCoins, RewardPop, RoundButton, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
+import { ActionBar, ActionIcon, Awakening, BarRows, CallTag, CardOverlay, CHART, ChartCard, Columns, DarkButton, Delta, FlatField, FlatSlider, FlatToggle, flyCoins, FlyHome, FlyIn, GearSlot, GhostButton, Heatmap, ItemCard, KeyBoard, KeyPeek, Keyword, KEYWORD_KINDS, KEYWORD_LIBRARY, KeywordLine, LevelUpMoment, PaperField, Phone, PrintedCard, ProgressCard, Purse, QuestCheck, RankBadge, RewardPop, RoundButton, Segmented, ServeMeter, SlotPop, SpinPicker, Spotlight, StaminaArc, StatTile, TimeChart, VitalBar, Vitals, WalletSlot, XpRing, type PeekKind, type PhoneApp } from "@/components/gui/flat";
 import type { Rarity } from "@/lib/rarity";
 import { BoardBody } from "@/components/game/volleyball/BoardSheet";
 import { DEFAULT_LOOK } from "@/lib/game/character/look";
@@ -47,7 +47,7 @@ function RodGearShow() {
   const bobber = TACKLE.find(t => t.slot === "bobber")!, bait = TACKLE.find(t => t.slot === "bait")!;
   return <>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24, alignItems: "end" }}>
-      <div data-testid="radar-live"><b>Glass rod, your build</b><RodRadar rod={RODS[2]} tackle={on ? [bobber.key, bait.key] : []} />
+      <div data-testid="radar-live"><b>Crystal rod, your build</b><RodRadar rod={rodByKey("rod_glass")!} tackle={on ? [bobber.key, bait.key] : []} />
         <GhostButton onClick={() => setOn(v => !v)} data-testid="radar-toggle">{on ? "Take the bobber and bait off" : "Put the lucky bobber and sweet bait on"}</GhostButton></div>
       <div><b>{bobber.name} on its own</b><TackleRadar tackle={bobber} /></div>
       <div style={{ display: "flex", gap: 8, alignSelf: "center" }}>
@@ -61,6 +61,7 @@ function RodGearShow() {
     </div>
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginTop: 24 }} data-testid="rarity-cards">
       {RARITIES.filter(r => r !== "contraband").map(r => <ItemCard key={r} size="md" arrow={false} rarity={r} picture={iconUrl("rod_glass")} name={RARITY_LABEL[r]} line="A rod at this rung" />)}
+      <ItemCard size="md" arrow={false} rarity="epic" awakened picture={iconUrl("rod_titanium_a1")} name="Awakened" line="Its mark, top right" />
     </div>
   </>;
 }
@@ -200,6 +201,10 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
   { id: "coin-fly", title: "A sale's coins, into the purse (flyCoins)", render: () => <Loop ms={3400}>{() => <CoinFlyShow />}</Loop> },
   { id: "quest-check", title: "Quest complete", render: () => <Loop ms={3000}>{() => <QuestCheck eyebrow="Quest complete" title="Walk with Bram" />}</Loop> },
   { id: "printed-card", title: "Printed card as the overlay (CardOverlay, PrintedCard, PaperField)", render: () => <PrintedShow /> },
+  { id: "awakening", title: "An awakening (Awakening): glow, pulse, hush, impact frames and burst, show, reveal", render: () => <Loop ms={12000}>{done => <Awakening label="Awakened" from="common" rarity="rare" rarityLabel="Rare rod"
+    lead="Your Training rod is glowing…" eyebrow="Awakened!" name="Training rod" text="It fishes like a rare rod now." onClose={done}
+    thing={after => <img src="/assets/icons/rod_training.webp" alt="" style={{ objectFit: "contain", imageRendering: "pixelated", filter: after ? "hue-rotate(160deg)" : undefined }} />}
+    action={<DarkButton onClick={done}>Nice!</DarkButton>} />}</Loop> },
   { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },
   { id: "emotes", title: "Emote wheel", render: () => <EmoteWheelShow /> },
@@ -295,7 +300,7 @@ export default function GuiShowroom() {
         <ListRow icon={iconUrl("acc_cap")} title="Cap" detail="Accessory" leader value={<Amount n={350} />} onClick={() => setRow(0)} selected={row === 0} />
         <ListRow icon={iconUrl("acc_backpack")} title="Backpack" detail="Accessory" leader value={<Amount n={1200} />} onClick={() => setRow(1)} selected={row === 1} />
         <ListRow icon={iconUrl("lounge-tea")} title="Tea set" detail="Furniture" leader value={<Amount n={220} />} onClick={() => setRow(2)} selected={row === 2} />
-        <ListRow icon={iconUrl("rod_glass")} title="Glass rod" detail="Premium · needs level 8" value="Locked" onClick={() => {}} disabled />
+        <ListRow icon={iconUrl("rod_glass")} title="Crystal rod" detail="Premium · needs level 8" value="Locked" onClick={() => {}} disabled />
         <ListRow icon={iconUrl("rock_stone")} title="Stone" leader value={<><b>2</b> / 5</>} />
       </List>
     </Section>

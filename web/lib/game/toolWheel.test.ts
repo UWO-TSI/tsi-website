@@ -2,17 +2,27 @@ import { describe, expect, it } from "vitest";
 import { STARTER_WEAPONS } from "@/lib/combat/weapons";
 import { EMPTY_HANDS, WHEEL_SLOTS, clickAction, equip, flick, flickPick, heldItem, newFlick, pinItem, quickSwap, reconcile, slotAt, slotPosition, toolNeeded, wheelContents, wheelWeapons, type WheelContext } from "./toolWheel";
 import { TOOLS, bestTool } from "./tools";
+import { AWAKEN_AT } from "./rods";
 
 const base: WheelContext = { site: "village", owned: [], weapons: STARTER_WEAPONS, armed: false, pins: [], stock: {} };
 const ids = (ctx: Partial<WheelContext>) => wheelContents({ ...base, ...ctx }).map(i => i.id);
 const NOTHING = { water: false, bug: null, dig: null };
 
 describe("the tool wheel's contents (specs/game-ui.md §1)", () => {
+  it("holds an awakened rod as it has awakened: its own model in the hand, its own icon (rods.ts awakenedLook)", () => {
+    const rod = (catches: Record<string, number>) => wheelContents({ ...base, owned: ["rod_titanium"], catches }).find(i => i.kind === "rod")!;
+    expect(rod({ rod_titanium: 120 })).toMatchObject({ key: "rod_titanium", icon: "/assets/icons/rod_titanium.webp" });
+    expect(rod({ rod_titanium: 120 }).model).toBeUndefined();
+    expect(rod({ rod_titanium: AWAKEN_AT })).toMatchObject({ key: "rod_titanium", icon: "/assets/icons/rod_titanium_a1.webp", model: "/assets/game/tools/rod-titanium-a1.glb" });
+  });
   it("holds everyone's tier-1 rod, net and shovel, and the best owned once you have more", () => {
     expect(ids({})).toEqual(["rod:rod_flimsy", "net:net-basic", "shovel:shovel-basic"]);
     expect(ids({ owned: ["rod_glass", "rod_cedar", "net-mid", "shovel-gold"] })).toEqual(["rod:rod_glass", "net:net-mid", "shovel:shovel-gold"]);
-    // Every tier 1 is a starter but the pickaxe, which only Mayor Eliza gives (m6).
-    expect(TOOLS.filter(t => t.tier === 1 && t.source !== "starter").map(t => t.key)).toEqual(["pickaxe-basic"]);
+    // Every tier 1 is a starter but the Training rod (the rod seller's trade), the Precision rod (the shop's) and the
+    // pickaxe, which only Mayor Eliza gives (m6).
+    expect(TOOLS.filter(t => t.tier === 1 && t.source !== "starter").map(t => t.key)).toEqual(["rod_training", "rod_precision", "pickaxe-basic"]);
+    // Traded for the Training rod, the Flimsy leaves the wheel.
+    expect(ids({ owned: ["rod_training"] })[0]).toBe("rod:rod_training");
     expect(ids({ owned: ["pickaxe-basic"] })).toContain("pickaxe:pickaxe-basic");
     expect(bestTool("shovel", ["shovel-gold", "shovel-mid"])?.tier).toBe(5);
   });

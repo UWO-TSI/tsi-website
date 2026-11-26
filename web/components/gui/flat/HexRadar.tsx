@@ -39,8 +39,10 @@ const R = 100, ICON_R = 128, VIEW = { x: -150, y: -146, w: 300, h: 300 };
  * growing. A change slides linearly. Each corner carries its icon and value; hovering or focusing it names the stat
  * and says in one line what it does. Its numbers are in the label for screen readers.
  */
-export function HexRadar({ axes, max = 100, label, size = 440, className, testId }: {
+export function HexRadar({ axes, max = 100, label, size = 440, className, testId, baseLabel = "without add-ons" }: {
   axes: readonly RadarAxis[]; max?: number; label: string; size?: number; className?: string; testId?: string;
+  /** What `base` is, for screen readers ("without add-ons", "before"). */
+  baseLabel?: string;
 }) {
   const n = axes.length;
   const values = useSlide(axes.map(a => a.value));
@@ -50,7 +52,7 @@ export function HexRadar({ axes, max = 100, label, size = 440, className, testId
   };
   const shape = (vs: readonly number[]) => vs.map((v, i) => at(i, v).map(c => c.toFixed(1)).join(",")).join(" ");
   const based = axes.some(a => a.base !== undefined && a.base !== a.value);
-  const spoken = axes.map(a => `${a.label} ${a.value}${based && a.base !== undefined && a.base !== a.value ? ` (${a.base} without add-ons)` : ""}`).join(", ");
+  const spoken = axes.map(a => `${a.label} ${a.value}${based && a.base !== undefined && a.base !== a.value ? ` (${a.base} ${baseLabel})` : ""}`).join(", ");
   return <figure className={`${f.radar} ${className ?? ""}`} style={{ maxWidth: size }} data-testid={testId} data-built={based || undefined}>
     <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} role="img" aria-label={`${label}: ${spoken}, out of ${max}`}>
       {[0.25, 0.5, 0.75, 1].map(k => <polygon key={k} className={f.radarRing} points={axes.map((_, i) => at(i, max * k).join(",")).join(" ")} />)}

@@ -6,6 +6,7 @@
 import { CATALOGUE, EVENT_ITEMS, OWNERSHIP_ITEMS } from "@/lib/wallet/catalogue";
 import { iconSpecs, type IconSpec } from "./manifest";
 import { iconKey, type IconRow } from "./keys";
+import { awakenedLook, type RodTier } from "@/lib/game/rods";
 
 let specs: Map<string, IconSpec> | null = null;
 const all = () => (specs ??= new Map(iconSpecs([...CATALOGUE, ...OWNERSHIP_ITEMS, ...EVENT_ITEMS]).map(s => [s.key, s])));
@@ -23,3 +24,6 @@ export function keyModel(key: string): IconSpec | null {
   const s = all().get(key) ?? null;
   return s && s.view !== "roll" && s.view !== "tile" && /\.glb$/.test(s.url) ? s : null;
 }
+
+/** A rod's model as it is now (`awakened`): its awakened model once it has one (rods.ts awakenedLook), else its own. */
+export const rodSpec = (r: RodTier): IconSpec | null => keyModel(awakenedLook(r)?.icon ?? r.key);

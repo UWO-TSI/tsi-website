@@ -10,8 +10,11 @@ Writes
   web/lib/game/fx/combatPack.ts              its layout (generated: edit the COMBAT_SPRITES list here)
   specs/evidence/classes/K0-combat-atlas.webp   every combat row through three sample ramps, as the engine maps heat
   web/public/assets/fx/fire-pack.webp        the campfire's and the candles' rows of the combat pack, cut out (build_fire)
+  web/public/assets/fx/fxlib-pack.webp       the effects library's rows (specs/vfx-library.md): combat rows cut out, and
+                                             a sakura petal tumbling, painted as heat (build_fxlib)
 
   python3 art/fx/build_pack.py fire          only the fire pack, cut from the committed combat pack (nothing repainted)
+  python3 art/fx/build_pack.py fxlib         only the effects library's pack (its combat rows cut, the petal painted)
 
 Painted procedurally, no downloads and no references: each frame is brushwork in numpy. A puff is a few lobes of
 paint (a metaball field) cut at a rising threshold through two kinds of noise, so it grows, thins and breaks up the way
@@ -2389,11 +2392,48 @@ def build_fire():
     print("wrote", OUT_FIRE, out.size, os.path.getsize(OUT_FIRE) // 1024, "KB")
 
 
+OUT_FXLIB = os.path.join(ROOT, "web", "public", "assets", "fx", "fxlib-pack.webp")
+# The effects library's rows (lib/game/fx/fxMaterial.ts FXLIB_PACK, same order; components/game/fx/HolderFx.tsx and the
+# awakening's strikes): the combat pack's, cut out, then the sakura petal, painted here.
+FXLIB_ROWS = ("mote", "sparkBurst", "flare", "bolt", "flame", "droplet")
+
+
+def sakura(t):
+    """A cherry petal tumbling (the movement pack's petal, its turn and roll), as heat for the ramp: hottest (palest) at
+    its notched tip, deeper toward its base and its edges, a crease down the middle; the back a little cooler."""
+    a, rgb = petal(t)
+    v = rgb.mean(axis=2)
+    heat = np.clip((v - 0.8) / 0.2, 0, 1) * 0.75 + 0.2
+    return a, np.repeat(heat[:, :, None], 3, axis=2)
+
+
+def build_fxlib():
+    combat = Image.open(OUT_COMBAT).convert("RGBA")
+    order = [name for name, *_ in COMBAT_SPRITES]
+    rows = len(FXLIB_ROWS) + 1
+    out = Image.new("RGBA", (FRAMES * CELL, rows * CELL))
+    for i, name in enumerate(FXLIB_ROWS):
+        r = order.index(name)
+        out.paste(combat.crop((0, r * CELL, FRAMES * CELL, (r + 1) * CELL)), (0, i * CELL))
+    painted = np.zeros((CELL, FRAMES * CELL, 4))
+    for i in range(FRAMES):
+        a, rgb = frame(sakura, i)
+        a[:2, :] = a[-2:, :] = 0
+        a[:, :2] = a[:, -2:] = 0
+        painted[:, i * CELL:(i + 1) * CELL, :3], painted[:, i * CELL:(i + 1) * CELL, 3] = rgb, a
+    out.paste(Image.fromarray((painted * 255 + 0.5).astype(np.uint8), "RGBA"), (0, len(FXLIB_ROWS) * CELL))
+    out.save(OUT_FXLIB, "WEBP", lossless=True, quality=100, method=6, exact=True)
+    print("wrote", OUT_FXLIB, out.size, os.path.getsize(OUT_FXLIB) // 1024, "KB")
+
+
 if __name__ == "__main__":
     import sys
     if sys.argv[1:] == ["fire"]:
         build_fire()
+    elif sys.argv[1:] == ["fxlib"]:
+        build_fxlib()
     else:
         build()
         build_combat()
         build_fire()
+        build_fxlib()

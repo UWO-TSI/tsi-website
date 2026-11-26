@@ -11,25 +11,29 @@
  * (components/gui/flat), which the game's other menus share (specs/polish/flat-ui.md).
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BadgePercent, HandCoins, House, KeyRound, LayoutGrid, Lock, Shirt, Sofa, Sticker, Ticket, Wrench } from "lucide-react";
+import { BadgePercent, HandCoins, House, KeyRound, LayoutGrid, Lock, Shirt, Sofa, Sticker, Ticket, Wrench, X } from "lucide-react";
 import { ApiError, newKey } from "@/lib/apiClient";
 import { countUp, sellAtCounter } from "@/lib/game/shopCounter";
 import { iconUrl, shopIcon } from "@/lib/icons/keys";
-import { itemModel } from "@/lib/icons/itemModel";
+import { itemModel, rodSpec } from "@/lib/icons/itemModel";
 import { httpEconomyTransport, type EconomyTransport, type MerchView } from "@/lib/wallet/transport";
 import type { SellEntry, ShopEntry, ShopView } from "@/lib/wallet/service";
 import { merchKind, merchSpecs, merchTag, MERCH_KINDS } from "@/lib/wallet/merchShelf";
 import { SHELF_LABEL, itemLine, shelfItems, shopShelves, type ShopSection, type ShopShelf } from "@/lib/wallet/shopShelves";
-import { CardGrid, Code, ColourDots, DarkButton, DetailView, FlatPanel, GhostButton, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, Purse, Quiet, RowActions, STAGE, StatusLine,
+import { CardGrid, Code, ColourDots, DarkButton, DetailView, FlatPanel, GhostButton, HairlineRow, HairlineRows, IconRail, InfoHead, ItemCard, PayRow, Purse, Quiet, RowActions, STAGE, StatusLine,
   flatStyles as f } from "@/components/gui/flat";
 import ItemViewer from "./ItemViewer";
-import { RodRadar, TackleRadar, rodLine, rodOf } from "./RodGear";
-import { tackleByKey } from "@/lib/game/rods";
+import { RodRadar, TackleRadar, RodRecord, rodLine } from "./RodGear";
+import { awakened, rodByKey, tackleByKey } from "@/lib/game/rods";
 
 const SHELF_ICON: Record<string, ReactNode> = {
   tools: <Wrench size={22} />, outfits: <Shirt size={22} />, furniture: <Sofa size={22} />, specials: <BadgePercent size={22} />, sell: <HandCoins size={22} />,
   merch: <LayoutGrid size={22} />, "merch:apparel": <Shirt size={22} />, "merch:accessories": <KeyRound size={22} />, "merch:stickers": <Sticker size={22} />, "merch:home": <House size={22} />,
   pickups: <Ticket size={22} />,
+  // The tackle shop's shelves wear the items' own pictures (David's approved mock, 2026-11-19).
+  rods: <img src={iconUrl("rod_cedar")} width={34} height={34} style={{ imageRendering: "pixelated" }} alt="" />,
+  bait: <img src={iconUrl("bait-sweet")} width={34} height={34} style={{ imageRendering: "pixelated" }} alt="" />,
+  bobbers: <img src={iconUrl("bobber-lucky")} width={34} height={34} style={{ imageRendering: "pixelated" }} alt="" />,
 };
 const KIND_LABEL = new Map(MERCH_KINDS.map(k => [k.id, k.label]));
 const CATEGORY_LABEL: Record<string, string> = { tool: "Tools", outfit: "Clothes", accessory: "Accessories", hair: "Hair dye", furniture: "Furniture", wallpaper: "Wallpaper", flooring: "Flooring" };
@@ -51,45 +55,53 @@ export function specsOf(e: ShopEntry): [string, string][] {
 }
 
 
-function Card({ e, onOpen }: { e: ShopEntry; onOpen: () => void }) {
+function Card({ e, catches, onOpen, selected }: { e: ShopEntry; catches: number; onOpen: () => void; selected?: boolean }) {
   // An unpriced item (merch waiting on its price): "Price to come" on its pill, and its action off. A rod the shop
-  // doesn't sell (the starter, the workbench ones) says where it comes from instead.
-  return <ItemCard picture={picture(e)} name={e.name} line={e.owned > 0 && !e.can_buy ? "Owned" : itemLine(e)} tag={tagOf(e)}
+  // doesn't sell (the starter, the workbench ones, a found one) says where it comes from instead. A rod you own says
+  // how many fish it has landed (rod_catches).
+  const rod = rodByKey(e.catalogue_ref), owned = e.owned > 0 && !e.can_buy;
+  // A found rod you don't have (lib/wallet/service.ts TEASER): its silhouette, "???", "Unique scenario required", nothing to open.
+  if (e.made === "found" && !rod) return <ItemCard picture={picture(e)} cover="not-found" name={e.name} line={e.description} label={`${e.name}: ${e.description}`}
+    testId="shop-teaser" arrow={false} disabled />;
+  return <ItemCard picture={picture(e)} name={e.name} line={owned ? (rod ? `Owned · ${catches.toLocaleString()} fish` : "Owned") : itemLine(e)} tag={tagOf(e)}
     price={e.made ? null : { amount: e.price, currency: e.currency }} pill={e.made ? MADE_PILL[e.made] : undefined} cover={e.stock === 0 ? "sold-out" : null}
-    rarity={rodOf(e.catalogue_ref)?.rarity} onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
+    rarity={rod ? awakened(rod, catches).rarity : tackleByKey(e.catalogue_ref)?.rarity} selected={selected} onClick={onOpen} label={`${e.name}, ${e.price} ${e.currency}`} testId="shop-card" />;
 }
 
-const MADE_PILL = { starter: "Yours", workbench: "Workbench" } as const;
-const MADE_ACTION = { starter: "Yours from the start", workbench: "Made at the workbench" } as const;
-const MADE_FINE = { starter: "Everyone fishes with it from day one.", workbench: "Craft it at a workbench." } as const;
+const MADE_PILL = { starter: "Yours", workbench: "Workbench", found: "Found" } as const;
+const MADE_ACTION = { starter: "Yours from the start", workbench: "Made at the workbench", found: "Found, never sold" } as const;
+const MADE_FINE = { starter: "Everyone fishes with it from day one.", workbench: "Craft it at a workbench.", found: "Nobody sells this one. You found it." } as const;
 
-/** A rod's radar (the rod alone: the shop has no slots, David 2026-10-28), or an add-on's own. */
-function GearInfo({ e }: { e: ShopEntry }) {
-  const rod = rodOf(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
-  return rod ? <RodRadar rod={rod} /> : add ? <TackleRadar tackle={add} /> : null;
+/** A rod's radar (the rod alone, as awakened: the shop has no slots, David 2026-10-28), or an add-on's own. */
+function GearInfo({ e, catches }: { e: ShopEntry; catches: number }) {
+  const rod = rodByKey(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
+  return rod ? <>{catches > 0 && <RodRecord rod={rod} catches={catches} />}<RodRadar rod={awakened(rod, catches)} size={340} /></> : add ? <TackleRadar tackle={add} /> : null;
 }
 
-function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
-  e: ShopEntry; list: ShopEntry[]; onPick: (id: string) => void; onBack: () => void; busy: string | null; onPay: (e: ShopEntry) => void;
+function Detail({ e, catches, list, onPick, onBack, busy, onPay, viewer }: {
+  e: ShopEntry; catches: number; list: ShopEntry[]; onPick: (id: string) => void; onBack: () => void; busy: string | null; onPay: (e: ShopEntry) => void;
   /** A model of its own for the left pane (the keychain's), in place of the turning icon model. */
   viewer?: ReactNode | null;
 }) {
   const i = list.findIndex(x => x.id === e.id);
   const prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
   const merch = e.category === "merch";
-  const spec = useMemo(() => itemModel(e), [e]);
+  const rod = rodByKey(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
+  // A rod you own shows as it has awakened (its awakened model, rods.ts awakenedLook), as its outline does.
+  const spec = useMemo(() => (rod ? rodSpec(awakened(rod, catches)) : itemModel(e)), [e, rod, catches]);
   // A hair dye's colour dots: the other dyes on the shelf.
   const dyes = e.category === "hair" ? list.filter(x => x.category === "hair") : [];
-  const rod = rodOf(e.catalogue_ref), gear = !!rod || !!tackleByKey(e.catalogue_ref);
   const action = merch ? "Redeem" : e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy";
-  return <DetailView testId="shop-detail" rarity={rod?.rarity} onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
+  // A rod's box keeps its paging quiet (David 2026-11-04): no back on the stage (the rail goes back), faint small
+  // chevrons for the next rod; its outline is the rarity it has awakened to.
+  return <DetailView testId="shop-detail" rarity={rod && awakened(rod, catches).rarity} quiet={!!rod} onBack={onBack} hint={e.slug === "merch-tsi-lanyard" ? "Drag to slide along" : e.slug === "merch-genesis-sticker" ? "Drag to tilt" : undefined}
     stage={viewer ?? <ItemViewer key={e.id} spec={spec} picture={picture(e)} name={e.name} className={STAGE.stage} pictureClassName={STAGE.picture} />}
     steps={list.length > 1 ? { prev: { label: `Previous: ${prev.name}`, onClick: () => onPick(prev.id) }, next: { label: `Next: ${next.name}`, onClick: () => onPick(next.id) } } : null}
     info={<>
-      <InfoHead kind={rod ? rodLine(rod) : kindOf(e)} title={e.name} text={itemLine(e)} />
+      <InfoHead kind={rod ? rodLine(awakened(rod, catches)) : kindOf(e)} title={e.name} text={itemLine(e)} />
       {dyes.length > 1 && <ColourDots value={e.id} onPick={onPick}
         items={dyes.map(d => ({ id: d.id, label: d.name, background: `url(${picture(d)}) center 62% / 260% no-repeat` }))} />}
-      <GearInfo e={e} />
+      <GearInfo e={e} catches={catches} />
     </>}
     pay={e.made ? { action: { label: MADE_ACTION[e.made], disabled: true, onClick: () => {} } }
       : { price: { amount: e.price, currency: e.currency }, was: e.special ? e.base_price.toLocaleString() : null,
@@ -98,6 +110,51 @@ function Detail({ e, list, onPick, onBack, busy, onPay, viewer }: {
       : <>{merch ? "Pay with Gems. Reserve it here, then pick it up at HQ on campus." : `Pay with ${e.currency === "gems" ? "Gems" : "coins"}.`}
       {e.owned > 0 ? ` You own ${e.owned}.` : ""}</>}
     specs={gear ? null : specsOf(e)} />;
+}
+
+/**
+ * The tackle shop's close-up (David's approved mock, 2026-11-19): the picked item beside its shelf, not over it. The
+ * model turns on its stage as the detail's does, then the kind, the name and the line, the stats the detail shows, the
+ * same pay button, and the facts in a row along the bottom. Where the browser can't draw the model (no WebGL), the
+ * stage shows the item's icon instead of a blank.
+ */
+function TackleCloseUp({ e, catches, busy, onPay, onClose }: {
+  e: ShopEntry; catches: number; busy: string | null; onPay: (e: ShopEntry) => void; onClose: () => void;
+}) {
+  const rod = rodByKey(e.catalogue_ref), add = tackleByKey(e.catalogue_ref);
+  // A rod you own shows as it has awakened, as its card and the detail do.
+  const spec = useMemo(() => (rod ? rodSpec(awakened(rod, catches)) : itemModel(e)), [e, rod, catches]);
+  const action = e.owned > 0 && e.can_buy ? "Buy another" : e.owned > 0 ? "Owned" : "Buy";
+  const rarity = rod ? awakened(rod, catches).rarity : add?.rarity ?? null;
+  // Whether this browser can draw a model at all: null until checked, so the first paint is the same on both sides.
+  const [gl, setGl] = useState<boolean | null>(null);
+  useEffect(() => {
+    const probe = document.createElement("canvas");
+    setGl(!!(probe.getContext("webgl2") ?? probe.getContext("webgl")));
+  }, []);
+  return <aside className={f.closeUp} aria-label={e.name} data-testid="tackle-close-up">
+    <button type="button" className={f.closeUpClose} aria-label="Close" title="Close" onClick={onClose}><X size={14} aria-hidden /></button>
+    {/* Its key remounts the body, so another card's close-up cross-fades over this one. */}
+    <div key={e.id} className={f.closeUpBody}>
+      <div className={f.closeUpStage}>
+        {gl === null ? null
+          : gl ? <ItemViewer spec={spec} picture={picture(e)} name={e.name} className={STAGE.stage} pictureClassName={STAGE.picture} />
+          : <img className={f.closeUpPicture} src={picture(e)} alt="" style={{ imageRendering: "pixelated" }} />}
+      </div>
+      <p className={f.closeUpKind}>{rod ? rodLine(awakened(rod, catches)) : `${cap(e.slot ?? e.category)} · ${rarity ? cap(rarity) : "—"}`}</p>
+      <h3 className={f.closeUpName}>{e.name}</h3>
+      <p className={f.closeUpLine}>{itemLine(e)}</p>
+      {rod || add ? <div className={f.closeUpStats}><GearInfo e={e} catches={catches} /></div> : null}
+      <PayRow price={{ amount: e.price, currency: e.currency }} was={e.special ? e.base_price.toLocaleString() : null}
+        action={e.made ? { label: MADE_ACTION[e.made], disabled: true, onClick: () => {} }
+          : { label: busy === e.id ? "One moment…" : e.stock === 0 ? "Sold out" : action, disabled: !e.can_buy || busy !== null || e.stock === 0, onClick: () => onPay(e) }} />
+      <dl className={f.closeUpFacts}>
+        <div><dt>Kind</dt><dd>{cap(e.slot ?? e.category)}</dd></div>
+        <div><dt>Rarity</dt><dd>{rarity ? cap(rarity) : "—"}</dd></div>
+        <div><dt>Stock</dt><dd>{e.stock === null ? "Always in stock" : e.stock > 0 ? `${e.stock} left` : "Sold out"}</dd></div>
+      </dl>
+    </div>
+  </aside>;
 }
 
 /** The counter's Sell: what's in your bag the shop buys, one or the stack. */
@@ -161,6 +218,8 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
   const [shelf, setShelf] = useState<ShopShelf | "pickups" | null>(initialShelf ?? null);
   const [picked, setPicked] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  /** The card just bought, for its pop and its +1 (the tackle shop keeps the card in view); `n` replays them. */
+  const [bought, setBought] = useState<{ id: string; n: number } | null>(null);
   const coinsEl = useRef<HTMLSpanElement>(null), gemsEl = useRef<HTMLSpanElement>(null);
   const timers = useRef<number[]>([]);
   const keysFor = useRef(new Map<string, string>());
@@ -189,6 +248,8 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
       } else {
         const r = await transport.buy(e.id, 1, key);
         setNote(`Bought ${e.name}.`);
+        setBought(b => ({ id: e.id, n: (b?.n ?? 0) + 1 }));
+        timers.current.push(window.setTimeout(() => setBought(null), 900));
         if (r.currency === "coins") countUp(coinsEl.current, r.balance + r.price_each, r.balance, timers.current);
         onBought?.(e, `The ${e.name.toLowerCase()}, all yours. Thanks for stopping by!`);
         if (e.category === "tool") window.dispatchEvent(new CustomEvent("tsi:gear-changed"));
@@ -201,17 +262,32 @@ export default function ShopOverlay({ open, onClose, title, section, sell = fals
     } finally { setBusy(null); }
   };
 
-  // A new shelf or an item opened fades in (the kit's micro animations, round 2).
-  return <FlatPanel open={open} onClose={onClose} title={title} keys={keys} testId="shop-overlay" embedded={embedded} contentKey={`${current ?? ""}${item ? `:${item.id}` : ""}`}
+  // A new shelf or an item opened fades in (the kit's micro animations, round 2). The tackle shop keeps its shelf in
+  // view while a card is open, so only its shelf key remounts (the close-up cross-fades on its own).
+  return <FlatPanel open={open} onClose={onClose} title={title} keys={keys} testId="shop-overlay" embedded={embedded}
+    contentKey={section === "rods" ? current ?? "" : `${current ?? ""}${item ? `:${item.id}` : ""}`}
     purse={<Purse coins={view ? view.coins : null} gems={view ? view.gems : null} coinsRef={coinsEl} gemsRef={gemsEl} />}
-    rail={<IconRail label="Shelves" value={current} onChange={id => { setShelf(id); setPicked(null); setNote(null); }}
+    rail={<IconRail label="Shelves" value={current} labelled={section === "rods"} onChange={id => { setShelf(id); setPicked(null); setNote(null); }}
       items={shelves.map(id => ({ id, label: id === "pickups" ? "Your pickups" : SHELF_LABEL[id], icon: SHELF_ICON[id], badge: id === "specials" && view ? view.tabs.specials.length : undefined }))} />}>
     {(note || error) && <StatusLine error={!!error}>{error ?? note}</StatusLine>}
     {!view ? <Quiet>{error ? "" : "Opening the shop…"}</Quiet>
       : current === "sell" ? <SellPane transport={transport} onSold={(from, to, line, ok) => { if (ok) countUp(coinsEl.current, from, to, timers.current); onSold?.(line, ok); }} />
       : current === "pickups" ? <Pickups transport={transport} />
-      : item ? <Detail e={item} list={items} onPick={setPicked} onBack={() => setPicked(null)} busy={busy} onPay={e => void pay(e)} viewer={viewerFor?.(item, STAGE.stage, STAGE.picture)} />
+      // The tackle shop: the close-up sits beside the shelf (David's approved mock, 2026-11-19), never over it.
+      : section === "rods" ? (items.length === 0 ? <Quiet>The shopkeeper restocks with each update.</Quiet>
+        : <div className={f.tackleSplit} data-open={item ? "" : undefined}>
+          <div className={f.tackleShelf}>
+            <CardGrid title={current ? SHELF_LABEL[current] : ""} className={f.tackleGrid}>
+              {items.map(e => <div key={e.id} className={f.tackleCell} data-bought={bought?.id === e.id || undefined}>
+                <Card e={e} catches={view?.catches[e.catalogue_ref ?? ""] ?? 0} selected={item?.id === e.id} onOpen={() => { setPicked(e.id); setNote(null); }} />
+                {bought?.id === e.id ? <span key={bought.n} className={f.plusOne} aria-hidden>+1</span> : null}
+              </div>)}
+            </CardGrid>
+          </div>
+          {item ? <TackleCloseUp e={item} catches={view?.catches[item.catalogue_ref ?? ""] ?? 0} busy={busy} onPay={e => void pay(e)} onClose={() => setPicked(null)} /> : null}
+        </div>)
+      : item ? <Detail e={item} catches={view?.catches[item.catalogue_ref ?? ""] ?? 0} list={items} onPick={setPicked} onBack={() => setPicked(null)} busy={busy} onPay={e => void pay(e)} viewer={viewerFor?.(item, STAGE.stage, STAGE.picture)} />
       : items.length === 0 ? <Quiet>{current === "specials" ? "No specials today. New picks go up at midnight, Toronto time." : current?.startsWith("merch") ? "New club merch arrives with the next order." : "The shopkeeper restocks with each update."}</Quiet>
-      : <CardGrid title={current ? SHELF_LABEL[current] : ""}>{items.map(e => <Card key={e.id} e={e} onOpen={() => { setPicked(e.id); setNote(null); }} />)}</CardGrid>}
+      : <CardGrid title={current ? SHELF_LABEL[current] : ""}>{items.map(e => <Card key={e.id} e={e} catches={view?.catches[e.catalogue_ref ?? ""] ?? 0} onOpen={() => { setPicked(e.id); setNote(null); }} />)}</CardGrid>}
   </FlatPanel>;
 }

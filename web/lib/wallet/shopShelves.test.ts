@@ -6,12 +6,15 @@ import { CATALOGUE, OWNERSHIP_ITEMS, onSale } from "./catalogue";
 import { CUSTOM_HAIR_REF, PART_BY_ID } from "@/lib/game/character/look";
 
 const entry = (slug: string, name: string, category: string, extra: Partial<ShopEntry> = {}): ShopEntry => ({
-  id: slug, slug, name, category, description: "", tier: null, currency: category === "merch" ? "gems" : "coins", price: 100, base_price: 100,
+  id: slug, slug, name, category, description: "", tier: null, slot: null, currency: category === "merch" ? "gems" : "coins", price: 100, base_price: 100,
   special: false, stock: null, owned: 0, can_buy: true, sprite_url: null, catalogue_ref: null, ...extra,
 });
 const view = {
   tabs: {
-    tools: [entry("rod-cedar", "Cedar rod", "tool", { tier: "mid" })], outfits: [entry("wear-top-cardigan", "Cardigan", "outfit")],
+    tools: [
+      entry("rod-cedar", "Cedar rod", "tool", { tier: "mid", slot: "rod" }), entry("bait-sweet", "Sweet bait", "tool", { tier: "mid", slot: "bait" }),
+      entry("bobber-lucky", "Lucky bobber", "tool", { tier: "premium", slot: "bobber" }), entry("net-basic", "Bug net", "tool", { tier: "basic", slot: "net" }),
+    ], outfits: [entry("wear-top-cardigan", "Cardigan", "outfit")],
     furniture: [entry("furn-lounge-sofa", "Sofa", "furniture")], specials: [entry("furn-lounge-sofa", "Sofa", "furniture", { special: true })],
     merch: [entry("merch-sticker-pack", "TSI sticker pack", "merch"), entry("merch-tote", "TSI tote bag", "merch")],
   },
@@ -25,15 +28,19 @@ describe("the shop overlay's sidebar (specs/interiors/shop.md, the shop overlay)
     expect(shopShelves(view)).toEqual(["tools", "outfits", "furniture", "specials", "merch"]);
   });
 
-  it("hides an empty shelf but tools, and the tackle shop shows only rods and tackle", () => {
+  it("hides an empty shelf but tools, and the tackle shop shows its three shelves", () => {
     const bare = { tabs: { ...view.tabs, furniture: [], specials: [] } };
     expect(shopShelves(bare, "items")).toEqual(["tools", "outfits"]);
     expect(shopShelves({ tabs: { ...bare.tabs, tools: [] } }, "items")).toEqual(["tools", "outfits"]);
-    expect(shopShelves(view, "rods", true)).toEqual(["tools"]);
+    expect(shopShelves(view, "rods", true)).toEqual(["rods", "bait", "bobbers"]);
   });
 
   it("puts each item on its shelf, and the merch's kinds split the merch", () => {
-    expect(shelfItems(view, "tools").map(e => e.slug)).toEqual(["rod-cedar"]);
+    // The general shop sells no rods, bait or bobbers: they are the tackle shop's.
+    expect(shelfItems(view, "tools").map(e => e.slug)).toEqual(["net-basic"]);
+    expect(shelfItems(view, "rods").map(e => e.slug)).toEqual(["rod-cedar"]);
+    expect(shelfItems(view, "bait").map(e => e.slug)).toEqual(["bait-sweet"]);
+    expect(shelfItems(view, "bobbers").map(e => e.slug)).toEqual(["bobber-lucky"]);
     expect(shelfItems(view, "merch")).toHaveLength(2);
     expect(shelfItems(view, "merch:stickers").map(e => e.slug)).toEqual(["merch-sticker-pack"]);
     expect(shelfItems(view, "sell")).toEqual([]);

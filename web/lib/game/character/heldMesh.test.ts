@@ -3,13 +3,16 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { heldTemplate, mergeHeld } from "./heldMesh";
 import { lookClassFor } from "../modelMaterials";
 
 const ASSETS = join(__dirname, "../../../public/assets/game");
 const load = (file: string) => new Promise<THREE.Object3D>((resolve, reject) => {
   const buf = readFileSync(join(ASSETS, file));
-  new GLTFLoader().parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), "", g => resolve(g.scene), reject);
+  // Tools ship meshopt-compressed (scripts/pack-glbs.mjs), as the game's useGLTF decodes them.
+  // Node has no image decoding: textures load as empty stand-ins (the meshes and materials are what's tested).
+  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).register(parser => { (parser as unknown as { loadTextureImage: () => Promise<THREE.Texture> }).loadTextureImage = () => Promise.resolve(new THREE.Texture()); return { name: "stub_textures" }; }).parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), "", g => resolve(g.scene), reject);
 });
 const meshes = (o: THREE.Object3D) => { const out: THREE.Mesh[] = []; o.traverse(c => { if ((c as THREE.Mesh).isMesh) out.push(c as THREE.Mesh); }); return out; };
 const triangles = (o: THREE.Object3D) => meshes(o).reduce((n, m) => n + (m.geometry.index ? m.geometry.index.count : m.geometry.getAttribute("position").count) / 3, 0);
@@ -17,11 +20,12 @@ const bounds = (o: THREE.Object3D) => { o.updateMatrixWorld(true); return new TH
 const classes = (o: THREE.Object3D, url: string) => new Set(meshes(o).map(m => lookClassFor(url, (m.material as THREE.Material).name)));
 
 describe("held items as one mesh per look class", () => {
-  const items = [...readdirSync(join(ASSETS, "tools")).map(f => `tools/${f}`), "props/leaf-glider.glb"];
+  const items = [...readdirSync(join(ASSETS, "tools")).filter(f => f.endsWith(".glb")).map(f => `tools/${f}`), "props/leaf-glider.glb"];
   it.each(items)("%s is one mesh, the same shape and size", async file => {
     const scene = await load(file), url = `/assets/game/${file}`, merged = mergeHeld(scene, url);
-    expect(meshes(scene).length).toBeGreaterThan(1);
-    expect(meshes(merged)).toHaveLength(1);
+    expect(meshes(scene).length).toBeGreaterThan(0);       // in parts, or one already (a rod of one material: the Titanium)
+    // Textured or see-through parts can't merge (2026-11-20, the rebuilt rods): never more meshes than materials.
+    expect(meshes(merged).length).toBeLessThanOrEqual(new Set(meshes(scene).map(m => m.material)).size);
     expect(triangles(merged)).toBe(triangles(scene));
     const a = bounds(scene), b = bounds(merged);
     expect(a.min.distanceTo(b.min)).toBeLessThan(1e-5);

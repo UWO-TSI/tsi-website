@@ -103,8 +103,8 @@ export const flightTime = (distance: number) => Math.min(0.75, 0.36 + 0.055 * di
 export const arcHeight = (distance: number, power: number) => 0.45 + 0.45 * power + 0.08 * distance;
 /** How long the bobber takes to come home to the rod's tip when a cast ends (s); then the cast is over. */
 export const HOME_S = 0.35;
-/** How far the bobber rides above the water while it floats (its belly is under). */
-export const FLOAT = 0.035;
+/** How far the bobber rides above the water while it floats (its belly is under; build_bobber.py SCALE). */
+export const FLOAT = 0.0245;
 
 export interface BobberPose { x: number; y: number; z: number; /** How far under it is pulled: 0 floating, 1 under. */ under: number }
 

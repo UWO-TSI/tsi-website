@@ -110,7 +110,7 @@ export const EFFECT_BUDGET: Record<string, EffectBudget> = {
 };
 
 /**
- * Particle pools (the scene's fixed capacities: nothing allocated as effects fire). Every `new ParticlePool(` in the
+ * Particle pools (the scene's fixed capacities: nothing allocated as effects fire). Every `new ParticlePool(` (or `HolderPool(`) in the
  * code is listed here with the most its file may hold in all; budget.test.ts reads the sources, so a new pool fails
  * until it is registered.
  */
@@ -121,6 +121,7 @@ export const PARTICLE_POOLS: Record<string, number> = {
   "components/game/combat/MobFx.tsx": 360,
   "components/game/oracle/CandleFire.tsx": 48,
   "components/game/campfire/Campfire.tsx": 64, // the beach fire's tongues and embers (about 40 alive with eight dancers)
+  "components/game/fx/HolderFx.tsx": 520, // one holder's code-drawn effects (lib/game/fx/holder.ts HolderPool) 320, its water drops 200
 };
 /** Particles one movement event may throw (one avatar, juice amount 1): the heaviest today is a heavy landing on grass, 19. */
 export const JUICE_EVENT_PARTICLES = 24;
@@ -229,4 +230,21 @@ export const ASSET_EXCEPTIONS: Record<string, Partial<AssetBudget> & { why: stri
   // Dump models David kept and we only retouched (row 314, art/props/derive_*.py): their own geometry and textures.
   "game/props/beach-parasol.glb": { triangles: 4740, why: "the dump's parasol and two loungers kept as they were, recoloured only (one draw)" },
   "game/props/hq-notice-board.glb": { texture: 768, why: "the dump's metal HQ board kept with its own 768 x 384 atlas, the notes made plain; one board, indoors" },
+  // The rods rebuilt to their concept sheets (2026-11-20): each held one per player, up to 2,500 triangles (coordinator).
+  // Tidewarden (David 2026-11-21: "don't worry about triangles, model as closely as possible"): the Meshy model decimated in Blender.
+  "game/tools/rod-5.glb": { triangles: 10000, texture: 1024, why: "Tidewarden: game copy cut down from the Blender-touched raw Meshy model, colour baked on 1024 (rod-touchup round 2, 2026-11-25)" },
+  "game/props/rodfx-cedar-boughs.glb": { triangles: 10000, texture: 1024, why: "the Cedar's swaying leaves, cut down with the rod (rod-touchup round 2)" },
+  "game/tools/rod-candy-cane.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-carrot.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-cedar.glb": { triangles: 7000, texture: 1024, why: "game copy cut down from the Blender-touched raw Meshy model, colour baked on 1024 (rod-touchup round 2, 2026-11-25)" },
+  "game/tools/rod-flimsy.glb": { triangles: 2500, texture: 512, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-glass.glb": { triangles: 8000, texture: 1024, why: "game copy cut down from the Blender-touched raw Meshy model, colour baked on 1024 (rod-touchup round 2, 2026-11-25)" },
+  "game/tools/rod-lighthouse.glb": { triangles: 9000, texture: 1024, why: "game copy cut down from the Blender-touched raw Meshy model, colour baked on 1024 (rod-touchup round 2, 2026-11-25)" },
+  "game/tools/rod-north-star.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-precision.glb": { triangles: 2500, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-riptide.glb": { triangles: 10000, texture: 1024, why: "game copy cut down from the Blender-touched raw Meshy model, colour baked on 1024 (rod-touchup round 2, 2026-11-25)" },
+  "game/tools/rod-tempest.glb": { triangles: 8000, texture: 1024, why: "game copy cut down from the Blender-touched raw Meshy model, colour baked on 1024 (rod-touchup round 2, 2026-11-25)" },
+  "game/tools/rod-titanium.glb": { triangles: 8000, texture: 1024, why: "game copy cut down from the Blender-touched raw Meshy model, colour baked on 1024 (rod-touchup round 2, 2026-11-25)" },
+  "game/tools/rod-training.glb": { triangles: 2500, texture: 512, why: "rebuilt to its concept sheet (art/pipeline/build_rods*.py)" },
+  "game/tools/rod-training-2.glb": { triangles: 8000, texture: 1024, why: "game copy cut down from the Blender-touched raw Meshy model, colour baked on 1024 (rod-touchup round 2, 2026-11-25)" },
 };

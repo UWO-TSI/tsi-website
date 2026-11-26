@@ -3,8 +3,8 @@
   /Applications/Blender.app/Contents/MacOS/Blender -b -P art/props-enemies/build_bobber.py [-- render <dir>]
 
 Writes web/public/assets/game/tools/bobber.glb, drawn by the rig on the angler's rod (components/game/character/
-FishingRig.tsx). World units, not the hand's (it rides on the water): about 0.18 across, the size the old sphere read
-at from the follow camera. Blender Z up, the origin at the ball's middle: the rig floats it a few centimetres up, so
+FishingRig.tsx). World units, not the hand's (it rides on the water): about 0.12 across (0.7 of the old sphere's
+size, round 11). Blender Z up, the origin at the ball's middle: the rig floats it a few centimetres up, so
 the cream belly sits under the water and the red cap rides above, as a float does. On top, the eye the line is tied to
 (`line_eye` below; the rig hangs the line from it); underneath, the short stem the hook line runs down. Matte palette
 colours with the shared top-light gradient (kit.material, roughness 0.9), faceted like the rods. With `render`, a
@@ -24,10 +24,11 @@ OUT = os.path.join(ROOT, "web", "public", "assets", "game", "tools", "bobber.glb
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
-R = 0.088                     # the ball's radius
+R = 0.088                     # the ball's radius, as modelled
+SCALE = 0.7                   # then the whole float, smaller (David 2026-11-06: "make all bobber smaller in general")
 CAP, BELLY, BAND, EYE, STEM = "#D9534A", "#F4EEDF", "#3A2E22", "#EFE8D6", "#8C7B66"
 # Where the line is tied (the eye's top), in glTF axes (y up): the rig hangs the line from here.
-line_eye = (0.0, R + 0.03, 0.0)
+line_eye = (0.0, (R + 0.03) * SCALE, 0.0)
 
 
 def build(pc):
@@ -59,6 +60,8 @@ os.makedirs(os.path.dirname(OUT), exist_ok=True)
 bpy.ops.object.select_all(action="DESELECT")
 ob.select_set(True)
 bpy.context.view_layer.objects.active = ob
+ob.scale = (SCALE,) * 3
+bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format="GLB", use_selection=True, export_yup=True, export_normals=True,
                           export_vertex_color="ACTIVE", export_all_vertex_colors=False, export_skins=False, export_animations=False)
 dims = ob.dimensions

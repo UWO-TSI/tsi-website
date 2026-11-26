@@ -121,13 +121,17 @@ export type SFXName =
   | "quest-complete"
   /** An upgrade bought. (SFX audit, David 2026-11-20). */
   | "upgrade"
-  | VbSfx;
+  | VbSfx
+  | AwSfx;
 
 /** The beach volleyball match's sounds, made in art/audio/synth_volleyball.py (lib/game/volleyball/sfx.ts plays them). */
 export const VB_SFX = ["vb-bump", "vb-set", "vb-serve", "vb-dig", "vb-block", "vb-spike", "vb-perfect", "vb-good", "vb-early", "vb-late",
   "vb-sand", "vb-boom", "vb-net", "vb-tape", "vb-takeoff", "vb-touchdown", "vb-dive", "vb-charge", "vb-max", "vb-toss", "vb-whiff",
   "vb-point", "vb-point-them", "vb-win", "vb-call", "vb-out", "vb-heat", "vb-fire", "vb-flame"] as const;
 export type VbSfx = (typeof VB_SFX)[number];
+/** A rod's awakening (art/audio/synth_awaken.py; components/game/RodAwakening.tsx plays them): the build-up, each beat, the hit, the strikes. */
+export const AW_SFX = ["aw-riser", "aw-heart", "aw-impact", "aw-thunder", "aw-wave"] as const;
+export type AwSfx = (typeof AW_SFX)[number];
 
 interface AudioManifest {
   ambient: Record<AmbientPhase, string>;
@@ -188,6 +192,7 @@ const MANIFEST: AudioManifest = {
     "quest-complete": "/audio/sfx/quest-complete.ogg",
     upgrade: "/audio/sfx/upgrade.ogg",
     ...(Object.fromEntries(VB_SFX.map(n => [n, `/audio/sfx/${n}.ogg`])) as Record<VbSfx, string>),
+    ...(Object.fromEntries(AW_SFX.map(n => [n, `/audio/sfx/${n}.ogg`])) as Record<AwSfx, string>),
   },
 };
 

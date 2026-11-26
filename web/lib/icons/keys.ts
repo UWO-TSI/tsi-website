@@ -15,6 +15,15 @@ export const RETIRED_PART: Record<string, string> = {
 /** Retired hair dyes: their dye bottle's colour. */
 export const RETIRED_DYE: Record<string, string> = { "hair-chestnut": "#7A4A2E", "hair-sea-glass": "#8FC7C0", "hair-sunset": "#E8875A" };
 
+/**
+ * The tackle shop's rows borrow an icon while their own art is made (David, 2026-11-19): the bobbers the lucky
+ * bobber's, the bait the worms' and the firefly's.
+ */
+export const TACKLE_ICON: Record<string, string> = {
+  "bobber-cork": "bobber-lucky", "bobber-float": "bobber-lucky", "bobber-brass": "bobber-lucky", "bobber-pearl": "bobber-lucky",
+  "bait-worms": "bug_bagworm", "bait-glow": "bug_firefly",
+};
+
 /** The fields of a shop row an icon depends on. */
 export interface IconRow { slug: string; catalogue_ref: string | null; category: string }
 /** The icon key an item uses (several shop rows share one: a tool and its shop row, every recipe card). */
@@ -25,7 +34,7 @@ export function iconKey(e: IconRow): string {
     if (e.slug === "rod-basic") return "rod_flimsy";
     if (ref === "glider_leaf") return "glider_leaf";
     const tool = toolByKey(ref) ?? toolByKey(e.slug);
-    return tool?.key ?? e.slug;
+    return tool ? tool.key : TACKLE_ICON[e.slug] ?? e.slug;
   }
   if (e.category === "hair") return ref.startsWith("hair:") ? `dye-${ref.slice(5)}` : ref || e.slug;   // a dye, or a hairstyle (wardrobe batch 2)
   if (e.category === "face") return `face-${ref.replace(/^face:/, "").replace(/_/g, "-")}`;   // a whole face (wardrobe batch 2)

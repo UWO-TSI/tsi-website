@@ -19,6 +19,7 @@ real generated SFX are pending.
 | Shop till counting | `click` (1.65 rising, 0.3; the last 0.5) | `ShopCounter.tsx` |
 | Missing (no blips, no doors; listed in `specs/polish/forage-craft-museum-questions.md`) | leaf rustle, fruit thud, rock clink, shovel scrape, pickup pop, cork, paper unroll, hammering, craft jingle, coin clink, museum chime, puddle splash, bug wings, bag full | |
 | Fishing (polish, `specs/polish/fishing.md` §6) | the bite's "!" `bite`, `bite-legendary` or `bite-divine` by hook tier (synthesized: `art/audio/synth_bite.py`, `lib/game/fishing.ts` HOOK); the meter's max cast `confirm`, the reel bar knocking its end `click` (0.75, 0.4), the catch card developing `confirm`; nothing else (no blips, no doors: the gaps are listed in `specs/polish/fishing-questions.md`) | `FishingOverlay.tsx`, `FishReveal.tsx` |
+| A rod's awakening (rods round 10) | the build-up `aw-riser` (cut dead at the hush), a heartbeat `aw-heart` on each pulse beat (rising), the hit `aw-impact` at the burst, and the strike from outside: `aw-thunder` (lightning, the Tempest) or `aw-wave` (a wave, the Tidewarden), all synthesized (`art/audio/synth_awaken.py`); `confirm` at the reveal | `components/game/RodAwakening.tsx` |
 | Collection page turn | `click` / `blip1` | `CollectionBook.tsx` |
 
 ## Crafting (already wired)

@@ -5,7 +5,7 @@ import { torontoInstant } from "@/lib/time";
 import { EconomyError, type EconomyErrorCode, type EconomyStore, type LedgerEntry, type Reservation } from "./store";
 
 type Row = Record<string, unknown>;
-const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked", "already_filled", "not_done", "already_claimed", "already_in_book", "not_learned"];
+const CODES: EconomyErrorCode[] = ["insufficient", "not_found", "not_for_sale", "already_owned", "bad_qty", "bad_price", "sold_out", "not_sellable", "insufficient_items", "too_many_open", "already_resolved", "forbidden", "locked", "already_filled", "not_done", "already_claimed", "already_in_book", "not_learned", "not_ready"];
 const raise = (error: { code?: string; message?: string } | null): never => raisePg(error, CODES);
 const first = (data: unknown) => ((Array.isArray(data) ? data[0] : data) ?? {}) as Row;
 const ITEM_COLS = "id, slug, display_name, category, description, price_coins, tc_price, tier, slot, special_pool, stackable, stock, catalogue_ref, sprite_url, position, active, available_from, available_until, retired_at";
@@ -46,6 +46,16 @@ export function supabaseEconomyStore(db: SupabaseClient): EconomyStore {
       const { data, error } = await db.from("shop_items").select(ITEM_COLS).eq("active", true).order("position");
       if (error) raise(error);
       return ((data ?? []) as Row[]).map(toItem);
+    },
+    async rodCatches(m) {
+      const { data, error } = await db.from("rod_catches").select("rod_key, count").eq("member_id", m);
+      if (error) raise(error);
+      return Object.fromEntries(((data ?? []) as Row[]).map((r) => [String(r.rod_key), Number(r.count)]));
+    },
+    async tradeForTraining(m) {
+      const { data, error } = await db.rpc("rod_training_trade", { p_member_id: m });
+      if (error) raise(error);
+      return { traded: data === true };
     },
     async inventory(m) {
       const { data, error } = await db.from("member_inventory").select(`qty, equipped, acquired_at, shop_items(${ITEM_COLS})`).eq("member_id", m);

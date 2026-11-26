@@ -1,0 +1,146 @@
+# Lane: rod-titanium (the new Titanium rod and its mecha awakening)
+
+Worktree `.claude/worktrees/rod-titanium`, branch `game/rod-titanium`, cut from `game/rod-gear` at 7106dbe5f (rod-gear round 8 built, round 9 notes only). Agent type `uwotsi-lane`. Dev port 3484.
+
+rod-gear owns the rods and runs round 9 in parallel (the Tidewarden and a `Water` effect type) in `art/pipeline/build_rods.py`, `fx_library.py`, `web/lib/game/fx/library.ts` and `RodAura`. Keep your edits to the Titanium's own functions and lines so the two branches merge cleanly; this branch merges into `game/rod-gear`. Read `specs/lanes/rod-gear.md` (Status, Tools and gotchas, Rules) and `specs/fx-library.md` first: the effects library, the awakening cutscene, rodMotion and the Blender pipeline are all there.
+
+## Round 4: David's marks on Rods Titanium 3 (2026-11-19, verbatim; https://claude.ai/artifact/JFZaJZnxyt3iPUuq5TEW1D)
+
+Approved with no note: rti3-walk, rti3-shelf, rti3-hand, rti3-bag, rti3-phone, rti3-perf.
+- rti3-material (approve): "has  a slight purple rainbow tint when the light hits it in the right angle"
+- rti3-awaken (redo): "why did the handle and reel dissapear? 3 start slow, open and release slow, and the gass needs to hiss out lightly and naturally"
+- rti3-idle (redo): "the inside energy rod needs more glow effect and sparks of electricity once in a while"
+- rti3-workbench (redo): "needs a lot of titanium ore redo recipe"
+- rti3-questions (redo): "1. st ronger,  / 2 right / 3 start slow, open and release slow, and the gass needs to hiss out lightly and naturally / 4. good"
+
+Keep (approved): walking and casting, the bag shelf mark, in hand, in the bag, on a phone, performance. The material is approved with a change; seven sections are right (answer 2); the bolt mark is good (answer 4).
+
+Build:
+1. **The film (rti3-material, answer 1):** stronger, with a slight purple rainbow tint when the light hits at the right angle.
+2. **The awakening (rti3-awaken, answer 3):**
+   - **Bug:** the handle and the reel disappear during the awakening. They stay.
+   - **Pace:** it starts slow, opens slow and releases slow.
+   - **The gas:** it hisses out lightly and naturally. Softer, thinner smoke, plus a hiss sound made through the asset pipeline (`specs/asset-pipeline.md` §2).
+3. **Awakened at rest (rti3-idle):** the inner energy beam gets more glow, and every so often a spark of electricity.
+4. **The workbench (rti3-workbench):** the recipe needs a lot of titanium ore. Raise the ore count and propose the number on the page.
+
+Page "Rods Titanium 4": the awakening at normal and half speed with sound, the idle with sparks, the film turning, the new recipe. The merge still goes into `game/rod-gear` (Next).
+
+## Round 3: David's Rods Titanium 2 review (2026-11-13, verbatim; https://claude.ai/artifact/4iNo5j7Um8GXPMKfxaZQsm)
+
+Approved: none.
+- rti2-a1 (redo): "it should open from bottom to top and it should open angeled outwards with more smaller moving parts and the and it should hover and float as kinda like effect amlost where it follows teh rod but theres a lil staggar and it spins aroudn the main energy beam like cw and ccw each layer rotating"
+- rti2-awaken (redo): "i want the parts to split open each section one by one and they open in like not the same side like 0 degreen 30 degreen 60 degree so on kind of the and it hovers around the and the unlock sequence has a lil shake for each part and smoke comes out like a machine moving and then its a neon henergy beam rod with the sections floading around. you can add more sections too"
+- rti2-bag-phone (redo)
+- rti2-hand (redo)
+- rti2-questions (redo)
+- rti2-shelf (redo): "the evolved should have like something that dictates that its evolved maybe in the top right corner a icon or smth"
+- rti2-stage (redo)
+- rti2-titanium (redo): "the texture for the material is not right, it should be titanium look and the rainbow glow should work like a texture and should still show that its the metal steel color, just when its hit in a angle you see the shade, cuz rn the wholething looks rainbow"
+- rti2-workbench (redo)
+
+The cards without a note are redo because the rod changes under them: reshoot them once it does.
+
+Build (coordinator):
+1. **The material first.** Base Titanium reads as titanium: grey-steel metal, brushed or polished. The thin-film rainbow is a sheen that shows only at grazing angles, like a texture on the metal (fresnel-weighted, low at facing angles), never the whole rod. Show it turning so the sheen comes and goes. His references `epic-titanium-metal-ref.png` and `epic-titanium-awakened-ref.png` (untracked, `specs/references/rods/`) are the material and feeling studies.
+2. **The awakening:** the sections unlock one at a time from the bottom to the top. Each unlock: a small shake, a puff of machine smoke, then the section splits open angled outwards, each at a different turn (0, 30, 60 degrees and so on round the rod). Add more, smaller moving parts; more sections are fine. The end state is a neon energy beam rod (the blue core as the beam) with the opened sections floating round it.
+3. **Awakened, at rest and in use:** the sections hover and follow the rod with a slight stagger (lag on movement), and each layer spins round the beam, alternating clockwise and counter-clockwise.
+4. **The bag shelf:** an awakened rod's slot shows an icon in its top right corner that says it is awakened. Same for any awakened item.
+5. Budgets: the held rod stays inside rods' draw and triangle budgets (specs/perf/effects-cost.md); the floating parts are one instanced or merged mesh if that's what it takes. The perf rerun owed from round 2 runs once at the end on a quiet machine (load under 4).
+6. **The page, "Rods Titanium 3":** the material turning (clip), the awakening (clip, normal and slowed), awakened idle and while walking and casting (clip), the shelf slot, hand, bag and phone views, the workbench and stage reshot, a questions card.
+
+Rebuild the Titanium GLBs and `pack-glbs.mjs` them after any Blender export. Evidence `rti3-*` in `specs/evidence/rod-titanium/r3/`.
+
+**Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, headless clips, one perf:check at the end.
+
+## Round 2: David's Titanium 1 review (2026-11-06, verbatim; https://claude.ai/artifact/86pLJkarHExN3epnHF88TR)
+
+Approved: rti1-budget, rti1-questions. Every other card is redo; the references were misread. They were studies of feeling and material, not models to copy:
+- rti1-titanium (redo): "no im simply showing you the feeling of the rod, which is the texture of the alumninum needs to shink and have that rainbow glisten, no sparkes, this is simply for material texture study"
+- rti1-a1 (redo): "no this one is to show the mecha parts and what the feeling of it looks like, i want you to rebuild based off the old titanium rod with the material from above and this weapons mecha feel, keep it simple and a closed version of the titanium rod, the awakened will be the rod opened with glowing blue energy core"
+- rti1-reserved (redo): "the old one looks better just needs a touch up and no purple glow on the unawakened and you can have the glow with the hexagons in the awakened"
+- rti1-awaken, rti1-bag, rti1-bag-awakened, rti1-hand, rti1-shelf, rti1-workbench (redo, no note: they follow from the above)
+
+Build (coordinator):
+1. **The Titanium is the old model again**, touched up: the reserved name goes away (`titanium()`, `rod-titanium.glb`). No purple glow and no sparkles when unawakened. Delete round 1's machined bar.
+2. **Its material** from the first photo: shiny, polished metal with the anodised rainbow glisten as light moves over it.
+3. **The mecha feel** from the second reference, kept simple: the base rod is the closed version, with clean panel lines and plates.
+4. **The awakened form is the same rod opened:** its plates part and reveal a glowing blue energy core; the hexagon glow belongs here. The cutscene shows it opening. Keep the general awakened-model wiring from round 1.
+5. The VFX library now has its own lane (game/vfx-library, renaming "Aura" to Energy); use its types, don't change them.
+
+Evidence `rti2-*`: the closed rod beside the old one (studio, turning), the material (light sliding over it), the opening (clip), the awakened form, the bag and hand (desktop and phone), a questions card. Side-by-sides with David's pictures stay out of git.
+
+## Round 1: David's notes (2026-11-05, verbatim)
+
+- "the current titanium rod shuold be something else it look nice, but i want you to make a new model of the titanium thats closer related while the current is reserved for smth else"
+- With `specs/references/rods/epic-titanium-metal-ref.png`: "titanium reference, clean like cnc machined rod, thick too and reflects this glow because its metal"
+- With `specs/references/rods/epic-titanium-awakened-ref.png`: "like this type of hard edge looks like this reference loosely as a rod and the awakenign will have the blue energy thing built in should be very meccha looking"
+
+The images are third-party: untracked in `specs/references/rods/` (README.md describes them) and in the vault. Never commit them.
+
+Build (coordinator):
+1. **Reserve the current Titanium.** Keep today's model and effect (`titanium()` in build_rods.py, `tools/rod-titanium.glb`, `props/rodfx-titanium.glb`, its icon) under a neutral reserved name (`reserved_slate()`, `rod-reserved-slate.glb`, `rodfx-reserved-slate.glb`), out of the roster, for a rod David names later. Its reference `epic-titanium-ref.png` goes with it.
+2. **The new Titanium**, from the metal reference: a thick, clean CNC-machined rod with hard bevels and flat ground facets, crisp edges and chamfers, machined rings where parts meet, a machined reel. The anodised titanium tint runs along it the way the reference does (pale steel and straw gold through bronze to deep blue and violet). It's metal, so it reflects: light and the glow (the shop, the bag stage, the cutscene's glow) slide across the facets in sharp streaks. Find how the stages light models today and make the metal read in each without breaking the toon look. Tool budget (600 tris, 5 materials, nothing emissive on the rod); same file names as today so nothing rewires (`tools/rod-titanium.glb`, `rodfx-titanium.glb`, `rod_titanium`). Its base effect stays quiet (it's metal, not magic): no halos or rings (the library's rules). Re-render the icon.
+3. **The awakening, mecha** (from the second reference, loosely, as a rod): at its awakening the Titanium becomes armoured, with stepped hard-edged plates, panel lines, a ring hub at the reel, and cyan-blue energy built into the plates (Glow parts in its effect GLB; the energy's motion from the library). This is the first real awakened model: give an awakening its own model and effect files (for example `rod-titanium-a1.glb`, `rodfx-titanium-a1.glb`) in place of the cutscene's `FINISH` recolour for this rod, and show it wherever an awakened Titanium shows (the bag, the card, the cutscene's reveal, in hand). Keep the change small and general so the other rods can use it later. The cutscene (`/dev/economy?view=awakening&rod=titanium&stage=1`) goes from the machined rod to the mecha form; the energy comes alive in the burst. Its awakening data (one at 400 fish, proposed in round 7) stays.
+
+Evidence `rti1-*` in `specs/evidence/rod-titanium/r1/`:
+- the new Titanium beside the metal reference (still), turning (clip), with the light sliding over the facets;
+- the awakened form beside the mecha reference (still), turning (clip), and the cutscene (clip);
+- both in the shop detail, the bag and in hand (desktop and phone);
+- the reserved rod (still) under its reserved name;
+- draws and tris against the budget;
+- a questions card (what the reserved rod becomes; anything else to decide).
+
+**Gates:** vitest with and without `NEXT_PUBLIC_GAME_WORLD=new`, tsc, eslint, headless shots, one `perf:check` at the end on the scenes you touched. Report at the end with the head SHA, gates, evidence and anything you couldn't verify.
+
+## Status
+
+- **Round 3 built** (David's Rods Titanium 2 review; game/rod-gear 544c3813f merged first at 474904021 so the cutscene builds on rods rounds 10 and 11; build 226fe8716, 226be30fa and 671354c1c, this file after; gates: tsc clean; full vitest 3824 passed + 4 skipped with and without `NEXT_PUBLIC_GAME_WORLD=new`; eslint clean on changed files; perf:check v2 with the awakened Titanium held FAILED on frame time only (high 5.30 ms +10.4%, lite 3.30 ms +13.8%; draws 363 and 286, +1.1% and -1.0%; tris -1.8% and -2.0%; spread 11% and 6%; started at load 3.75, ran at 4.9, swap 26.7 GB), not rerun):
+  - **The metal** (rti2-titanium): grey titanium, not a rainbow. `ti_colour` is steel (`TI_STEEL`: each hex flat a touch lighter or darker than the next, a little brighter toward the tip; seams, cut faces and the plates' insides dark). The thin film stays on `P_Polished` (GLB iridescence 1, 160 to 420 nm; preset `polished` roughness 0.26, metalness 0.85, env 2.2) but shows only at grazing angles: `FILM_GRAZE` in modelMaterials.ts edits three's `lights_fragment_begin` chunk once, so every iridescent material (stage, hand, merged copy, effect) has it. Only the Titanium's GLBs carry a film.
+  - **The rod** (`titanium()`, 594 tris, one material): seven sections (`TI_N`, `TI_SECTIONS`: foot, rim, radius, turn 30 degrees a section), each three plates (`ti_plate`) that stop `TI_GAP` short of their splits (the groove); the shut rod's plates are wedges to the axis (cut faces skip the seam ring for the budget); the reel's halves and three claws as before (reel profile and side claws trimmed a point each, spikes three-sided, for the budget).
+  - **The awakened Titanium** (`titanium_a1()`): the rod is the grip, the reel and claws opened (264 tris; morph target `Closed` the shut ones, as round 2). Its effect `rodfx-titanium-a1.glb` (4 meshes, 1,188 tris; 5 draws a holder with the rod): `Sections` (the 21 plates as hollow shells with a fin each, one lit mesh; each vertex's UV is its section and its plate's middle angle, glTF Y up; extra `sections` = each section's foot height and pivot radius), `Core` (glow, the neon beam), `Beam` (light, its haze; no pulse: the cutscene's strength stretched it past the tip), `Rings` (glow, spin).
+  - **The floating sections** (`components/game/character/RodSections.tsx`, mounted by RodAura for a part with a `sections` extra; logic in `lib/game/fx/sections.ts`, tested): the vertex shader leans each plate out from its foot (`SECTION_TILT` 0.22 rad), stands it off the beam (`SECTION_PUSH` 0.9 times its pivot radius plus `SECTION_GAP`), turns each section round the beam (`spinOf`: alternating cw and ccw, three speeds) and adds the holder's offset: a spring per section on the rod's acceleration (looser up the rod: the stagger), a hover, and the shake. Its material is the rod's own, cloned (the stage's preset, a hand's look). `openSections` is the same opening on the CPU for the icon (`/lab/icons` draws the sections open; the beam is light, left out).
+  - **The awakening** (RodAwakening): `UNLOCKS` (rodMotion.ts) rods show their awakened form from the start, shut, instead of flickering between looks; `Motion` sets `userData.unlock` `{ seq, float }` on the stage group: through the pulse (90% of it) the sections unlock bottom first (`sectionAt`: a shake, then a latch click (`keyswitch`) and three puffs of grey smoke from the splits into the scene's movement particles, then it cracks open to `CRACK` 0.5); at the burst they all float and start turning, the reel and claws open (`SHUT`).
+  - **The mark** (shelf): kit `ItemCard awakened` (a round bolt top right, the card's rung colour, `.awake` in flat.module.css; `/lab/gui` rarity cards show it); the bag's tools shelf sets it for an awakened rod (`rodAwake`). The shop's cards keep their arrow there, so not on the shop.
+  - Merge notes: build_rods.py lost `reserved_slate()` (re-added by the merge), `halo` and `aura_shell` (unused); RodAura.test's Titanium test rewritten, named effects 7; `?ti=` comment says AWAKEN_AT 600.
+  - Evidence `specs/evidence/rod-titanium/r3/` (shots.mjs `ONLY=look|stages|clips|awaken|hand|walk|cards`).
+
+- **Round 2 built** (David's rti1 review: the old model again, touched up, in the metal of the first picture; the awakened form the same rod opened; build 744ce9008, fixes and evidence 5b1f3ef07 and 5aa264b3c, this file after; gates: tsc clean; full vitest 3806 passed + 4 skipped with and without `NEXT_PUBLIC_GAME_WORLD=new`; eslint clean on changed files; perf:check v2 with the awakened Titanium held FAILED on frame time only (high 5.70 ms +18.8%, lite 3.10 ms +6.9%; draws 360 and 284, flat; tris down 1.6%; run spread 14% and 19%, load 7.4 on a contended machine), not rerun):
+  - **The Titanium** (`titanium()`, `tools/rod-titanium.glb`, `rod_titanium`): the old model (six hexagonal cups, the hex reel with three spikes, two claws down and one up; `TI_CUPS`, `TI_REEL`) built by `ti_body(op)` at an opening `op` (0 closed). Each cup is two half plates (`cup_half`) that part along X; their flats stop 7 degrees short of the parting plane, so a dark groove (their cut faces) runs down the front and back: the panel line; each rim band is dark (the seams). 542 tris, one material. **No effect at all** (no rodFx): no purple glow, no sparkles.
+  - **The metal:** one `P_Polished` material, colour in COLOR_0 (`ti_colour`: the anodised run `ANODISED`, pale steel at the tip through straw and gold to violet and blue at the grip, each hex flat shifted along it; the reel and claws heat-coloured from the hub). The preset in modelMaterials.ts now carries a thin film (`polished`: roughness 0.16, metalness 0.6, env 2.2, `film` amount 0.5, IOR 1.8, 180 nm; prepareModel sets three's iridescence on the MeshPhysicalMaterial GLTFLoader makes from the GLB's KHR_materials_iridescence): the rainbow sheen slides over it as it turns (blue at the face, purple and gold toward the edges, as anodised titanium does). Blender 5.2's exporter writes the extension only from a "glTF Material Output" group that also has an Occlusion input (`metal()` explains).
+  - **The awakened Titanium** (`titanium_a1()`, `tools/rod-titanium-a1.glb`): the same body at `op` 1 (each cup's halves apart by about its radius, the reel's halves apart, the claws spread), with the closed body as its morph target `Closed` (weights 0: it ships open; same vertex count asserted). Its effect `rodfx-titanium-a1.glb` (2 draws, 288 tris): `Core` (glow: the blue core up the blank and a disc between the reel's halves) and `Rings` (glow, spin: a hexagon of light round the core in every cup, turning). No halo, aura, flicker or particles; a pulse on the core was dropped (the cutscene's strength swelled it out of the rod). `fxRoom` 0 on the rod: rod-gear's FittedModel line (copied verbatim, so it merges clean) then gives both forms the same size on a stage.
+  - **The cutscene opens it:** RodAwakening `SHUT` (frame and glow 1, pulse 0.85, burst on 0) eases the new form's first morph target: shut through the glow, a crack of blue on each pulse, the plates parting at the burst. General: any awakened model whose first morph target is the form it awakens from (rods.ts `Awakening` doc).
+  - **Deleted:** round 1's machined bar (`machined`, `oct_`, `dia`, `FLATS`, `ground`, `plate`, `inset`, `ccw`, `A1_PLATES`, `FINISHES`, the P_Paint path) and the reserved rod (`reserved_slate()`, `rod-reserved-slate.glb`, `rodfx-reserved-slate.glb`, `rod_reserved_slate.webp`), and `rodfx-titanium.glb`. The r1 evidence scripts moved to `r2/` (r1's images stay as history).
+  - Evidence `specs/evidence/rod-titanium/r2/` (see the report); the vs-ref composites stay in the session scratchpad.
+
+- **Round 1b built** (the coordinator's review of e6ba25651: "thick too", the flat-to-flat contrast, the awakened form washed out in the bag; build aa88f0e99; gates: tsc clean, full vitest 3808 passed + 4 skipped with and without `NEXT_PUBLIC_GAME_WORLD=new`, eslint clean, perf:check v2 passed (high 5.20 ms, lite 3.00 ms, draws 360 and 283; load 8.5)):
+  - The machined Titanium is thick bar stock (about twice round 1's width: grip 0.036, collar 0.047, blank 0.062 by 0.046 rig units), tapering only into a broad ground point from 0.62; the reel moved out (y -0.105, rim 0.045) and the line runs clear of the bar.
+  - Contrast: `ground(u, n)` gives each wide flat its own oxide (`FLATS`: a shift along `ANODISED` and a brightness: one bright, the next deep blue), chamfers polished brighter, the point pale steel on every flat; the run stretched (`u ** 1.6`) so straw and gold cover the front half. `P_Polished` is now metallic 0.85, roughness 0.14 (env 2.2): the light slides from flat to flat as it turns, and it survives the bag's pixel finish (rti1-titanium-stage).
+  - The awakened form is painted armour: one `P_Paint` material (`metal(..., finish="P_Paint")`, `FINISHES`), pale grey faces outlined dark (chamfers and walls), cyan energy lines thicker; its `Aura` dropped and `Blades` made a solid `Glow` (the additive parts vanished on the shop's white and washed the plates pale). Effect 3 parts, 308 tris, 4 draws in a hand.
+  - Evidence redone under the same names; the vs-ref composites are in the session scratchpad (`with-ref/`); the questions card updated.
+
+- **Round 1 built** on `game/rod-titanium` (build 167628157, final models and evidence c74091e66, this file after; gates: tsc clean, full vitest 3808 passed + 4 skipped with and without `NEXT_PUBLIC_GAME_WORLD=new`, eslint clean on changed files, perf:check v2 passed (high 4.90 ms, lite 3.00 ms, draws 358 and 285)):
+  - **Reserved:** the old Titanium is `reserved_slate()` in build_rods.py: `tools/rod-reserved-slate.glb`, `props/rodfx-reserved-slate.glb` (rodFx `reserved-slate`), `icons/rod_reserved_slate.webp` (the old icon, moved), out of the roster. Its reference `epic-titanium-ref.png` goes with it (the references README already says so).
+  - **The new Titanium** (`titanium()`, same file names: `tools/rod-titanium.glb`, `rodfx-titanium.glb`, `rod_titanium`): a thick machined bar through `machined()` stations (eight points each, ground flats and chamfers): a chamfered pommel, a grip with two machined grooves, the reel seat collar, a blank ground to a diamond, a ferrule ring, a broad chisel point; a machined reel heat-coloured from its hub. 578 tris, **one material `P_Polished`** (all colour in COLOR_0, `metal()`): the anodised run `ANODISED` (pale steel, straw, gold, bronze, purple, blue, violet), polished chamfers brighter (`chamfer()`), hard edges over 14 degrees. Effect quiet: `Glint` (light, pulse) on the point and sparkle particles; no halos, no aura.
+  - **The metal in each stage:** the stages (shop, bag, workbench, cutscene) are TurnStage: studio lights and a RoomEnvironment at 0.7. New preset `polished` in modelMaterials.ts (`P_Polished`: roughness 0.2, metalness 0.45, `env` 2.2, the room seen brighter in it); prepareModel applies `env` as envMapIntensity. In a hand the rod merges to one mesh of the `metal` look class, so LookMaterials reflects the island's sky in it. The icon stage is matte by design (the gradient and facets still read).
+  - **The awakening's own model** (general): `Awakening.model` (rods.ts) and `awakenedLook(rod)` (`{ model, icon: <key>_a<n> }`, the last reached awakening with a model). The icon manifest adds `<rod>_a<n>` for each (rendered icon `rod_titanium_a1.webp`); `rodSpec(rod)` (lib/icons/itemModel.ts) is the rod's spec as it is now. Used by the bag (RodStage gets the awakened rod; the card's picture), the shop's detail (`rodSpec(awakened(rod, catches))`), the cutscene (`looks` before and after; `FINISH` stays only as the stand-in for awakenings without a model, the Titanium's entry deleted) and the hand (WheelContext `catches`, WheelItem `model` and icon; `heldView` uses `item.model`).
+  - **The awakened Titanium** (`titanium_a1()`, `tools/rod-titanium-a1.glb`, `props/rodfx-titanium-a1.glb`, rodFx `titanium-a1`): the machined core armoured with `A1_PLATES` through `plate()` (convex outline in the broad XZ plane, chamfered: pale chamfers, grey faces, dark walls as panel lines), stepped plates either side, cheeks over the seat, a fin, a ring hub on the front with a knuckle guard. 590 tris, one material. Effect (4 draws): `Energy` (glow, flicker: panel lines and the blade's edge), `Core` (glow, pulse: the hub), `Blades` (light, pulse: two energy blades), `Aura` (aura_hug), sparks.
+  - Dev: `/dev/economy?view=bag&ti=<fish>` puts a Titanium in the bag (400 awakens it); `/dev/flat-ui?surface=crafting&crafting=demo&ti=1` teaches its recipe (lib/crafting/demo.ts). heldMesh.test allows a held item that is one mesh already.
+  - Evidence: `specs/evidence/rod-titanium/r1/` (below). The side-by-sides with the references are **not committed** (they contain the third-party art): the coordinator's copies are in the session scratchpad, `with-ref/rti1-titanium-vs-ref.png` and `with-ref/rti1-a1-vs-ref.png`.
+
+## Next
+
+1. David reviews "Rods Titanium 3" (`specs/evidence/rod-titanium/r3/`, `rti3-questions.png`: the film's strength, seven sections, the unlock's pace and smoke, the mark).
+2. Merges into `game/rod-gear` (this branch already holds rod-gear 544c3813f). Rebuild the Titanium GLBs from the merged script if build_rods.py conflicts; never pick a side of a GLB.
+
+## Tools and gotchas
+
+- Build: `Blender -b --factory-startup -P art/pipeline/build_rods.py -- only titanium,titanium-a1 [render <dir>]` under `withlock.sh blender`, then `cd web && node scripts/pack-glbs.mjs <the files>`. The two Titanium rods share one `P_Polished` material when built in one run (`metal()` reuses it).
+- Studio renders (a dim warm room and three soft boxes): add `-P specs/evidence/rod-titanium/r2/studio.py` after build_rods.py and `studio <dir> [turn <n>] [open <n>] [pair <old glb> <n>]` to the args (stills, turning, the opening, beside the old rod; it exports too: repack after). The old GLB for `pair` is `git show 18cb82788:web/public/assets/game/tools/rod-reserved-slate.glb`. Frames to mp4 with ffmpeg.
+- Shots (round 3): `withlock.sh devserver specs/evidence/rod-titanium/r3/serve.sh <script>` running `ONLY=stages|clips|awaken|hand|walk|cards GPU=1 node specs/evidence/rod-titanium/r3/shots.mjs` (`look` writes working stills; `OUT=` absolute). The walk clip casts through the world's `[data-use]` prompt (headless has no pointer capture). Round 2's: `specs/evidence/rod-titanium/r2/serve.sh node specs/evidence/rod-titanium/r2/shots.mjs` with `ONLY=look|stages|cut|clips|cards` (`OUT=` must be absolute); serve.sh starts `next dev -p 3484` in its own process group with Supabase blanked and the new world, and stops it after. In hand: `serve.sh node specs/evidence/rod-titanium/r2/hand.mjs <dir> name=<rod glb>@day|night@140,8,0.25` (`CLIP=440,250,400,420`, `VIEW=390x844` for a phone). Icons: `serve.sh node web/scripts/render-icons.mjs rod_titanium rod_titanium_a1`. Use `GPU=1` (headless Metal) so the thin film renders as on a GPU. The devserver lock is contended: a run often waits past the 600 s Bash limit and goes to the background; a run that waited 20 min exits 75, so retry it.
+- node_modules: this worktree had none; cloned from rod-gear's (`cp -Rc`, same package-lock).
+- `specs/perf/measure-build.sh` restores the game's files from git after its build: commit first.
+
+## Rules
+
+Same as `specs/lanes/rod-gear.md` Rules, with your own lane in the lock commands: `LANE=game/rod-titanium /Users/DavidLiu/.claude/jobs/62203045/tmp/withlock.sh heavy|blender|devserver <cmd>`. Commit with `[build]`; never push; never bare `git stash`; work only in this worktree; never touch prod. After any Blender export into web/public: `cd web && node scripts/pack-glbs.mjs <the files>`.

@@ -2,14 +2,15 @@ import * as THREE from "three";
 
 /**
  * The rod's tip in the model's own space (the blank runs up +y from the grip, art/props-enemies/build_tools.py): its
- * highest point. From the meshes' own transforms up to the model, not the world's (it pops in from scale 0).
+ * highest point. From the meshes' own transforms up to the model, not the world's (it pops in from scale 0). An effect's
+ * parts riding the rod (RodAura, `userData.fx`) aren't the rod.
  */
 export function rodTip(model: THREE.Object3D): THREE.Vector3 {
   const tip = new THREE.Vector3(0, 0.7, 0), v = new THREE.Vector3(), rel = new THREE.Matrix4();
   let best = -Infinity;
   model.traverse(o => {
     const m = o as THREE.Mesh;
-    if (!m.isMesh) return;
+    if (!m.isMesh || m.userData.fx) return;
     rel.identity();
     for (let n: THREE.Object3D | null = m; n && n !== model; n = n.parent) { n.updateMatrix(); rel.premultiply(n.matrix); }
     const p = m.geometry.getAttribute("position");

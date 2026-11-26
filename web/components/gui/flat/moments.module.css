@@ -211,10 +211,91 @@
 .coin { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; image-rendering: pixelated; filter: drop-shadow(0 2px 3px rgb(var(--ui-shade) / 0.3)); will-change: transform; }
 .coinSpark { position: absolute; width: 12px; height: 12px; background: var(--ui-gold-light); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
   filter: drop-shadow(0 0 3px var(--ui-gold)); }
+/* The awakening (Awakening): the thing large in the middle over a deep scrim; a glow gathers on it, the scrim closes in,
+   it pulses between its two forms faster and faster, everything holds its breath (the hush), the hit lands in impact
+   frames, a burst, then its new form with a card beside it (under it on a phone). */
+.awScrim { position: absolute; inset: 0; background: var(--ui-scrim-deep); animation: fade 0.5s ease-out both; }
+/* The suspense: a second scrim deepening as it builds, darkest in the hush, lifting at the burst. */
+.awDeep { position: absolute; inset: 0; background: var(--ui-scrim-deep); opacity: 0; pointer-events: none; transition: opacity 1.2s ease-in; }
+.awaken[data-phase="glow"] .awDeep { opacity: 0.35; }
+.awaken[data-phase="pulse"] .awDeep { opacity: 0.7; transition-duration: 2.8s; }
+.awaken[data-phase="hush"] .awDeep { opacity: 0.95; transition-duration: 0.3s; }
+.awaken:is([data-phase="burst"], [data-phase="show"], [data-phase="reveal"]) .awDeep { opacity: 0; transition: opacity 0.6s 0.2s ease-out; }
+/* --glow: the colour of the glow on the thing, its old rung's (--from) until the burst, then its new one's (--edge). */
+.awaken { --s: min(440px, 58vh, 84vw); --glow: var(--from); position: absolute; inset: 0; outline: none; pointer-events: none; }
+.awaken:is([data-phase="burst"], [data-phase="show"], [data-phase="reveal"]) { --glow: var(--edge); }
+.awaken > * { pointer-events: auto; }
+.awaken > .awDeep, .awaken > .awImpact, .awaken > .awImpactTint { pointer-events: none; }
+.awLead { position: absolute; left: 50%; top: calc(50% - var(--s) / 2 - 44px); width: max-content; max-width: calc(100vw - 32px); margin: 0; translate: -50% 0;
+  color: var(--ui-glow); font: 700 18px/1.3 var(--gui-font); text-align: center; animation: rise 0.5s 0.3s ease both; transition: opacity 0.3s ease; }
+.awaken:is([data-phase="hush"], [data-phase="burst"], [data-phase="show"]) .awLead { animation: none; opacity: 0; }
+/* The stage pushes in as it builds (slowly over the pulse, a last lean in the hush), and shakes when the hit lands. */
+.awStage { position: absolute; left: 50%; top: 50%; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  transition: transform 0.7s cubic-bezier(0.34, 1.3, 0.64, 1); }
+.awaken[data-phase="pulse"] .awStage { transform: scale(1.07); transition: transform 2.8s cubic-bezier(0.4, 0, 0.9, 0.6); }
+.awaken[data-phase="hush"] .awStage { transform: scale(1.12); transition: transform 0.5s ease-in; }
+.awaken[data-phase="burst"] .awStage { transform: scale(1); transition: transform 0.45s cubic-bezier(0.34, 1.5, 0.64, 1); animation: awShake 0.55s 0.2s linear both; }
+/* The thing's box is --room times the stage, so its glow and its motion never reach an edge. */
+.awThing { position: absolute; inset: calc((1 - var(--room)) * 50%); display: grid; transform: scale(0.72);
+  filter: drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
+  transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.12), filter 0.9s ease; animation: awIn 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.12) both; }
+.awThing > * { width: 100%; height: 100%; }
+.awaken:not([data-ready]) .awThing { opacity: 0; animation: none; }
+.awaken:not([data-phase="frame"]) .awThing { transform: scale(0.94); }
+/* The glow, on the thing itself: it gathers, flashes up on each beat of the new form, dims to a held breath in the hush,
+   flares at the burst in the new colour, eases while the new form shows itself, and stays a faint edge at the reveal. */
+.awaken:is([data-phase="glow"], [data-phase="pulse"]) .awThing { filter: drop-shadow(0 0 4px var(--glow)) drop-shadow(0 0 14px var(--glow)) drop-shadow(0 0 36px var(--glow)); }
+.awaken[data-phase="pulse"] .awThing { transition: transform 0.07s ease-out, filter 0.12s ease-out; }
+.awaken[data-phase="pulse"][data-after] .awThing { transform: scale(1.06); filter: brightness(1.5) drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 22px var(--glow)) drop-shadow(0 0 54px var(--glow)); }
+.awaken[data-phase="hush"] .awThing { filter: drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 0 transparent); transition: filter 0.25s ease, transform 0.5s ease-in; transform: scale(0.98); }
+.awaken[data-phase="burst"] .awThing { filter: drop-shadow(0 0 6px var(--glow)) drop-shadow(0 0 28px var(--glow)) drop-shadow(0 0 80px var(--glow)); transition: filter 0.25s ease-out, transform 0.3s ease-out;
+  transform: scale(1.08); }
+.awaken[data-phase="show"] .awThing { filter: drop-shadow(0 0 3px var(--glow)) drop-shadow(0 0 12px var(--glow)) drop-shadow(0 0 30px var(--glow)); transition: filter 1.4s ease, transform 0.6s ease; }
+.awaken[data-phase="reveal"] .awThing { transform: scale(0.9); filter: drop-shadow(0 0 2px var(--glow)) drop-shadow(0 0 8px var(--glow)) drop-shadow(0 0 0 transparent);
+  transition: transform 0.6s cubic-bezier(0.34, 1.3, 0.64, 1), filter 0.8s ease; }
+/* The impact frames, as the hit lands (David 2026-11-06: "more flash and almost impact flash frames"; round 11: "the
+   flash frame should have more impact ... and the flash frame needs to fit"): they burst out of the thing. First the
+   new rung's colour in rays out from it (speed lines), the thing a dark cut-out; then dark with the thing lit in that
+   colour (white times the colour, through the tint); then the colour with a ring round it. Never white. Then a
+   shockwave runs out from the thing. */
+.awImpact, .awImpactTint { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.awImpactTint { background: var(--edge); mix-blend-mode: multiply; }
+.awaken[data-impact="1"] .awImpact { opacity: 1; background: radial-gradient(circle at 50% 50%, var(--edge) 0 9%, transparent 30%),
+  repeating-conic-gradient(from 4deg at 50% 50%, var(--edge) 0 9deg, color-mix(in srgb, var(--edge) 50%, var(--ui-ink)) 9deg 12deg, var(--edge) 12deg 21deg, color-mix(in srgb, var(--edge) 72%, var(--ui-ink)) 21deg 23deg); }
+.awaken[data-impact="3"] .awImpact { opacity: 1; background: radial-gradient(circle at 50% 50%, var(--edge) 0 calc(var(--s) * 0.42), color-mix(in srgb, var(--edge) 55%, var(--ui-ink)) 0 calc(var(--s) * 0.46), var(--edge) 0); }
+.awStage::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 10px solid var(--edge); opacity: 0; pointer-events: none; }
+.awaken[data-phase="burst"]:not([data-impact]) .awStage::after { animation: awRing 0.6s ease-out both; }
+.awaken[data-impact="2"] .awImpact { opacity: 1; background: var(--ui-ink); }
+.awaken[data-impact="2"] .awImpactTint { opacity: 1; }
+.awaken[data-impact] .awThing { transition: none; }
+.awaken:is([data-impact="1"], [data-impact="3"]) .awThing { filter: brightness(0); }
+.awaken[data-impact="2"] .awThing { filter: brightness(0) invert(1); }
+/* The burst: the screen takes the new rung's colour a moment (never white), with no shape and no edge, then clears. */
+.awFlash { position: absolute; inset: 0; background: var(--edge); opacity: 0; pointer-events: none; }
+.awFlash[data-phase="burst"]:not([data-impact]) { animation: awFlash 1s ease-out both; }
+/* The card of what changed: beside it on a wide screen, under it on a phone; the stage steps aside for it. */
+.awCard { position: absolute; left: 50%; top: 50%; display: grid; justify-items: start; gap: 8px; width: 340px; box-sizing: border-box; padding: 20px 22px 18px;
+  border-radius: 22px; background: var(--ui-card); box-shadow: 0 24px 80px rgb(var(--ui-shade) / 0.4); translate: 12px -50%;
+  animation: awCard 0.55s 0.25s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+.awCard .text { max-width: none; }
+.awPill { padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--edge); color: var(--ui-ink); font: 700 12px/1.3 var(--gui-font); }
+.awaken[data-phase="reveal"] .awStage { transform: translateX(-52%); }
+@media (max-width: 720px) {
+  .awaken { --s: min(340px, 44vh, 84vw); }
+  .awaken[data-phase="reveal"] .awStage { transform: translateY(-52%) scale(0.55); }
+  .awCard { left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; translate: none; max-height: 62vh; overflow: auto; }
+}
+@keyframes awIn { from { opacity: 0; } }
+@keyframes awRing { 0% { opacity: 0.95; transform: scale(0.12); border-width: 18px; } 100% { opacity: 0; transform: scale(2.4); border-width: 2px; } }
+@keyframes awFlash { 0% { opacity: 0.45; } 100% { opacity: 0; } }
+@keyframes awShake { 0% { translate: 0 0; } 10% { translate: -9px 5px; } 20% { translate: 8px -6px; } 30% { translate: -6px -4px; } 40% { translate: 5px 5px; }
+  55% { translate: -3px 2px; } 70% { translate: 2px -2px; } 85% { translate: -1px 1px; } 100% { translate: 0 0; } }
+@keyframes awCard { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
 
 @media (prefers-reduced-motion: reduce) {
   .scrim, .spotlight, .lead, .key, .key[data-lit], .key[data-won], .flyDim, .flyIcon, .flyIcon > span, .flyName, .flyRing, .pop, .disc, .ring, .spark,
-  .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp, .held { animation: none; transition: none; }
+  .popEyebrow, .popTitle, .printed[data-printing] .slot, .printed[data-printing] .paper, .stamp, .held,
+  .awScrim, .awDeep, .awLead, .awStage, .awThing, .awFlash, .awImpact, .awImpactTint, .awCard { animation: none; transition: none; }
   .paper[data-tilt] { transform: none; }
   .stamper { display: none; }
   .paper[data-stamped], .paper[data-stamped]::after, .printed[data-printing] .slot::after { animation: none; }

@@ -3,7 +3,7 @@ import { SHOWCASE_SLOTS, type Donation, type MemberItem, type WeeklyBest } from 
 import { ROSTER, type Species } from "./roster";
 import { raisePg } from "@/lib/result";
 import { torontoInstant } from "@/lib/time";
-import type { CollectionsStore } from "./store";
+import type { CollectionsStore, RodCount } from "./store";
 import { ledgerToolsTaught } from "@/lib/game/arrival/arrivalLedger";
 import { bookLuck } from "@/lib/wallet/rules";
 
@@ -37,6 +37,18 @@ async function names(db: SupabaseClient, ids: string[]): Promise<Map<string, str
   const { data } = await db.from("member_identity").select("member_id, world_name").in("member_id", ids);
   for (const p of (data ?? []) as Row[]) if (p.world_name) out.set(String(p.member_id), String(p.world_name));
   return out;
+}
+
+/**
+ * A landed roll's rod and its count after the land (collections_land counted it, rod_catches). Read after the land, so a
+ * failed read only leaves the card without its count: the catch is already kept.
+ */
+async function rodAfterLand(db: SupabaseClient, memberId: string, rollId: string): Promise<RodCount | null> {
+  const { data: roll } = await db.from("catch_rolls").select("rod_key").eq("id", rollId).eq("member_id", memberId).maybeSingle();
+  const key = (roll as Row | null)?.rod_key;
+  if (!key) return null;
+  const { data } = await db.from("rod_catches").select("count").eq("member_id", memberId).eq("rod_key", key).maybeSingle();
+  return data ? { key: String(key), catches: Number((data as Row).count) } : null;
 }
 
 export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
@@ -111,8 +123,8 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const r = (Array.isArray(data) ? data[0] : data) as Row;
       return { size_cm: Number(r.size_cm), replayed: r.replayed === true };
     },
-    async cast(memberId, key, size, trophy) {
-      const { data, error } = await db.rpc("collections_cast", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy });
+    async cast(memberId, key, size, trophy, rod) {
+      const { data, error } = await db.rpc("collections_cast", { p_member_id: memberId, p_item_key: key, p_size: size, p_trophy: trophy, p_rod: rod });
       if (error) raise(error);
       return String(data);
     },
@@ -121,7 +133,12 @@ export function supabaseCollectionsStore(db: SupabaseClient): CollectionsStore {
       const { data, error } = await db.rpc("collections_land_drop", { p_member_id: memberId, p_roll_id: rollId, p_closed: seasonal?.closed ?? [], p_goal_id: seasonal?.tourney?.goal_id ?? null, p_cycle: seasonal?.tourney?.cycle ?? null });
       if (error) raise(error);
       const r = one(data);
-      return { item_key: String(r.item_key), size_cm: num(r.size_cm), ...caught(r) };
+      return { item_key: String(r.item_key), size_cm: num(r.size_cm), ...caught(r), rod: await rodAfterLand(db, memberId, rollId) };
+    },
+    async rodCatches(memberId) {
+      const { data, error } = await db.from("rod_catches").select("rod_key, count").eq("member_id", memberId);
+      if (error) raise(error);
+      return Object.fromEntries(((data ?? []) as Row[]).map((r) => [String(r.rod_key), Number(r.count)]));
     },
     async rolled(memberId, rollId) {
       const { data, error } = await db.from("catch_rolls").select("item_key").eq("id", rollId).eq("member_id", memberId).maybeSingle();
