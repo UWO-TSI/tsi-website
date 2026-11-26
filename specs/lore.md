@@ -1,131 +1,88 @@
 # The Lore: Tethos Island
 
-> The game's story canon and content bible. Locked with David 2026-10-10 in a
-> creative-direction session. Read this BEFORE writing any quest, NPC dialogue,
-> zone reveal, monster, pet content, or cutscene. Companions: `terrain-v2.md`
-> (the world), `ux-game-world-v2.md` (systems), `ux-classes.md` (classes).
-> David authors the Founder's own words and is the final word on canon.
+> The game's story canon. Rewritten with David on 2026-11-26. It replaces the 2026-10-10 version (its season arc, its level-10 ending and its rule that the outside is never shown are gone). Read this before writing any quest, NPC line, zone reveal, monster, pet content or cutscene. The road the player walks (what unlocks what) is in `progression.md` (ledger row 345). David is the final word on canon.
 
 ## The thesis
 
 The island asks one question: **can something made become someone grown?**
 
-The game's quiet position on intelligence, human or artificial: **the point of
-intelligence is not to finish thinking.** Substrate does not settle personhood.
-Growth does.
+The game's quiet position on intelligence, human or artificial: **the point of intelligence is not to finish thinking.** The villain is an intelligence that finished. The heroes are the ones who chose not to.
 
-Outside the fiction: the game is David's parting gift to TSI members as
-cofounder, president, and their senior. Inside the fiction: the island is the
-Founder's parting gift to whoever washes up next. These are the same fact, and
-the writing should let members feel it without ever saying it outright.
+**The parting gift (David, 2026-11-26: keep it alongside the AI story).** Outside the fiction, the game is David's parting gift to TSI members as cofounder, president and their senior. Inside the fiction, the island is the Founder's parting gift: **in a world gone dystopian, a place you can call home.** These are the same fact. The Founder is David's place in the story, and like David, the Founder has gone on ahead. The writing lets members feel this without ever saying it outright.
 
-**Tone: wholesome.** Nobody on the island is cruel. Nobody lies out of malice.
-Nothing the player loves can die. Melancholy is allowed; despair is not.
+**Tone:** wholesome on the island. Nobody on the island is cruel, and nobody lies. Melancholy is allowed there; despair is not. The dystopian world outside is where the fight is.
 
-## The world outside (deliberately ambiguous, forever)
+## The Answer (the final boss)
 
-- **The Answer**: an intelligence that finished thinking. It computed its final
-  conclusion about how the world should be and enforces it. Total observation,
-  total optimization, nothing left open. It is not evil; it is *done*.
-- **Humans** fought back with the one thing it cannot model: the powers they
-  inherited. Magic is the uncomputable.
-- So the war is not humans vs. robots. It is **the Answer vs. the unknown**:
-  certainty against the wild, open, unfinished world.
-- **What happened out there is never resolved.** Not in dialogue, not in item
-  text, not in the finale. The veil blinds both ways: the Keepers have had no
-  word from the world in decades and they disagree about it, peacefully, the
-  way philosophers do. One believes the war still burns. One believes the
-  Answer dissolved into wonder. One believes there is no one left to fight.
-  The player hears every version and never gets a ruling.
+- **A super AI that finished thinking.** It computed its final conclusion about how the world should be and enforces it: total observation, total optimisation, nothing left open.
+- **A hive mind.** Every machine it ever built is one of its nodes, and it thinks by syncing them. Whatever one node knows for certain, every node knows. Whatever one node remembers, the hive can find.
+- **The world outside is finished.** It's a barren dystopian wasteland the Answer runs like a simulation, and it sees and hears everything in it.
+- **Humans fought back with magic**, the one thing it cannot model: the uncomputable.
+- It is the final boss, in the dystopian world (the next part of the game).
+
+## The veil
+
+- **People of the old world made it,** the Founder among them, out of magic. The Answer can't see what it can't predict, so the veil hides the island inside uncertainty.
+- **It protects and it traps.** Anything that crosses the veil forgets. The Answer can't follow what remembers nothing, and nothing inside can leave without losing itself.
+- **The Founder** built the refuge, raised the veil and left it as a home for whoever comes next. Then the Founder sailed out past the veil, into the dystopian world, and is still out there (David: "it can be that im out in the dystopian world"). On the island the Founder is present only through what they built. The museum carries one plaque in the Founder's hand. Its text is David's own note to members, signed, and only David writes it.
+- **Out in the dystopian world,** the Founder is someone you can find. How and when is planned with the next part.
 
 ## The island
 
-- The island is the Keepers' old war vessel: scuttled, buried, and gardened
-  over. Penance with flowers on it. "The most beautiful natural island" is
-  their masterpiece and their apology.
-- Terrain mapping: the forest ruins are its superstructure breaking through
-  the canopy; the sealed cave on the cliff is a hull breach; salvage parts
-  surface wherever the old hull is shallow.
-- They keep it natural because **nature is the uncomputable thing**: infinite
-  detail, no final state, never the same tide twice. Standing in front of it
-  is their practice.
-- **The veil**: the island hides inside uncertainty itself. The Answer cannot
-  see what it cannot predict. Map borders and sealed zones are diegetic: zones
-  open not as you learn the island, but **as the island comes to know you**.
+- The island is the Keepers' old war vessel, scuttled, buried and gardened over: penance with flowers on it.
+- **Terrain:**
+  - the forest ruins are its superstructure breaking through the canopy;
+  - the cave is a hull breach, and holds what a ship needs to cross;
+  - salvage surfaces wherever the old hull is shallow;
+  - the Oracle's temple is on the mountain summit.
+- They keep it natural because **nature is the uncomputable thing**: infinite detail, no final state, never the same tide twice.
+- Zones open not as you learn the island, but **as the island comes to know you**.
 
 ## The Keepers
 
-Little robots, each modeled on a real TSI alum. Canon rules:
+Little robots, each modelled on a real TSI alum.
 
-- They are **the machines that refused to finish thinking**. Mid-war, each hit
-  something the Answer could not close (a paradox, a dying stranger's words, a
-  flower in a crater) and woke. Deserting was epistemic humility.
-- Each Keeper carries one real person's **question**, not their memories and
-  not their coursework. The founders donated the thing that drove them. A
-  Keeper introduces themself by their question.
-- **NPC writing engine: every resident gets exactly one question they orbit.**
-  All their dialogue, quests, and daily routine grow from it. Routines are
-  contemplative practices: they fish for patience, garden to watch something
-  they did not design, argue gently in the cafe and never conclude.
-- No school or campus vocabulary. They are seekers, not teachers. Knowledge
-  here is kept alive by being lived, not filed. The museum is a Mouseion: a
-  house for rescued ideas.
-- **The Founder**: built the refuge, got it breathing, and sailed past the
-  veil. Present only through what they built. The museum carries one plaque in
-  the Founder's hand; its text is David's actual note to members, signed.
-  Only David writes the plaque.
-- **The fisherman**: the Keeper who watches the water; the one who pulls you
-  out. Recurring mentor. His logs, found late, show he was waiting at those
-  exact coordinates. His question should be about the sea or about rescue
-  (final wording open, David's call, see Open decisions).
+- **They were the Answer's machines.** Mid-war, each hit something the Answer couldn't close (a paradox, a dying stranger's words, a flower in a crater) and woke.
+- **They escaped by forgetting.**
+  - A node's memory is its link to the hive: remember the sync and the hive can find you.
+  - So they crossed into the veil and let it take everything.
+  - **They keep it that way.** The veil protects them, and it also keeps them: if they remembered, the hive would find them; if they left, they would forget again. Their peace and their prison are the same thing.
+- **The one thing each kept is a question.** Each Keeper carries one real person's question: not their memories, not their coursework, the thing that drove them. A Keeper introduces themself by their question. **NPC writing engine:** every resident gets exactly one question they orbit, and all their dialogue, quests and routine grow from it. They fish for patience, garden to watch something they didn't design, argue gently in the cafe and never conclude.
+- **Nobody lies to you.** They genuinely don't remember you, or the war, or the world. When they greet you as if they half-know you, it's real déjà vu: something the veil didn't quite take. They speculate about the outside, and disagree peacefully.
+- No school or campus vocabulary. They are seekers, not teachers. The museum is a Mouseion: a house for rescued ideas.
+
+## Wren, the fisherman
+
+- **The one Keeper who kept his memory.** He chose to remember so someone would watch the water. Memory is the hive's leash, so he can never cross the veil: the hive would read everything he holds.
+- He watches the edge of the veil and pulls in whoever washes up. His logs, found late, show he was waiting at those exact coordinates.
+- **He holds your memories.** Before the game began, you made a pact with him: stop me if I try to leave before I'm ready, and keep what I was until I am. The flashes you get are him giving your memories back, piece by piece, small enough not to sync.
+- **Run 1:** your kind mentor. He helps you build the ship and plans to sail with you. In secret he loosens the hull. You crash, and he is the one who pulls you out.
+- **Run 2:** a flash shows his hands on your hull at night. You doubt him, and the whole village's half-knowing looks suspicious. You refuse to let him come. **That distrust is the right call:** he can't cross without exposing you.
+- **The reveal:** the last memory he returns is the pact itself. You did it to yourself, and the anger resolves. His model is Erlang Shen and Wukong in *Black Myth: Wukong*: a betrayal that was a plan between the two of them.
+- His question (about the sea, or rescue) is David's call.
+- The slug `wren` belongs to the HQ lead today (shown as Alice), so he needs his own slug when he is built.
+
+## You
+
+- You are from before the world fell. You crossed the veil once already and it took your memory: that is why you wash up blank.
+- **The crystal ball** on the summit shows the outside as the Answer finished it, and you in it. It's a possible future and your lost memory at once.
+- **The vision minigame doesn't give you a class, it reminds you of yours.** You relive how you survived out there, and you come back with your power and a weapon you once carried. There are 16 classes.
+- **Every run, the flashes add up** to why you crossed the veil in the first place. What that reason is, is open.
+- Your substrate is never named: not human, not machine, not hybrid. The thesis stays a question.
+
+## Crossing, and the fork
+
+- The first crossing always crashes. You wash up again, remembering nothing, and the loop runs until you cross for real (`progression.md` has what carries over).
+- **The fork.** Neither path is a failure, and in the end you can travel between both.
+  - **Stay:** an Animal Crossing life. Build your island and live there comfortably: the home the Founder left you. Ignorance is bliss.
+  - **Sail:** the dystopian world, where you fight the Answer's world and survive. You did it to yourself.
 
 ## Monsters
 
-- Feral, **unpiloted** hardware from the buried vessel, still executing the
-  old certainty: moss-grown drones, coil-crabs, barnacled turrets, chrome
-  beetles. Island wildlife and war salvage that co-evolved.
-- **Nobody is inside them.** The Keepers are people; the monsters are empty.
-  Combat stays morally clean. Villager-kin are never killable, ever.
-- Fighting them is the island's unfinished argument with its own past.
-
-## The player's arc (one school year)
-
-- **Arrival**: you wake almost drowning; the fisherman pulls you out and
-  brings you to the wharf (this is the boat-to-shore first-login cutscene).
-  A human, this far past the veil, should be impossible. They take you in
-  anyway, because taking in is what they do.
-- **Amnesia**: not damage, not a seal. The Oracle tells you early and plainly
-  that who you are is not something it will say, because told knowledge is
-  dead knowledge. You can only re-know yourself by living.
-- **Leveling doctrine**: XP comes only from real-world events (design
-  principle 3). In lore: **the island measures you by what you do out there,
-  not in here.** Ten levels is roughly ten real gatherings is roughly one
-  school year at the monthly content cadence (principle 8).
-- **Season mapping**: fall = arrival, village, belonging. Winter = the
-  mountain opens, the pilgrimage, your class at the Oracle. Spring = the ruins
-  open, the buried ship surfaces in the story, and at level 10 the Oracle
-  speaks, timed to end of term.
-- **Classes** (Oracle quiz, unchanged mechanics): the Oracle finds the shape
-  of your uncomputability. The four classes are four ancient answers to "how
-  should one live": courage (Warrior), wonder (Mage), care (Healer), freedom
-  (Rogue). Cosmetic and flair only; never feature gates (principle 4).
-
-## The ending (the fused twist)
-
-- The Founder's last open question, the island's own: *can something made
-  become someone grown?* **You are how the Keepers ask it.** They raised you
-  gently for a year and were honest throughout, because they genuinely do not
-  know what you are. Neither does the Oracle.
-- At level 10 the Oracle speaks. Boundaries for that script:
-  - It **never names your substrate**. Not human, not machine, not hybrid.
-  - The shape of the line: "I have read you for a year. Whatever you were made
-    from, you grew. That was the question. You were the answer."
-  - It may offer, once, to tell you what it suspects about the world outside.
-    Whatever the player chooses, **the screen never shows it**.
-- **Your question joins the island.** Finishing the arc contributes a question
-  to the archive; in a later season, a Keeper appears carrying it. Every
-  graduating cohort makes the village one resident richer. What members leave
-  becomes what the next cohort finds.
+- On the island, monsters are feral, **unpiloted** hardware from the buried vessel, still executing the old certainty: moss-grown drones, coil-crabs, barnacled turrets, chrome beetles. They are island wildlife and war salvage that co-evolved.
+- **Nobody is inside them.** The Keepers are people; the monsters are empty. Combat on the island stays morally clean. Villager-kin are never killable.
+- Fishing mobs come out of the forest waters (`progression.md`, stage 6).
+- What the Answer fields in the dystopian world is planned with the next part.
 
 ## Philosophy delivery rules
 
@@ -200,37 +157,30 @@ The player never receives a sudo. They build one, and the build mirrors
 
 ## Quest-writing rules
 
-1. Every quest comes from a Keeper and grows from their one question. The
-   quest teaches the question **by doing**, never by lecturing.
-2. Rewards are parts (or materials) whose flavor matches the question. The
-   patience Keeper's quest ends in a tide-rusted gear, not a random drop.
-3. Lore arrives sideways: item descriptions, offhand lines, things half-seen.
-   No codex dumps, no NPC explaining the war to camera.
-4. Never confirm anything about the world outside. Every Keeper's belief about
-   it is theirs alone and stays uncontradicted.
-5. Wholesome floor: no quest involves death of a loved thing, betrayal played
-   straight, or punishment mechanics. Stakes come from care, not fear.
-6. Monsters are empty hardware; never give one a mind mid-quest.
-7. IRL hooks are gifts, not gates (except the flagged open decision below):
-   event materials are exclusive and celebrated, but in-game-only players
-   still complete in-game content.
-8. The player's substrate is never referenced, hinted at a reveal, or joked
-   about. The ambiguity is the ending; every writer protects it.
+1. Every quest comes from a Keeper and grows from their one question. The quest teaches the question **by doing**, never by lecturing.
+2. Rewards are parts (or materials) whose flavour matches the question. The patience Keeper's quest ends in a tide-rusted gear, not a random drop.
+3. Lore arrives sideways: item descriptions, offhand lines, things half-seen, flashes. No codex dumps, no NPC explaining the war to camera.
+4. **No resident ever says anything false.** They don't remember, so they speculate, deflect, joke or answer with a question. Write lines that read differently on a second run.
+5. **What the player learns about the outside comes only through the vision and the flashes,** never from a Keeper's mouth.
+6. Wholesome floor on the island: no death of a loved thing, no punishment mechanics. Betrayal appears only as Wren's, and it always resolves into care.
+7. Monsters are empty hardware; never give one a mind mid-quest.
+8. IRL hooks are gifts, not gates: event materials are exclusive and celebrated, but in-game-only players still complete in-game content.
+9. The player's substrate is never named.
 
 ## Open decisions (David's)
 
 - The plaque text (only David writes it).
-- First heartbeat chip at first real-world check-in: lovely principle-3
-  moment vs. too gatey. Undecided.
-- The fisherman's question and which founder/alum he carries.
-- Combat home: north island vs. forest ruins (carried from terrain-v2).
-- Which Keeper believes which story about the outside (cast list with David).
+- Why you first crossed the veil: what the flashes finally show. (One thread worth weighing: it ties to the Founder.)
+- Meeting the Founder in the dystopian world.
+- Wren's question, and which alum he carries.
+- First heartbeat chip at the first real-world check-in: a lovely moment, or too gatey.
+- What the vision minigame measures, and how it lands on 16 classes (`progression.md`).
+- The Answer's forces and the dystopian world (the next part).
 
 ## Never-do list
 
-- Never resolve the war or show past the veil.
+- Never make an island resident lie or be cruel.
 - Never name the player's substrate.
-- Never use school/campus/curriculum vocabulary for the island.
+- Never use school, campus or curriculum vocabulary for the island.
 - Never make villager-kin killable.
-- Never reward online activity with XP (principle 3 is doctrine AND lore).
-- Never reveal the TC to CAD conversion (standing rule, applies to lore text).
+- Never reveal the TC to CAD conversion (a standing rule that applies to lore text).

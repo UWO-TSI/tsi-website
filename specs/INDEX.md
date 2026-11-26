@@ -27,7 +27,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 ## World, terrain, lore
 `island-core.md` | Milestone 1 island core, look transfer | reference
 `island-painter.md` | Hand-painted village map tool and data | retired with the village
-`lore.md` | Tethos Island lore canon | live
+`lore.md` | Story canon: the Answer, the veil, the Keepers who escaped by forgetting, Wren the fisherman, the fork (rewritten 2026-11-26) | live
 `seasonal-events.md` | Four repeating club-goal seasonal events | reference
 `seasonal-palettes.md` | Monthly palette and content cadence | reference
 `terrain-blending.md` | Natural terrain blending inside the grid | reference
@@ -76,11 +76,12 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 ## Arrival, onboarding, progression
 `hq-onboarding.md` | HQ onboarding after Bram's tour, row 312 | live
 `launch-routing.md` | New island becomes the member game route | reference
-`oracle-identity.md` | Oracle quiz, family, display names | reference
+`oracle-identity.md` | Oracle quiz, family, display names | superseded: the class now comes from the vision minigame (`progression.md`)
 `polish/arrival-wharf.md` | Arrival, wharf and home island polish | reference
 `polish/hud-first-login.md` | HUD frame and first login | reference
-`progression-systems.md` | Main quest, club goals, journal, letters | reference
-`ux-oracle-v2.md` | Oracle quiz as card-game NPC encounter | reference
+`progression.md` | The progression road: arrival, village, mountain obby, Oracle vision and class, forest, cooking, cave, ship crossing (row 345) | live
+`progression-systems.md` | Club goals, journal, letters (its four-chapter main quest is replaced by `progression.md`) | reference
+`ux-oracle-v2.md` | Oracle quiz as card-game NPC encounter | superseded: the class now comes from the vision minigame (`progression.md`)
 
 ## Interiors and study
 `cafe-polish.md` | Cafe polish, rows 268-269 | reference
