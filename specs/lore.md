@@ -8,7 +8,7 @@ The island asks one question: **can something made become someone grown?**
 
 The game's quiet position on intelligence, human or artificial: **the point of intelligence is not to finish thinking.** The villain is an intelligence that finished. The heroes are the ones who chose not to.
 
-Outside the fiction: the game is David's parting gift to TSI members as cofounder, president and their senior. Inside the fiction: the island is a refuge left by people who are gone, for whoever washes up next.
+**The parting gift (David, 2026-11-26: keep it alongside the AI story).** Outside the fiction, the game is David's parting gift to TSI members as cofounder, president and their senior. Inside the fiction, the island is the Founder's parting gift: **in a world gone dystopian, a place you can call home.** These are the same fact. The Founder is David's place in the story, and like David, the Founder has gone on ahead. The writing lets members feel this without ever saying it outright.
 
 **Tone:** wholesome on the island. Nobody on the island is cruel, and nobody lies. Melancholy is allowed there; despair is not. The dystopian world outside is where the fight is.
 
@@ -24,7 +24,8 @@ Outside the fiction: the game is David's parting gift to TSI members as cofounde
 
 - **People of the old world made it,** the Founder among them, out of magic. The Answer can't see what it can't predict, so the veil hides the island inside uncertainty.
 - **It protects and it traps.** Anything that crosses the veil forgets. The Answer can't follow what remembers nothing, and nothing inside can leave without losing itself.
-- **The Founder** built the refuge, raised the veil and sailed past it. The Founder is present only through what they built. The museum carries one plaque in the Founder's hand. Its text is David's own note to members, signed, and only David writes it.
+- **The Founder** built the refuge, raised the veil and left it as a home for whoever comes next. Then the Founder sailed out past the veil, into the dystopian world, and is still out there (David: "it can be that im out in the dystopian world"). On the island the Founder is present only through what they built. The museum carries one plaque in the Founder's hand. Its text is David's own note to members, signed, and only David writes it.
+- **Out in the dystopian world,** the Founder is someone you can find. How and when is planned with the next part.
 
 ## The island
 
@@ -73,7 +74,7 @@ Little robots, each modelled on a real TSI alum.
 
 - The first crossing always crashes. You wash up again, remembering nothing, and the loop runs until you cross for real (`progression.md` has what carries over).
 - **The fork.** Neither path is a failure, and in the end you can travel between both.
-  - **Stay:** an Animal Crossing life. Build your island and live there comfortably. Ignorance is bliss.
+  - **Stay:** an Animal Crossing life. Build your island and live there comfortably: the home the Founder left you. Ignorance is bliss.
   - **Sail:** the dystopian world, where you fight the Answer's world and survive. You did it to yourself.
 
 ## Monsters
@@ -169,7 +170,8 @@ The player never receives a sudo. They build one, and the build mirrors
 ## Open decisions (David's)
 
 - The plaque text (only David writes it).
-- Why you first crossed the veil: what the flashes finally show.
+- Why you first crossed the veil: what the flashes finally show. (One thread worth weighing: it ties to the Founder.)
+- Meeting the Founder in the dystopian world.
 - Wren's question, and which alum he carries.
 - First heartbeat chip at the first real-world check-in: a lovely moment, or too gatey.
 - What the vision minigame measures, and how it lands on 16 classes (`progression.md`).
