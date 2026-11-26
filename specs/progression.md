@@ -89,6 +89,52 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 ### 10. The dystopian world
 - The next part of the game. Not planned yet.
 
+## The story spine (planned with David, 2026-11-26)
+
+### The truth
+- The world outside is the wasteland now: the Answer finished it.
+- You are from before it fell.
+- The crystal ball shows both a possible future and your lost memory (David: "both 2 and 3"). It is the world as the Answer finished it, and you were in it.
+- The vision minigame doesn't give you a class, it reminds you of the one you had. You relive how you survived out there, and the weapon you bring back is one you once carried.
+
+### The veil and the loop
+- **The veil eats memory.** Anyone who crosses it forgets. That's why you wash up blank, and why residents greet you as if they half-know you.
+- They don't say more because of the Oracle's rule: told knowledge is dead knowledge.
+- **The first crossing always crashes. It is scripted** (David: yes).
+
+### The fisherman (David's model: Erlang Shen and Wukong in Black Myth: Wukong)
+David: "it feels like hes nice and then the sabatoge make you doubt everything but then it later explains why which resolves all anger".
+1. **Run 1:** the fisherman is your kind mentor. He helps you build the ship. In secret he loosens the hull. You crash, and he is the one who pulls you out.
+2. **Run 2, the doubt:**
+   - A flash shows his hands on your hull at night.
+   - You refuse to let him sail with you.
+   - The residents' half-knowing lines now read as if everyone knew.
+   - This is the drama beat: doubt everything.
+3. **The reveal: it was your plan.**
+   - Before the game began, you asked him to stop you if you ever tried to cross before you were ready. Going out unready would have cost you everything the veil takes.
+   - He keeps your memories for you, the way Erlang Shen kept Wukong's six senses.
+   - **The flashes are him, giving them back piece by piece.**
+   - The last flash he returns is the pact itself. "You did it to yourself."
+   - The anger resolves.
+   - **Rule:** no resident is ever actually against you. The doubt is real while it lasts, and the answer is always care.
+4. **The send-off:** he doesn't sail with you, but he sees you off.
+
+### The fork
+David: "both will be fine".
+- **Stay:** an Animal Crossing life. Build your island and live there comfortably.
+- **Sail:** the dystopian world, where you fight and survive. "you kinda did it to yourself"; more fun for combat-driven players.
+- Neither is a failure. In the end you can travel between Tethos and the dystopian world.
+
+### What survives a crash (David: "innate stuff stays the same like class and skill stats")
+
+| Stays (who you are) | Resets (what you carried) |
+|---|---|
+| Level, skill points, stats, class | The village story steps, replayed fast because flashes skip the teaching |
+| Fishing, foraging and cooking mastery | What you carried on the ship (lost at sea) |
+| Known recipes | The ship (the wreck's salvage makes the second one better) |
+| Your home ("someone kept this house for you") | The climb and the Oracle visit |
+| Everything bought with gems or earned as cosmetics, never lost | The glider: found again on the climb, already known how to fly |
+
 ## What this changes
 
 - **Main quest:** the four chapters in `progression-systems.md` (rows 87, 101, 177 to 179) are replaced by the road above. Chapters 2 and 3 were club-wide goals. Club-wide goals and their monument still exist, as their own layer; they no longer gate the personal road.
@@ -127,6 +173,6 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 4. What is a fishing mob?
 5. Does a small part of cooking open before the forest, or nothing until then?
 6. The ship: a checklist of parts, or an editor where the build changes how it sails?
-7. After a crash: what resets besides memory (items, home, class, quest steps); does the first crossing always fail?
+7. ~~After a crash~~ (answered: the table in the story spine; the first crossing always crashes).
 8. ~~Where the temple sits~~ (answered: the summit).
 9. How long counts as stuck before the summit-whisper nudge plays.
