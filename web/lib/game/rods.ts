@@ -266,6 +266,12 @@ export const ownedRig = (key: string, tackle: readonly string[], owned: readonly
   heldRig(key, tackle.filter(k => owned.includes(k)), catches);
 
 export const rodByKey = (key: unknown): RodTier | null => RODS.find(r => r.key === key) ?? null;
+/**
+ * How big a rod is drawn in a hand, as a factor on its model (David 2026-11-26, the Tidewarden: "make the model bigger in
+ * game"). The grip sits at the model's origin, so it stays seated. A value, not a baked mesh: held tools grow later with
+ * the 2 m body (ledger row 346). Rods not listed draw at 1.
+ */
+export const ROD_SCALE: Readonly<Partial<Record<string, number>>> = { rod_tidewarden: 1.25 };
 /** The first rod of a tool tier (1 to 5). */
 export function rodByTier(tier: number): RodTier {
   const t = Math.min(5, Math.max(1, Math.round(tier)));

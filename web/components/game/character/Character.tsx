@@ -30,6 +30,7 @@ import { DESIGN_U, materialName, mergeLook, refCache, skinnedPrimitives, type Pi
 import type { WeaponGrip, WeaponKind } from "@/lib/game/combat/contract";
 import { tagLookClasses } from "@/lib/game/modelMaterials";
 import { heldTemplate } from "@/lib/game/character/heldMesh";
+import { heldScale } from "@/lib/game/tools";
 import { addContact } from "../ContactShadows";
 import { addGrassBender } from "@/lib/game/grassBenders";
 import { frameStats } from "@/lib/game/perf/frameStats";
@@ -849,7 +850,8 @@ function HeldItem({ puppet, motion, view: { url, hold, fit }, remote }: { puppet
   }, [scene, url, hold, fit]);
   const casters = useMemo(() => meshesOf(model), [model]);
   const fxUrl = hold === "rod" ? rodFxUrl(model) : null;
-  const grip = HELD_GRIPS[hold];
+  // A rod drawn bigger in the hand (rods.ts ROD_SCALE) keeps its grip: the hold's scale times the rod's own.
+  const grip = useMemo(() => { const g = HELD_GRIPS[hold], k = heldScale(url); return k === 1 ? g : { ...g, scale: (g.scale ?? 1) * k }; }, [hold, url]);
   const age = useRef(0);
   useEffect(() => {
     age.current = 0;

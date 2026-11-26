@@ -5,7 +5,7 @@
  * inventory's: a rod's catalogue_ref, a net's or shovel's shop slug (they have no ref). Tools never break (row 279).
  * Rod tiers' effects are rods.ts; nets and shovels have none yet (specs/game-ui-questions.md).
  */
-import { RODS, ownsRod } from "./rods";
+import { RODS, ROD_SCALE, ownsRod } from "./rods";
 
 export type ToolKind = "rod" | "net" | "shovel" | "pickaxe";
 export type ToolTier = 1 | 2 | 3 | 4 | 5;
@@ -32,6 +32,14 @@ export const TOOLS: readonly Tool[] = [
 ];
 
 export const toolByKey = (key: unknown): Tool | null => TOOLS.find(t => t.key === key) ?? null;
+/** The scale a held model is drawn at (rods.ts ROD_SCALE): the rod whose own or awakened model it is, else 1. */
+export function heldScale(url: string): number {
+  for (const r of RODS) {
+    const k = ROD_SCALE[r.key];
+    if (k && (rodTool(r).model === url || r.awakenings.some(a => a.model === url))) return k;
+  }
+  return 1;
+}
 /**
  * The kinds a resident teaches (row 312, specs/hq-onboarding.md): for a member whose tools are taught (`taught`: they
  * arrived after row 312, lib/game/arrival/arrivalService.ts), the tier-1 net and shovel are theirs only once a resident

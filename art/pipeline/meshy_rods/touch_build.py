@@ -407,7 +407,7 @@ def tidewarden():
     stem = cyl("KnobStem", arm1, arm1 + np.array([-0.010, 0, 0]), 0.0028, gold)
     knob = sphere("Knob", arm1 + np.array([-0.015, 0, 0]), 0.0075, pearl)
     EXTRA.extend([sh, sp, f1, neck, foot, hub, arm, stem, knob])
-    # round 3 (David: "revert back to the old version, make the head slightly bigger"): Meshy's own prongs kept, the
+    # round 3 (David: "revert back to the old version, make the head slightly bigger"; round 3b: "make the head 30% bigger"): Meshy's own prongs kept, the
     # whole head (gold, coral, prongs, from z 0.64) scaled up HEAD_SCALE about its root, eased in over the collar
     co = np.zeros(len(me.vertices)*3); me.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
     c = np.array([-0.002, 0.003, HEAD_Z]); e = np.clip((co[:, 2] - (HEAD_Z - 0.01))/0.03, 0, 1); e = e*e*(3 - 2*e)
@@ -488,7 +488,7 @@ def cone(name, base, d, L, r, mat, seg=8):
     return mesh_obj(name, V, F, mat, smooth_=False)
 
 SHELL_R, SHELL_ANG, SHELL_SHIFT = 0.043, -2.4, 0.33
-HEAD_Z, HEAD_SCALE = 0.635, 1.12
+HEAD_Z, HEAD_SCALE = 0.635, 1.30
 SM = {}
 SM = {}
 EDITS = {"cedar": cedar, "glass": glass, "riptide": riptide, "tempest": tempest, "tidewarden": tidewarden, "lighthouse": lighthouse}
