@@ -8,6 +8,10 @@ Pipeline step 3 for the 7 raw Meshy rods David approved: Blender hand-edits from
 
 ## Status
 
+Round 3 (2026-11-26): Tidewarden only, waiting for David. Page published: https://claude.ai/artifact/4cEhrPv9ER4k92JKdgF1fG (db + comments; `approvals` collection empty at publish), source `specs/evidence/rod-touchup/page-3/index.html`, image `r3-tidewarden.jpg`. The round-2 sharp tip is dropped (`tidewarden_tip()` no longer called); the round-1 Tidewarden with its whole head scaled 1.12 about z 0.635 (`HEAD_Z`, `HEAD_SCALE` in touch_build.py, eased over 0.03), tip now 0.993. Game copy 10.0k tris, 1024, 0.52 MB. Icon re-rendered with `SPIN_5=180` (icon.py turns the rod about its axis: the shell faces the camera). In-hand shot: rod-gear's `hand.mjs` with the route widened to `rod-{1,flimsy}.glb` (the starter now loads rod-flimsy.glb); its `time=` and zoom are ignored by the current lab island (night light, fixed distance), so crop around the character.
+Approved by David on page 2: Riptide round 2 and all 8 game copies.
+
+
 Round 2 done, waiting for review (`[build]` commit on `game/rod-touchup`, head SHA in the report). Review page (not published): `specs/evidence/rod-touchup/page-2/index.html`. Evidence: `specs/evidence/rod-touchup/r2-<rod>.jpg` (sheet | round 1 | round 2) for Riptide and Tidewarden, `low-<rod>.jpg` (high | game copy) for all 8. Round 1 page and compares: `specs/evidence/rod-touchup/<rod>.jpg`; round-1 high GLBs are in commit 86eb8104c.
 
 The game now loads the cut-down copies (touch_low.py: the touched-up high model decimated, one 1024 texture baked from it, P_Metal parts kept as flat metal):

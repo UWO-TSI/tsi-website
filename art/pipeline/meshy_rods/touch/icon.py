@@ -16,6 +16,10 @@ for key in sys.argv[sys.argv.index("--")+1:]:
     mn=Vector([min(p[i] for p in pts) for i in range(3)]); mx=Vector([max(p[i] for p in pts) for i in range(3)])
     ax=max(range(3),key=lambda i:mx[i]-mn[i]); c=(mn+mx)/2
     root.location=-c; bpy.context.view_layer.update()
+    spin=float(os.environ.get('SPIN_'+key.replace('-','_'), 0))      # turn the rod about its own axis (Tidewarden: its shell reel to the camera)
+    if spin:
+        for o in obs: o.matrix_world = Matrix.Rotation(math.radians(spin), 4, 'Z') @ o.matrix_world
+        bpy.context.view_layer.update()
     # lay long axis along view diagonal
     if ax==1: root.rotation_euler=(0,0,0)
     cam=bpy.data.cameras.new("c"); cam.type="ORTHO"; cam.ortho_scale=(mx[ax]-mn[ax])*0.78
