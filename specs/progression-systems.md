@@ -8,7 +8,7 @@ Owner: systems agent (data + API + UI sheets) and island agent (world objects). 
 
 Two quest layers and the social plumbing around them:
 
-1. **Personal main quest** (per account): chapter 1 *Settle in* → chapter 2 *Reopen the cafe* → chapter 3 *Fund the museum* → chapter 4 *Reach the ruins gate*. Chapters 2 and 3 are pointers at club-wide goals; chapters 1 and 4 are personal. Chapter completion opens regions per account (village core → cafe/study tables → museum + woods → cliffs/ruins gate). Skippable in one click for senior members (design principle 7).
+1. **Personal main quest:** see `progression.md` (the road). The old four chapters are deleted.
 2. **Club-wide goals** (server-wide): story goals are one-time (cafe, museum), seasonal goals repeat yearly. Progress counts in-game deliveries (coins, materials, specimens at the monument) and real club activity (QR event check-ins, completed bounties, admin-logged contributions) with admin-set weights, real activity weighted higher. Default size: reachable in ~2 weeks by 20–30 active members. Progress is shown by a plaza monument that visibly builds up; completion triggers a short in-world ceremony (confetti, building unboards, residents gather) and a letter to every member.
 3. **Journal**: quest list with chapter state, club-goal progress, discoveries (species journal hooks for later), study stats. HUD: one current-objective line under the minimap with a marker on the minimap.
 4. **Letters**: mailbox at each home (homes come later; for now a mailbox at HQ) and a village notice board. Letters and notes only, no item transfer. System letters (goal completed, chapter completed) plus member-to-member notes, length-limited, reportable. Visible on phones later.
@@ -17,9 +17,6 @@ Two quest layers and the social plumbing around them:
 
 | Topic | Decision | Row |
 |---|---|---|
-| Chapter 1 | Claim starter island (stub until homes exist: "claim your plot" at HQ), make a first catch and donate it (museum shell accepts one donation before opening), report to HQ | 101 |
-| Chapters 2, 3 | Club-wide goals; personal chapter shows the goal, credits contributions | 177, 178 |
-| Chapter 4 | Oracle quiz done + level-10 family trial done → gate opens | 179 |
 | Contributions | In-game deliveries + real activity, weights admin-set, real weighted higher; per-member caps | 102 |
 | Goal size | ~30 event check-ins or ~15,000 coin-equivalent; admin retunes | 181 |
 | Progress display | Plaza monument builds up in stages (e.g. 0/25/50/75/100%) | 182 |

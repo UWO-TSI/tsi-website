@@ -89,60 +89,14 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 ### 10. The dystopian world
 - The next part of the game. Not planned yet.
 
-## The story spine (planned with David, 2026-11-26)
+## The story
 
-### The truth
-- The world outside is the wasteland now: the Answer finished it.
-- You are from before it fell.
-- The crystal ball shows both a possible future and your lost memory (David: "both 2 and 3"). It is the world as the Answer finished it, and you were in it.
-- The vision minigame doesn't give you a class, it reminds you of the one you had. You relive how you survived out there, and the weapon you bring back is one you once carried.
+The story (the Answer, the veil, the Keepers who escaped by forgetting, Wren the fisherman and his pact, the fork) is canon in `lore.md`. This file holds only the road and its rules.
 
-### The veil and the loop
-- **The veil eats memory.** Anyone who crosses it forgets. That's why you wash up blank, and why residents greet you as if they half-know you.
-- They don't say more because of the Oracle's rule: told knowledge is dead knowledge.
-- **The first crossing always crashes. It is scripted** (David: yes).
+## The crossing loop: rules
 
-### The fisherman (David's model: Erlang Shen and Wukong in Black Myth: Wukong)
-David: "it feels like hes nice and then the sabatoge make you doubt everything but then it later explains why which resolves all anger".
-1. **Run 1:** the fisherman (Wren) is your kind mentor. He helps you build the ship. In secret he loosens the hull. You crash, and he is the one who pulls you out.
-2. **Run 2, the doubt:**
-   - A flash shows his hands on your hull at night.
-   - You refuse to let him sail with you.
-   - The residents' half-knowing lines now read as if everyone knew.
-   - This is the drama beat: doubt everything.
-3. **The reveal: it was your plan.**
-   - Before the game began, you asked him to stop you if you ever tried to cross before you were ready. Going out unready would have cost you everything the veil takes.
-   - He keeps your memories for you, the way Erlang Shen kept Wukong's six senses.
-   - **The flashes are him, giving them back piece by piece.**
-   - The last flash he returns is the pact itself. "You did it to yourself."
-   - The anger resolves.
-   - **Rule:** no resident is ever actually against you. The doubt is real while it lasts, and the answer is always care.
-4. **The send-off:** he doesn't sail with you, but he sees you off.
-
-### The greater evil and why everyone keeps quiet (David, 2026-11-26)
-David: "what if like in the dystopian world, theres a super ai thats kidna like the final boss, and it can hear everything ... because we are in a simulation kinda thing", and the reason must be "something related to the whole ai hive mind".
-- **The Answer is the final boss.** It is a super AI hive mind that runs the outside world as a simulation and sees and hears everything in it.
-- **The hive syncs certainty.** Every machine it built is one of its nodes. Whatever one node knows for certain, every node knows.
-- **The Keepers defected by staying unsure.** They are the machines that refused to finish thinking. An open question can't be synced, so their doubt is their firewall. **The veil is all their doubt pooled together.**
-- **They keep themselves from knowing.** If a Keeper became certain who you are, that certainty would sync and leak to the hive. Their half-recognition is real: they hold you as a question on purpose. Nobody lies, because nobody lets themselves know.
-- **The same goes for you.** If you are certain who you are, you become a fixed point the hive can compute, and doubt can't hide a certainty. That is why your memories come back only as fragments, and why the Oracle gives a vision to interpret, never an answer.
-- **Writing rule:** no resident ever says anything false. They deflect, joke or answer with a question. Lines carry a second meaning on a replay.
-- **A possible meta touch:** speech is the one thing that leaks through, the game's chat included. Residents might go quiet when players type certain words in chat. Not decided.
-
-### Wren, the fisherman: a defector on a leash
-David named the fisherman Wren and picked "defector with a leash".
-- Wren left the Answer's fleet but carries a link to the hive he can't cut.
-- He is the one Keeper who chose to know you: **he holds your memories** (the pact), and the flashes are him giving them back.
-- Because of his leash, that knowledge is one sync away from the hive. If he ever crossed the veil, the hive would read you through him.
-- That is why he wrecked the run-1 voyage you had planned to sail together, keeping the pact you made.
-- **In run 2, when you distrust him and refuse to let him come, your distrust is the right call.** He lets you go alone.
-- The slug `wren` is taken today by the HQ lead (shown as Alice), so the fisherman needs his own slug when he is built.
-
-### The fork
-David: "both will be fine".
-- **Stay:** an Animal Crossing life. Build your island and live there comfortably.
-- **Sail:** the dystopian world, where you fight and survive. "you kinda did it to yourself"; more fun for combat-driven players.
-- Neither is a failure. In the end you can travel between Tethos and the dystopian world.
+- The first crossing always crashes. It is scripted.
+- **The fork:** stay (an Animal Crossing life on the island) or sail (the dystopian world, combat and survival). Neither is a failure, and in the end you can travel between both.
 
 ### What survives a crash (David: "innate stuff stays the same like class and skill stats")
 
@@ -160,10 +114,7 @@ David: "both will be fine".
 - **Classes:** assigned by the vision minigame instead of the Oracle quiz and the level-10 choice (rows 16, 20, 22).
 - **Combat:** unlocks on the mountain, before the class. `lore.md`'s class line "cosmetic and flair only; never feature gates" no longer holds, because the class now brings a power and a weapon.
 - **Glider:** comes from the mountain.
-- **Lore** (`lore.md`; David is the final word on canon). The new road breaks three canon lines, and David's direction wins:
-  - "Never resolve the war or show past the veil" (never-do list). The vision shows the wasteland outside, and the crossing reaches the dystopian world.
-  - The season mapping (fall arrival, winter mountain and class, spring ruins and ship) and the level-10 ending.
-  - "What happened out there is never resolved." **Open:** whether the vision is the real outside or a possible one. The wasteland can stay a foreshadow without the game ruling on the war. Something like "the Answer's world as it would be if it won" keeps both.
+- **Lore:** `lore.md` was rewritten on 2026-11-26 around this road. The old season arc, level-10 ending and never-show-the-outside rule are deleted.
 - **The arrival loop:** the opening cutscene becomes the restart point of the crossing.
 
 ## Existing pieces by stage
@@ -188,7 +139,7 @@ David: "both will be fine".
    - how it reaches one of 16 classes;
    - whether you can see or redo the result.
    This needs its own planning pass.
-3. ~~Real outside or possible future~~ (answered: both a possible future and your lost memory; story spine being planned).
+3. ~~Real outside or possible future~~ (answered: both; see `lore.md`).
 4. What is a fishing mob?
 5. Does a small part of cooking open before the forest, or nothing until then?
 6. The ship: a checklist of parts, or an editor where the build changes how it sails?
