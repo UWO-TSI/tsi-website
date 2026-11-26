@@ -40,15 +40,15 @@ describe("what each move throws", () => {
     expect(step("sand").sprites).toEqual(["dust", "sand"]);
     expect(step("snow").sprites[0]).toBe("snow");
     expect(step("soil").sprites).toEqual(["dust"]);
-    expect(step("wood")).toEqual({ sound: { name: "blip4", rate: 1, gain: 0.7 }, sprites: [] });
+    expect(step("wood")).toEqual({ sound: { name: "footstep-wood", rate: 1, gain: 1 }, sprites: [] });
     expect(step("stone").sprites).toEqual([]);
-    expect(step("stone").sound.name).toBe("blip3");
+    expect(step("stone").sound.name).toBe("footstep-stone");
     // A rain day: a ripple and a drop with every step, but not on the boards.
     expect(step("stone", true).sprites).toEqual(["droplets", "ripple"]);
     expect(step("wood", true).sprites).toEqual([]);
     // Off in the lab's Juice panel: the sound stays.
     const p = new ParticlePool(8);
-    expect(footstep(p, "grass", 0, 0, 0, 0, 7, false, 0).name).toBe("footstep");
+    expect(footstep(p, "grass", 0, 0, 0, 0, 7, false, 0).name).toBe("footstep-grass");
     expect(p.alive).toBe(0);
   });
 

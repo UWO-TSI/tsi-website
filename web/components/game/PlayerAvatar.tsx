@@ -110,7 +110,7 @@ interface PlayerAvatarProps {
   ride?: AvatarRide;
 }
 
-const playSFX = (name: SFXName, rate = 1, gain = 1) => AudioManager.playSFX(name, { rate, gain });
+const playSFX = (name: SFXName, rate = 1, gain = 1, variant?: number) => AudioManager.playSFX(name, { rate, gain, variant });
 /** The ground under a point, for the effect, tint and sound of every move there (module scope: see turnTo). */
 function groundAt(surface: ((x: number, z: number) => number) | undefined, world: MoveWorld, x: number, z: number): GroundKind {
   return groundUnder(surface?.(x, z), WORLD_SNOW.value, world.wet, x, z);
@@ -169,7 +169,7 @@ function rideFrame(r: AvatarRide, g: THREE.Group, bd: THREE.Group, hd: THREE.Gro
     if (r.ground && !r.seated && r.speed > 0.6) {
       const side = m.foot === 0 ? 0.1 : -0.1, px = r.x + Math.cos(r.yaw) * side, pz = r.z - Math.sin(r.yaw) * side;
       const sound = footstep(pool, r.ground, px, r.y, pz, Math.sin(r.yaw) * r.speed, Math.cos(r.yaw) * r.speed, false, amount);
-      playSFX(sound.name, sound.rate, sound.gain);
+      playSFX(sound.name, sound.rate, sound.gain, sound.name === "footstep-grass" ? m.foot : undefined);
     }
   }
   f.focus.set(r.focus.x, r.focus.y, r.focus.z);
@@ -609,7 +609,7 @@ export default function PlayerAvatar({ spawnPosition, player, world, groundHeigh
         // Crouch-walking tiptoes: half the dust and a softer step. Sand, wet sand and snow keep a print of the foot.
         const g = groundAt(groundSurface, world, px, pz), soft = state.crouch ? 0.5 : 1, sound = footstep(pool, g, px, groundY, pz, state.vx, state.vz, rain, j.footsteps * soft);
         footprint(particles.prints, g, px, groundY, pz, state.facing, j.prints);
-        playSFX(sound.name, sound.rate, sound.gain * soft);
+        playSFX(sound.name, sound.rate, sound.gain * soft, sound.name === "footstep-grass" ? m.foot : undefined);
         if (inCombat && f.grow > 1.5) { shakeCamera(0.06 * f.grow); puffRing(pool, g, px, groundY, pz, 0.6 * f.grow); } // Titan: every step shakes the ground
       }
     }

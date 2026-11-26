@@ -32,7 +32,10 @@ const SPRAY_N = 24;
  */
 export default function LoadingScreen() {
   // The applicant island, the member island (/student/dashboard) and the portal's title screen (/student) have their own.
-  const recruitment = /^\/student(\/(apply|dashboard\/?$)|\/?$)/.test(usePathname());
+  const path = usePathname();
+  // The GENESIS pass (genesis.tethos.ca, /pass elsewhere) opens instantly, with no loader.
+  const recruitment = /^\/student(\/(apply|dashboard\/?$)|\/?$)/.test(path) || /^\/pass(\/|$)/.test(path)
+    || (typeof window !== "undefined" && window.location.hostname.startsWith("genesis."));
   const [phase, setPhase] = useState<"loading" | "click" | "lift" | "gone">("loading");
   const [shownCount, setShownCount] = useState(0);
   const mark = useRef<SVGSVGElement>(null);
