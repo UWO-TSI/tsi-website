@@ -40,6 +40,9 @@ const e = (slug: string, display_name: string, category: ShopCategory, price: nu
 });
 const furniture = (ref: string, name: string, price: number) => e(`furn-${ref}`, name, "furniture", price, { catalogue_ref: ref, stackable: true, special_pool: true });
 
+/** A row at its own position, out of the running order (`e` counts it, this gives the count back), so no other
+ * row's position moves: rows added since launch. */
+const own = (position: number, row: CatalogueEntry): CatalogueEntry => { pos--; return { ...row, position }; };
 const rodRow = (slug: string, display_name: string, price: number, tier: Tier, description: string, position: number): CatalogueEntry => withIcon({
   slug, display_name, category: "tool", description, price_coins: price, price_gems: null, tier, slot: "rod", special_pool: false, stackable: false, stock: null,
   catalogue_ref: slug.replace("-", "_"), sprite_url: null, position });
@@ -60,13 +63,14 @@ export const CATALOGUE: CatalogueEntry[] = [
   rodRow("rod-tempest", "Tempest rod", 16000, "premium", "An epic rod that comes with a storm. Never sold.", 1004),
   e("bobber-lucky", "Lucky bobber", "tool", 600, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_lucky", description: "A bobber for your rod: +20 luck, so rarer fish bite more often." }),
   // The tackle shop's baits and bobbers (David, 2026-11-19): the wharf's rod shop becomes the tackle shop, with a Rods,
-  // a Bait and a Bobbers shelf (lib/game/rods.ts TACKLE has their gains).
-  e("bobber-cork", "Cork bobber", "tool", 200, { tier: "basic", slot: "bobber", catalogue_ref: "bobber_cork", description: "A slightly wider catch bar." }),
-  e("bobber-float", "Striped float", "tool", 400, { tier: "mid", slot: "bobber", catalogue_ref: "bobber_float", description: "Easier to hook and to hold." }),
-  e("bobber-brass", "Brass bobber", "tool", 900, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_brass", description: "The line holds when a fish pulls." }),
-  e("bobber-pearl", "Pearl bobber", "tool", 1800, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_pearl", description: "Luckier casts and a steadier bar." }),
-  e("bait-worms", "Worms", "tool", 60, { tier: "basic", slot: "bait", stackable: true, catalogue_ref: "bait_worms", description: "Booster: bites come sooner." }),
-  e("bait-glow", "Glow bait", "tool", 450, { tier: "mid", slot: "bait", stackable: true, catalogue_ref: "bait_glow", description: "Targeter: works best at night and in bad weather." }),
+  // a Bait and a Bobbers shelf (lib/game/rods.ts TACKLE has their gains). Their own positions (after the rods), so no
+  // live row's position moves; the Sweet bait follows them so the Bait shelf keeps its order.
+  own(1005, e("bobber-cork", "Cork bobber", "tool", 200, { tier: "basic", slot: "bobber", catalogue_ref: "bobber_cork", description: "A slightly wider catch bar." })),
+  own(1006, e("bobber-float", "Striped float", "tool", 400, { tier: "mid", slot: "bobber", catalogue_ref: "bobber_float", description: "Easier to hook and to hold." })),
+  own(1007, e("bobber-brass", "Brass bobber", "tool", 900, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_brass", description: "The line holds when a fish pulls." })),
+  own(1008, e("bobber-pearl", "Pearl bobber", "tool", 1800, { tier: "premium", slot: "bobber", catalogue_ref: "bobber_pearl", description: "Luckier casts and a steadier bar." })),
+  own(1009, e("bait-worms", "Worms", "tool", 60, { tier: "basic", slot: "bait", stackable: true, catalogue_ref: "bait_worms", description: "Booster: bites come sooner." })),
+  own(1010, e("bait-glow", "Glow bait", "tool", 450, { tier: "mid", slot: "bait", stackable: true, catalogue_ref: "bait_glow", description: "Targeter: works best at night and in bad weather." })),
   e("net-basic", "Bug net", "tool", 100, { tier: "basic", slot: "net" }),
   e("net-mid", "Wide net", "tool", 400, { tier: "mid", slot: "net" }),
   e("shovel-basic", "Shovel", "tool", 100, { tier: "basic", slot: "shovel" }),
@@ -118,7 +122,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     description: "Holographic, in light or dark: the GENESIS ASCII art and GEN_26. Pick up at HQ on campus." }),
     sprite_url: "/assets/game/items/merch-genesis-sticker-light-sprite.webp" },
   // Bait for the rod's bait slot (lib/game/rods.ts TACKLE; David 2026-10-27 x-shop). Last, so no earlier row moves.
-  e("bait-sweet", "Sweet bait", "tool", 300, { tier: "mid", slot: "bait", catalogue_ref: "bait_sweet", description: "Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner." }),
+  own(1011, e("bait-sweet", "Sweet bait", "tool", 300, { tier: "mid", slot: "bait", catalogue_ref: "bait_sweet", description: "Bait for your rod: +20 bite window and +10 lure, so you get longer to hook and bites come sooner." })),
 ];
 
 // ── Ownership (coordinator ruling on audit item 22; 20260926180000_ownership.sql) ──

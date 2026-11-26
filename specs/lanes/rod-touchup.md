@@ -8,6 +8,12 @@ Pipeline step 3 for the 7 raw Meshy rods David approved: Blender hand-edits from
 
 ## Status
 
+Merge-ready (2026-11-26, David: "Merge both now"): origin/main (fish-list, eee3e179d) merged. Branch migrations re-dated after main's applied seeds (20261125191541, 20261126073423), in apply order:
+1. `20261126073500_rod_catches.sql` (was 20261119120000, unchanged; `git mv`): catch_rolls.rod_key column, the rod_catches table (owner-read RLS), collections_cast with the rod argument (drops the 4-argument signature first), collections_land counting the rod, rod_training_trade, grants to service_role only.
+2. `20261126203439_catalogue_seed.sql` (generated, replaces the branch's 20261120031507 and 20261121192921, which were generated only): economy (new rods, bobbers and baits; Cedar 400 to 2500, Glass renamed Crystal 1200 to 6000; Sweet bait to position 1011), crafting (Riptide and Titanium rows and recipes; Lighthouse 3000 to 8000, Tidewarden 6000 to 16000), ownership (rod-training and rod-tempest off sale), shop icons.
+The tackle shop's six new rows now take their own positions (catalogue.ts `own`), so no live row's position moves (club_merch_smoke expects the keychain at 40). SQL smoke: all fish and rod checks pass; only the known world-chat "the rest" error and main's own chain-list gaps (tasting_book, genesis_*) remain.
+
+
 Round 3b (2026-11-26): David approved round 3 with "looks better make the model bigger in game and make the head 30% bigger". Head: `HEAD_SCALE` 1.30 about z 0.635 (tip now 1.051), game copy rebuilt (10.0k tris, 1024, 0.55 MB), icon re-rendered (`SPIN_5=180`). In game: `ROD_SCALE` in `web/lib/game/rods.ts` (rod_tidewarden 1.25), looked up by `heldScale(url)` in `web/lib/game/tools.ts` (the rod's own and awakened models) and multiplied into the hold's grip scale in Character.tsx HeldItem (the grip is the model's origin, so it stays in the hand; remote players use the same component). The shop and bag stages fit every model to the stage, so a scale does not show there; there is no rod rack in the game. In-hand still: `specs/evidence/rod-touchup/r3b-tidewarden-hand.jpg` (shot with the starter's slot carrying the Tidewarden GLB and a temporary rod_flimsy 1.25 entry, reverted). origin/main merged (`.gitignore` and `audio.ts` conflicts: both sides kept). Branch ready for the coordinator to push and merge.
 
 

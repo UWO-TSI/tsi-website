@@ -26,7 +26,7 @@ Credits: 1070 before, 795 after: 275 spent (8 x 30 generation, 7 x 5 remesh). No
 Evidence: `specs/evidence/rod-meshy/<rod>-compare.jpg` (sheet view above model view: side, top, three-quarter; Training stage 2: refs a and b above the model side and three-quarter).
 
 What changed besides the GLBs:
-- Glass renamed "Crystal rod" (rods.ts, catalogue.ts, lab gui page, tests); key `rod_glass` and slug `rod-glass` kept. Economy seed migration `web/supabase/migrations/20261121192921_catalogue_seed.sql` (economy block only, upserts rod-glass's display name). Needs applying to prod with the code.
+- Glass renamed "Crystal rod" (rods.ts, catalogue.ts, lab gui page, tests); key `rod_glass` and slug `rod-glass` kept. Economy seed: folded into `20261126203439_catalogue_seed.sql` (rod-touchup, 2026-11-26; the branch seeds 20261120031507 and 20261121192921 were dropped and regenerated on top of main).
 - Lighthouse light moved to the lantern on the body: LanternGlow `GLASS` (0, 1.05, 0); rodfx-lighthouse's Lamp, Halo, FX_Lamp and Beam at y 1.05, the Beam turned to shine out sideways (+X) at 0.6 size instead of along the rod past the tip.
 - Cedar: the old swaying Boughs replaced by the Meshy model's own leaves (faces whose texel is green), cut into rodfx-cedar-boughs.glb with `sway: 1`.
 - Riptide: rodfx-riptide's Current, Crests and Whirl dropped (the Meshy body has the ribbon, wave and whirlpool; the old animated water spiralled across it). Drops, Swoosh and sparks kept.
