@@ -70,7 +70,7 @@ export const EXTRA_FISH: FishRow[] = [
   // The fish list's new fish (specs/fish-list.md; fish-models lane, 2026-11-25): our Meshy-made models, already in the
   // game's frame (art/fish/build_meshy_fish.py), so not raw; the same file in both worlds.
   { key: "fish_common_shiner", label: "a Common Shiner", name: "Common Shiner", model: "/assets/game/remodel/fish/common-shiner.glb", move: { speed: 0.22, accel: 0.9, jitter: 0.006, dartChance: 0.1, dartMul: 1.8, retargetMs: 1800 } },
-  { key: "fish_brown_trout", label: "a Brown Trout", name: "Brown Trout", model: "/assets/game/remodel/fish/brown-trout.glb", move: { speed: 0.33, accel: 1.5, jitter: 0.008, dartChance: 0.22, dartMul: 2.2, retargetMs: 1300 } },
+  { key: "fish_brown_trout", label: "a Brown Trout", name: "Brown Trout", model: "/assets/game/remodel/fish/brown-trout.glb", move: { speed: 0.28, accel: 1.15, jitter: 0.008, dartChance: 0.15, dartMul: 1.95, retargetMs: 1500 } },
   { key: "fish_paddlefish", label: "a Paddlefish", name: "Paddlefish", model: "/assets/game/remodel/fish/paddlefish.glb", move: { speed: 0.33, accel: 1.5, jitter: 0.008, dartChance: 0.22, dartMul: 2.2, retargetMs: 1300 } },
   { key: "fish_muskellunge", label: "a Muskellunge", name: "Muskellunge", model: "/assets/game/remodel/fish/muskellunge.glb", move: { speed: 0.41, accel: 2.05, jitter: 0.011, dartChance: 0.31, dartMul: 2.35, retargetMs: 1000 } },
 ];

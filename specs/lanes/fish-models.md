@@ -9,6 +9,17 @@ Worktree `.claude/worktrees/fish-list`, branch `game/fish-list` (shared with the
 3. Legendary heroes: one hero concept for L1 to L12, D1, D2, from section 4's text (no references). Aura only in the hero. David marks them up before any views or Meshy.
 4. Two review pages (not published; the coordinator publishes): `specs/evidence/fish-models/page-pilot/index.html`, `page-legendary/index.html`.
 
+## Round 5 (2026-11-26): Brown Trout to uncommon, merge-ready
+
+David's marks on Fish pilot 4 (https://claude.ai/artifact/FxSFtwMF8iRgawDg1xuZHC): every card approved, the epic held-size rule kept for all epics and rares; r4-trout-option approved with the note "uncommon".
+
+Done:
+- Brown Trout uncommon: `specs/fish-list.md` (data.mjs, rebuilt: river now 13 common, 13 uncommon, 10 rare; its drop Fin, not Fin x2), `roster.ts` (rarity), `fishCatalog.ts` (the uncommon move profile); it keeps the rich model and 45 to 80 cm, and is held at the uncommon size (as before round 4).
+- The seed folded into `web/supabase/migrations/20261126073423_catalogue_seed.sql` (regenerated with gen-seeds against `20261125191541` and renamed back; not applied anywhere): the trout's and the muskie's rows. `catalogue_seed_smoke.sql` checks the trout uncommon and the muskie to 180 cm.
+- `origin/main` merged (already up to date at c9c419cab). Gates: tsc clean; eslint clean on touched files; vitest lib/game, lib/collections, seedMigrations, lib/icons, components/game/peaceful, components/lab: 246 files passed; SQL smoke: chain ok, "031 ok", "catalogue seed ok" (the world-chat "the rest" error is other lanes').
+- Production migrations, in order: `20261125191541_catalogue_seed.sql`, then `20261126073423_catalogue_seed.sql`.
+- Not pushed (lanes never push): the coordinator pushes and merges.
+
 ## Round 4 (2026-11-26): upside-down fix, huge Muskellunge, rare Brown Trout, Imugi rig note
 
 David's marks on Fish pilot 3 (https://claude.ai/artifact/8r52wzRXSnBzvEbSSqmy5G): approved fp3-list, fp3-paddle, fp3-shiner, fp3-imugi. Notes: fp3-shiner "wh yare all the fish upside down"; fp3-imugi "looks good, when rigging you need to have its movements like snake"; redo fp3-muskie "its gotta be huge to justify it being a epic"; redo fp3-trout "this look more like a uncommon to me, nothing baout this is rare".
@@ -49,7 +60,7 @@ Done:
 
 ## Status
 
-Round 4 done (2026-11-26; above), rounds 3, 2 and 1 below. Head SHA: `git log -1` on `game/fish-list`.
+Round 5 done (2026-11-26; above), merge-ready; rounds 4 to 1 below. Head SHA: `git log -1` on `game/fish-list`.
 
 - **ElevenLabs:** 26 generations (budget about 30): 12 pilot views (side 338 credits each, top and front edits 412 each) and 14 heroes (338 each). About 9,800 ElevenLabs credits.
 - **Meshy:** 4 runs, 120 credits (balance was 725, now 605), meshy-7.1 + meshy-7, standard, 2K, image_enhancement false:
@@ -63,6 +74,7 @@ Round 4 done (2026-11-26; above), rounds 3, 2 and 1 below. Head SHA: `git log -1
 
 ## David's decisions
 
+- 2026-11-26, Fish pilot 4 marks: every card approved (keep the rarity-based held size for all epics and rares; keep the trout's rich look and size); r4-trout-option "uncommon": the Brown Trout moves to uncommon.
 - 2026-11-25, Fish pilot 3 marks: list, paddle, shiner and the Imugi raw model approved; "wh yare all the fish upside down"; Imugi "when rigging you need to have its movements like snake"; Muskellunge redo "its gotta be huge to justify it being a epic"; Brown Trout redo "this look more like a uncommon to me, nothing baout this is rare".
 - 2026-11-25, "Fish pilot 2" marks (via the coordinator): the four game models approved, the fierce Imugi hero approved; keep the 1024 textures.
 - 2026-11-25, pilot page marks (via the coordinator): the 4 raw Meshy fish approved, "looks good, now time to model and convert into triangles". Imugi hero redo: "make it more fearsome looking with fangs, look scarier like a seaserpant."
@@ -70,10 +82,9 @@ Round 4 done (2026-11-26; above), rounds 3, 2 and 1 below. Head SHA: `git log -1
 
 ## Next
 
-1. David's marks on Fish pilot 4: the epic held-size rule (all epics or the Muskellunge only), the Brown Trout rare look versus the uncommon option.
-2. The coordinator merges and applies `20261125191541` and `20261126073423` to production with the code.
-3. The Imugi boss edit in Blender after the raw is approved for it; the rig (serpentine S-wave down a spine chain) in Roblox Studio later.
-4. The legendary page's marks, then the next fish through the pipeline.
+1. The coordinator pushes `game/fish-list`, merges it to main and applies `20261125191541_catalogue_seed.sql` then `20261126073423_catalogue_seed.sql` to production.
+2. The Imugi boss edit in Blender when David asks; the rig (a serpentine S-wave down a spine chain) in Roblox Studio later.
+3. The legendary page's marks (13 creatures), then views and Meshy per creature; the next fish through the pipeline.
 
 ## Tools and gotchas
 

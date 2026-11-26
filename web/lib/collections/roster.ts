@@ -300,13 +300,13 @@ export const BURIED_FINDS: Species[] = make("nature", "shovel", "nature_room", [
 /**
  * The fish list's new fish (specs/fish-list.md section 3), modelled through Meshy (fish-models lane, David approved
  * 2026-11-25): water, rarity, seasons and hours from the list; sizes are the species' real adult range (the list sets
- * none), the Brown Trout and the Muskellunge at their trophy end (round 4, David: an epic "gotta be huge", the rare trout
- * "nothing baout this is rare"). Their models are ours, already in the game's frame (art/fish/build_meshy_fish.py). Seeded after the buried
+ * none), the Brown Trout and the Muskellunge at their trophy end (round 4, David: an epic "gotta be huge"); the Brown Trout
+ * is uncommon (Fish pilot 4, David: "uncommon"). Their models are ours, already in the game's frame (art/fish/build_meshy_fish.py). Seeded after the buried
  * finds so no earlier position moves.
  */
 export const FISH_LIST_FISH: Species[] = make("fish", "rod", "aquarium", [
   ["fish_common_shiner", "Common Shiner", "river", "common", [8, 15], DAY, { oneLiner: "A silver net of scales, flashing in the shallows." }],
-  ["fish_brown_trout", "Brown Trout", "river", "rare", [45, 80], [18, 6], { months: seasons("spring", "autumn"), oneLiner: "Gold, freckled, and up after dark." }],
+  ["fish_brown_trout", "Brown Trout", "river", "uncommon", [45, 80], [18, 6], { months: seasons("spring", "autumn"), oneLiner: "Gold, freckled, and up after dark." }],
   ["fish_paddlefish", "Paddlefish", "river", "rare", [90, 180], null, { months: seasons("spring"), oneLiner: "Leads with its nose. All of it." }],
   ["fish_muskellunge", "Muskellunge", "river", "epic", [110, 180], DAY, { months: seasons("spring", "autumn", "winter"), oneLiner: "The fish of ten thousand casts." }],
 ], { model: null });

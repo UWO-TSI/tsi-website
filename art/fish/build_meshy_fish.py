@@ -205,9 +205,9 @@ def grow(mask, n):
 
 
 def rare_look(rgb, covered):
-    """The Brown Trout's rare finish (David: "this look more like a uncommon to me, nothing baout this is rare"): the
-    flank pushed to a rich gold, the red spots vivid with a pale blue-white halo, the black spots bolder. The species'
-    own markings, only stronger; nothing new painted."""
+    """The Brown Trout's rich finish (David on pilot 3: "nothing baout this is rare"; approved on pilot 4, which then moved
+    it to uncommon and kept this look): the flank pushed to a rich gold, the red spots vivid with a pale blue-white halo,
+    the black spots bolder. The species' own markings, only stronger; nothing new painted."""
     hsv = rgb_to_hsv(rgb)
     h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
     flank = covered & (h > 25) & (h < 70) & (v > 0.35)

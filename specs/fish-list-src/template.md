@@ -4,6 +4,8 @@ Lane `fish-list`, round 3 (2026-11-04). Still the list only: nothing is built or
 
 ## 0. David's marks
 
+Fish-models round 4 (2026-11-26, Fish pilot 4, card r4-trout-option approved with the note "uncommon"): the Brown Trout moves from rare to uncommon, keeping its rich model and its 45 to 80 cm size (lane `fish-models`).
+
 Round 3 review (2026-11-04, verbatim; every card approved: fl2-biome, fl2-new, fl2-megabyte, fl2-odds, fl2-questions "looks good", all ten picks), with these notes:
 
 - fl2-drops (approve): "more rare so like divine 80, leg 70 epic 60"
@@ -57,7 +59,7 @@ Plus the Tide-rusted Gear (round 1): salvage, not a fish, uncommon, in any water
 | River in winter, by day: no uncommon or epic | Burbot (now any hour), Brook Trout (winter and spring), Lake Trout, Muskellunge (spring, autumn and winter) |
 | River in spring, by day: no epic | Muskellunge now bites in spring too |
 | River at dusk | Walleye (17 to 21) |
-| River's rare band: 5 kinds | Lake Trout, Brown Trout, Bowfin, American Eel, Paddlefish (11 rare) |
+| River's rare band: 5 kinds | Lake Trout, Bowfin, American Eel, Paddlefish (10 rare; the Brown Trout, added here, moved to uncommon in the fish-models lane) |
 | Pond: shut, 1 rare, no common in autumn | 17 new kinds, among them a koi set (Golden, Platinum, Tancho, then the Dragon Gate Koi); opens in the next fishing round (David's pick) |
 | Cliff pools: 4 kinds, no common or uncommon | 6 of every band, all new except Char, Gar, Golden Trout and Stringfish; the hull breach is the excuse for the odd ones (crystal, electric, blind) |
 | Sea: 12 epics, rare band thin | 7 epics move to the deep sea; 6 new rares (Octopus, Spiny Lobster, Yellowtail, Cuttlefish, Halibut, Sea Urchin) |

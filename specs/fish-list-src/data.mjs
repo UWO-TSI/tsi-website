@@ -36,7 +36,7 @@ export const FISH = [
   ["Snakehead","R","r","all","09-16","","T","Fang","",""],
   ["Walleye","R","r","Au Wi","17-21","","N1","Fang","gift: Toren",""],
   ["Lake Trout","R","r","Wi Sp","any","","N2","Fin x2","",""],
-  ["Brown Trout","R","r","Sp Au","18-06","","N2","Fin x2","",""],
+  ["Brown Trout","R","u","Sp Au","18-06","","N2","Fin","",""],
   ["Bowfin","R","r","Su","20-04","","N2","Armour Scale","",""],
   ["American Eel","R","r","Su Au","20-04","rain+","N2","Eel Skin x2","",""],
   ["Paddlefish","R","r","Sp","any","","N2","Ray Leather","",""],

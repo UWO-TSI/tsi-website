@@ -4,6 +4,8 @@ Lane `fish-list`, round 3 (2026-11-04). Still the list only: nothing is built or
 
 ## 0. David's marks
 
+Fish-models round 4 (2026-11-26, Fish pilot 4, card r4-trout-option approved with the note "uncommon"): the Brown Trout moves from rare to uncommon, keeping its rich model and its 45 to 80 cm size (lane `fish-models`).
+
 Round 3 review (2026-11-04, verbatim; every card approved: fl2-biome, fl2-new, fl2-megabyte, fl2-odds, fl2-questions "looks good", all ten picks), with these notes:
 
 - fl2-drops (approve): "more rare so like divine 80, leg 70 epic 60"
@@ -42,7 +44,7 @@ Coins by rarity, unchanged (`SELL_PRICES`): common 8, uncommon 20, rare 60, epic
 
 | Water | common | uncommon | rare | epic | legendary | Divine | All | Epic and up | New this round |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| River | 13 | 12 | 11 | 8 | 2 |  | 46 | 22% | 10 |
+| River | 13 | 13 | 10 | 8 | 2 |  | 46 | 22% | 10 |
 | Cliff pools | 6 | 6 | 6 | 6 | 2 |  | 26 | 31% | 18 |
 | Pond | 10 | 10 | 8 | 5 | 2 |  | 35 | 20% | 17 |
 | Sea | 16 | 16 | 11 | 7 | 2 | 1 | 53 | 19% | 10 |
@@ -52,7 +54,7 @@ River and sea are the biggest and lean on common and rare; the deep sea and the 
 
 **The new fish, by name:**
 
-- **River.** New this round: common: Common Shiner, Brook Stickleback, White Sucker, Rock Bass; rare: Lake Trout, Brown Trout, Bowfin, American Eel, Paddlefish; legendary: Namazu. From round 1: common: Lake Whitefish; uncommon: Burbot, Brook Trout; rare: Walleye; epic: Muskellunge; legendary: Imugi.
+- **River.** New this round: common: Common Shiner, Brook Stickleback, White Sucker, Rock Bass; uncommon: Brown Trout; rare: Lake Trout, Bowfin, American Eel, Paddlefish; legendary: Namazu. From round 1: common: Lake Whitefish; uncommon: Burbot, Brook Trout; rare: Walleye; epic: Muskellunge; legendary: Imugi.
 - **Cliff pools.** New this round: common: Cave Shrimp, Fathead Minnow, Alpine Newt, Stone Loach, Pearl Dace; uncommon: Arctic Grayling, Cutthroat Trout, Freshwater Mussel, Glass Catfish, Kokanee; rare: Black Ghost Knifefish, Golden Mahseer, Geode Clam, Hillstream Loach; epic: Taimen, Olm; legendary: Raiju, Hanzaki. From round 1: common: Sculpin; uncommon: Blind Cavefish; rare: Crystal Crayfish. Moved in: Electric Eel.
 - **Pond.** New this round: common: Weather Loach, Golden Shiner, Pond Snail; uncommon: Medaka, Paradise Fish, Black Crappie, Painted Turtle; rare: Butterfly Koi, Bullfrog, Brown Bullhead, Eastern Newt, Oranda Goldfish, Tench; epic: Platinum Koi, Tancho Koi, Giant Gourami; legendary: Dragon Gate Koi. From round 1: common: Pumpkinseed, Mudminnow; rare: Axolotl; epic: Mossback Turtle; legendary: Ness.
 - **Sea.** New this round: common: Blue Mussel, Sardine, Sand Dollar; rare: Octopus, Spiny Lobster, Yellowtail, Cuttlefish, Halibut, Sea Urchin; legendary: Umibozu. From round 1: common: Herring; uncommon: Lumpfish, Snowflake Eel; epic: Black-lip Oyster, Sailfish; legendary: Megabyte; Divine: Longwang, the Dragon King.
@@ -67,7 +69,7 @@ Plus the Tide-rusted Gear (round 1): salvage, not a fish, uncommon, in any water
 | River in winter, by day: no uncommon or epic | Burbot (now any hour), Brook Trout (winter and spring), Lake Trout, Muskellunge (spring, autumn and winter) |
 | River in spring, by day: no epic | Muskellunge now bites in spring too |
 | River at dusk | Walleye (17 to 21) |
-| River's rare band: 5 kinds | Lake Trout, Brown Trout, Bowfin, American Eel, Paddlefish (11 rare) |
+| River's rare band: 5 kinds | Lake Trout, Bowfin, American Eel, Paddlefish (10 rare; the Brown Trout, added here, moved to uncommon in the fish-models lane) |
 | Pond: shut, 1 rare, no common in autumn | 17 new kinds, among them a koi set (Golden, Platinum, Tancho, then the Dragon Gate Koi); opens in the next fishing round (David's pick) |
 | Cliff pools: 4 kinds, no common or uncommon | 6 of every band, all new except Char, Gar, Golden Trout and Stringfish; the hull breach is the excuse for the odd ones (crystal, electric, blind) |
 | Sea: 12 epics, rare band thin | 7 epics move to the deep sea; 6 new rares (Octopus, Spiny Lobster, Yellowtail, Cuttlefish, Halibut, Sea Urchin) |
@@ -106,29 +108,29 @@ Plus the Tide-rusted Gear (round 1): salvage, not a fish, uncommon, in any water
 | Brook Stickleback | common | Sp Su | any hour | **new** | Fish Scale |  |  | 13.1 | 10.6 |
 | White Sucker | common | Sp | any hour | **new** | Fish Scale | the spring run |  | 11.8 | 9.5 |
 | Rock Bass | common | Su Au | any hour | **new** | Fish Scale |  |  | 16.8 | 13.6 |
-| Angelfish | uncommon | Su Au | any hour |  | Fin |  |  | 5.1 | 4.1 |
+| Angelfish | uncommon | Su Au | any hour |  | Fin |  |  | 4.9 | 4.0 |
 | Betta | uncommon | Su Au | 06-18 |  | Fin | gift: Juniper |  | 4.5 | 3.7 |
 | Doctor Fish | uncommon | Su | any hour |  | Fin |  |  | 5.7 | 4.6 |
-| Mitten Crab | uncommon | Au | any hour |  | Crab Shell | dish: hotpot; gift: Pim |  | 4.5 | 3.6 |
-| Rainbow Trout | uncommon | Sp Au | 05-19 |  | Fin |  |  | 7.2 | 5.8 |
-| Salmon | uncommon | Au | any hour |  | Fin | dish: salmon nigiri (menu) |  | 4.5 | 3.6 |
-| Soft-shelled Turtle | uncommon | Su Au | any hour |  | Crab Shell |  |  | 5.1 | 4.1 |
+| Mitten Crab | uncommon | Au | any hour |  | Crab Shell | dish: hotpot; gift: Pim |  | 4.1 | 3.3 |
+| Rainbow Trout | uncommon | Sp Au | 05-19 |  | Fin |  |  | 6.9 | 5.6 |
+| Salmon | uncommon | Au | any hour |  | Fin | dish: salmon nigiri (menu) |  | 4.1 | 3.3 |
+| Soft-shelled Turtle | uncommon | Su Au | any hour |  | Crab Shell |  |  | 4.9 | 4.0 |
 | Sweetfish | uncommon | Su | any hour |  | Fin | dish: salt-grilled |  | 5.7 | 4.6 |
-| Tilapia | uncommon | Su Au | any hour |  | Fin |  |  | 5.1 | 4.1 |
-| Yamame Trout | uncommon | Sp Au | any hour |  | Fin |  |  | 11.7 | 9.5 |
+| Tilapia | uncommon | Su Au | any hour |  | Fin |  |  | 4.9 | 4.0 |
+| Yamame Trout | uncommon | Sp Au | any hour |  | Fin |  |  | 8.2 | 6.6 |
 | Burbot | uncommon | Wi | any hour | new (r1) | Fin | dish: stew |  | 22.0 | 17.8 |
-| Brook Trout | uncommon | Wi Sp | 05-19 | new (r1) | Fin |  |  | 13.0 | 10.5 |
+| Brook Trout | uncommon | Wi Sp | 05-19 | new (r1) | Fin |  |  | 12.8 | 10.3 |
+| Brown Trout | uncommon | Sp Au | 18-06 | **new** | Fin |  |  | 9.3 | 7.5 |
 | Bichir | rare | Su | 20-04 |  | Armour Scale |  |  | 2.1 | 4.0 |
-| Black Bass | rare | all year | any hour |  | Fin x2 | recipe: Lighthouse rod |  | 3.1 | 5.9 |
-| Pike | rare | Au | any hour |  | Fang |  |  | 2.8 | 5.1 |
+| Black Bass | rare | all year | any hour |  | Fin x2 | recipe: Lighthouse rod |  | 3.3 | 6.3 |
+| Pike | rare | Au | any hour |  | Fang |  |  | 3.2 | 5.9 |
 | Piranha | rare | Su | 06-18 |  | Fang |  |  | 3.4 | 6.4 |
 | Snakehead | rare | all year | 09-16 |  | Fang |  |  | 2.7 | 4.9 |
-| Walleye | rare | Au Wi | 17-21 | new (r1) | Fang | gift: Toren |  | 2.5 | 5.0 |
-| Lake Trout | rare | Wi Sp | any hour | **new** | Fin x2 |  |  | 2.9 | 5.7 |
-| Brown Trout | rare | Sp Au | 18-06 | **new** | Fin x2 |  |  | 2.2 | 4.2 |
+| Walleye | rare | Au Wi | 17-21 | new (r1) | Fang | gift: Toren |  | 2.7 | 5.4 |
+| Lake Trout | rare | Wi Sp | any hour | **new** | Fin x2 |  |  | 3.1 | 6.0 |
 | Bowfin | rare | Su | 20-04 | **new** | Armour Scale |  |  | 2.1 | 4.0 |
-| American Eel | rare | Su Au | 20-04, any hour in rain | **new** | Eel Skin x2 |  |  | 2.1 | 3.9 |
-| Paddlefish | rare | Sp | any hour | **new** | Ray Leather |  |  | 2.3 | 4.4 |
+| American Eel | rare | Su Au | 20-04, any hour in rain | **new** | Eel Skin x2 |  |  | 2.4 | 4.5 |
+| Paddlefish | rare | Sp | any hour | **new** | Ray Leather |  |  | 2.6 | 5.1 |
 | Arapaima | epic | Su | 16-09, any hour in rain |  | Arapaima Scale |  | Leap | 1.1 | 1.7 |
 | Arowana | epic | Su | 20-04 |  | Silver Scale |  | Leap | 0.54 | 0.87 |
 | Catfish | epic | all year | 20-04, any hour in rain |  | Whisker |  | Snag | 1.5 | 2.4 |
@@ -433,7 +435,7 @@ Luck doesn't touch the drop (luck is for rarity), so the drop is the same for ev
 | Fish Scale | common | Dace, Freshwater Goby, Guppy, Loach, Neon Tetra, Pale Chub, Pond Smelt, Yellow Perch, Lake Whitefish, Common Shiner, Brook Stickleback, White Sucker, Rock Bass, Sculpin, Fathead Minnow, Alpine Newt, Stone Loach, Pearl Dace, Bitterling, Killifish, Pumpkinseed, Mudminnow, Weather Loach, Golden Shiner, Anchovy, Clown Fish, Dab, Horse Mackerel, Sea Bass, Surgeonfish, Herring, Sardine, Lanternfish, Hatchetfish, Bristlemouth | rod grips, every Guardian shield's facing, fishing outfit trims |
 | Shell Grit | common | Cave Shrimp, Freshwater Mussel (x2), Crayfish, Pond Snail, Acorn Barnacle, Scallop, Sea Butterfly, Sea Star, Sweet Shrimp, Blue Mussel, Sand Dollar, Ruby Shrimp, Sea Pig (x2) | the polish in every crafted rod; shell housings for sudos later (lore: beachcombing) |
 | Squid Ink | common | Squid, Octopus (x2), Glass Squid, Dumbo Octopus | Summoner seals, Illusionist cards, Necromancer pages |
-| Fin | uncommon | Angelfish, Betta, Doctor Fish, Rainbow Trout, Salmon, Sweetfish, Tilapia, Yamame Trout, Burbot, Brook Trout, Black Bass (x2), Lake Trout (x2), Brown Trout (x2), Blind Cavefish, Arctic Grayling, Cutthroat Trout, Glass Catfish, Kokanee, Black Ghost Knifefish (x2), Hillstream Loach (x2), Bluegill, Carp, Crucian Carp, Goldfish, Pop-eyed Goldfish, Ranchu Goldfish, Medaka, Paradise Fish, Black Crappie, Butterfly Koi (x2), Brown Bullhead (x2), Oranda Goldfish (x2), Tench (x2), Barred Knifejaw, Butterfly Fish, Olive Flounder, Red Snapper, Seahorse, Suckerfish, Lumpfish, Mahi-mahi (x2), Yellowtail (x2), Halibut (x2) | Marksman fletching, Hunter bolt vanes, Shaman totem feathers |
+| Fin | uncommon | Angelfish, Betta, Doctor Fish, Rainbow Trout, Salmon, Sweetfish, Tilapia, Yamame Trout, Burbot, Brook Trout, Black Bass (x2), Lake Trout (x2), Brown Trout, Blind Cavefish, Arctic Grayling, Cutthroat Trout, Glass Catfish, Kokanee, Black Ghost Knifefish (x2), Hillstream Loach (x2), Bluegill, Carp, Crucian Carp, Goldfish, Pop-eyed Goldfish, Ranchu Goldfish, Medaka, Paradise Fish, Black Crappie, Butterfly Koi (x2), Brown Bullhead (x2), Oranda Goldfish (x2), Tench (x2), Barred Knifejaw, Butterfly Fish, Olive Flounder, Red Snapper, Seahorse, Suckerfish, Lumpfish, Mahi-mahi (x2), Yellowtail (x2), Halibut (x2) | Marksman fletching, Hunter bolt vanes, Shaman totem feathers |
 | Crab Shell | uncommon | Mitten Crab, Soft-shelled Turtle, Painted Turtle, Dungeness Crab, Spiny Lobster (x2), Yeti Crab, Spider Crab (x2) | Juggernaut and Guardian plating |
 | Spine | uncommon | Blowfish, Porcupine Fish, Zebra Turkeyfish, Sea Urchin (x2), Chimaera | Assassin kunai, Hunter barbs |
 | Eel Skin | uncommon | American Eel (x2), Garden Eel, Moray Eel, Ribbon Eel, Snowflake Eel, Hagfish, Gulper Eel | Martial Artist wraps, bow and holster leather |
