@@ -90,6 +90,8 @@ Little robots, each modeled on a real TSI alum. Canon rules:
 
 ## The player's arc (one school year)
 
+> **2026-11-26, David (ledger row 345, `specs/progression.md`):** the road is now arrival and fishing, village, mountain obby (glider, combat), the Oracle's crystal-ball vision of a dystopian wasteland that gives your class, forest, cooking, cave, and a ship crossing that loops back to the wash-up on a crash until you reach the dystopian world. The season mapping, the level-10 ending and the never-show-past-the-veil rule below are superseded where they conflict. Whether the vision is the real outside or a possible one is an open question for David.
+
 - **Arrival**: you wake almost drowning; the fisherman pulls you out and
   brings you to the wharf (this is the boat-to-shore first-login cutscene).
   A human, this far past the veil, should be impossible. They take you in

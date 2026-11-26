@@ -79,7 +79,8 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `oracle-identity.md` | Oracle quiz, family, display names | reference
 `polish/arrival-wharf.md` | Arrival, wharf and home island polish | reference
 `polish/hud-first-login.md` | HUD frame and first login | reference
-`progression-systems.md` | Main quest, club goals, journal, letters | reference
+`progression.md` | The progression road: arrival, village, mountain obby, Oracle vision and class, forest, cooking, cave, ship crossing (row 345) | live
+`progression-systems.md` | Club goals, journal, letters (its four-chapter main quest is replaced by `progression.md`) | reference
 `ux-oracle-v2.md` | Oracle quiz as card-game NPC encounter | reference
 
 ## Interiors and study

@@ -1,5 +1,7 @@
 # Progression systems spec (main quest, club goals, journal, letters)
 
+> **2026-11-26: the personal main quest below (chapters 1 to 4) is replaced by `progression.md` (ledger row 345).** Club-wide goals, the journal and letters still stand; club goals no longer gate the personal road.
+
 Owner: systems agent (data + API + UI sheets) and island agent (world objects). Decisions: `game-world-development-plan.md` rows 87, 90, 93, 96, 101, 102, 120, 177–184, 95, 180, 33, 48. Ledger wins over older specs and this worktree's CLAUDE.md.
 
 ## What it is
