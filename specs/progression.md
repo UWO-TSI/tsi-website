@@ -63,9 +63,9 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 - Foraging rows in the ledger (129 and others) still describe what can be found.
 
 ### 7. Cooking
-- Cooking fully unlocks after some forest missions. "Fully" suggests a small part of cooking may open earlier, for example at the sushi bar. **Open.**
+- Cooking fully unlocks after some forest missions. A first slice opens earlier: Bancha's quest in the village is a guided sushi session, and its sushi opens the mountain path (stage 2).
 - **Ingredients:** foraged goods, fish, and meat from fishing and from monsters.
-- **The model:** first-person cooking modelled closely on Kaleidoscope Cookery (study: lane `cooking-study`, `specs/cooking/`).
+- **The model:** first-person cooking modelled closely on Hands-On Delight (study and build plan: `specs/cooking/`, branch game/cooking-study). Kaleidoscope Cookery is a secondary reference.
 - **Where:** the sushi bar first, restaurants later.
 
 ### 8. The cave
@@ -141,7 +141,7 @@ The story (the Answer, the veil, the Keepers who escaped by forgetting, Wren the
    This needs its own planning pass.
 3. ~~Real outside or possible future~~ (answered: both; see `lore.md`).
 4. What is a fishing mob?
-5. Does a small part of cooking open before the forest, or nothing until then?
+5. ~~Does any cooking open before the forest~~ (answered: Bancha's quest is a guided first slice).
 6. The ship: a checklist of parts, or an editor where the build changes how it sails?
 7. ~~After a crash~~ (answered: the table in the story spine; the first crossing always crashes).
 8. ~~Where the temple sits~~ (answered: the summit).
