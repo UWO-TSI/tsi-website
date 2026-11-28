@@ -79,7 +79,7 @@ New models start in Meshy (`node art/meshy/meshy.mjs`, raw output in the untrack
 | `pipeline/` | new tool, fish and gear versions (`tools.md`): `profile.py` (views and dimensions of any GLB), `collage.py`, `families.sh`, `blueprint.py` (a turnaround sheet as blueprints, the match check), `{rod,fish,gear}-style.md`, image prompts in `prompts/`, sheets in `out/`; `build_rods.py` (the rods round 2: every rod and its effect `game/props/rodfx-<name>.glb`, renders) |
 | `barriers/`, `fx/`, `icons/`, `merch/`, `traditions/`, `audio/` | fences, FX packs, class icons, lanyard/keychain/sticker, pumpkin, key synth |
 
-Import scripts (`web/scripts/`, `node`): `extract-acnh-*`, `extract-{sky,road,grass}-*`, `derive-kit-mapping`, `organize-dump`, `sync-character-assets`, `convert-fbx-to-glb.js`, `convert-world.ts`, `bake-hair-thumbs`, `render-icons`, `finish-{trees,bushes,greenery}`, `fix-normal-maps`, `restore-*-assets`, `glb-bbox`, `character-inspect`. Root `scripts/`: `fbx_to_glb.py`, `prepare-hq-lamp.py`, `restore-hq-textures.py`. David supplies all art references.
+Import scripts (`web/scripts/`, `node`): `extract-acnh-*`, `extract-{sky,road,grass}-*`, `derive-kit-mapping`, `organize-dump`, `sync-character-assets`, `convert-world.ts`, `bake-hair-thumbs`, `render-icons`, `finish-{trees,bushes,greenery}`, `fix-normal-maps`, `restore-*-assets`, `glb-bbox`, `character-inspect`. Root `scripts/`: `prepare-hq-lamp.py`, `restore-hq-textures.py`. David supplies all art references.
 
 ## 5. Commands
 
