@@ -101,32 +101,6 @@ const errand = (n: number, slug: string, title: string, requirement: QuestChapte
 
 export const DEFAULT_CHAPTERS: QuestChapter[] = [
   {
-    id: "00000000-0000-4000-8000-0000000000a1",
-    slug: "settle-in",
-    position: 1,
-    title: "Settle in",
-    // The village's chapter 1, as it has always played (the new world has its own: first-find).
-    // Claiming your plot is the home island's drop (lib/game/drops.ts STEP_FEATURE): the summary leaves it out until then.
-    // Alice is HQ's host after Bram's tour (row 312, 20261017010000_hq_onboarding_copy).
-    summary: "Make your first catch and donate it to the museum, then report back to Alice at HQ.",
-    requirement: "settle_in",
-    goal_slug: null,
-    step_copy: {
-      claim_plot: { label: "Claim your plot at HQ" },
-      first_catch: { label: "Make your first catch", hint: "Any fish counts. Try the pier." },
-      donate_catch: { label: "Donate your catch to the museum shell" },
-      report_hq: { label: "Report back to Alice at HQ" },
-    },
-    unlocks_regions: ["village_core"],
-    completion_letter: "Welcome to the island. The village is yours to explore.",
-    // Design principle 7: onboarding is opt-in and skippable in one click for everyone.
-    skippable_max_tier: 5,
-    reward_coins: 100,
-    reward_item: null,
-    world: "village",
-    active: true,
-  },
-  {
     id: "00000000-0000-4000-8000-0000000000b1",
     slug: "first-find",
     position: 5,
@@ -177,6 +151,8 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     mine_iron: { label: "Find a lump of iron", hint: "Iron turns up in rocks now and then." },
     show_eliza: { label: "Bring your stone to Mayor Eliza" },
   }, 200),
+  // The old four-chapter quest's club chapters: kept, inactive (migration 20261128, old-cleanup), to be remade against
+  // specs/progression.md (David, 2026-11-28: "keep but needs to be remade").
   {
     id: "00000000-0000-4000-8000-0000000000a2",
     slug: "reopen-cafe",
@@ -194,7 +170,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     skippable_max_tier: 0,
     reward_coins: 0,
     reward_item: null,
-    active: true,
+    active: false,
   },
   {
     id: "00000000-0000-4000-8000-0000000000a3",
@@ -213,7 +189,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     skippable_max_tier: 0,
     reward_coins: 0,
     reward_item: null,
-    active: true,
+    active: false,
   },
   {
     id: "00000000-0000-4000-8000-0000000000a4",
@@ -233,7 +209,7 @@ export const DEFAULT_CHAPTERS: QuestChapter[] = [
     skippable_max_tier: 0,
     reward_coins: 300,
     reward_item: null,
-    active: true,
+    active: false,
   },
 ];
 

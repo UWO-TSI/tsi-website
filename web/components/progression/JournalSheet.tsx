@@ -25,12 +25,7 @@ function chapterActions(c: ChapterView): { action: AdvanceAction; label: string 
   if (c.status !== "active" && c.status !== "ready") return [];
   const out: { action: AdvanceAction; label: string }[] = [];
   const open = (k: string) => c.steps.find((x) => x.key === k && !x.done);
-  if (c.requirement === "settle_in") {
-    // The village's chapter 1, as it always played.
-    if (open("claim_plot")) out.push({ action: "claim_plot", label: "Claim plot" });
-    if (open("donate_catch") && !open("first_catch")) out.push({ action: "donate_catch", label: "Donate catch" });
-    if (c.status === "ready") out.push({ action: "report_hq", label: "Report to HQ" });
-  } else if (c.requirement === "first_find") {
+  if (c.requirement === "first_find") {
     // The new world's chapter 1 and its errands finish by talking to their person (Juno, Odile, Pim, Bram, Eliza).
     if (open("claim_plot")) out.push({ action: "claim_plot", label: "Claim plot" });
   } else if (c.status === "ready" && (c.requirement === "club_goal" || c.requirement === "oracle_trial")) {

@@ -138,7 +138,7 @@ describe("chapters through the service", () => {
     m.setFacts(A, { firstCatchKey: "fish_dace", counts: { fish: 1 } });
     expect(await advanceChapter(m.store, A, { chapter_slug: "first-find", action: "claim_plot" }, now)).toMatchObject({ ok: true });
     expect(await advanceChapter(m.store, A, { chapter_slug: "settle-in", action: "claim_plot" }, now)).toMatchObject({ ok: false });
-    expect(await advanceChapter(m.store, A, { chapter_slug: "reopen-cafe", action: "complete" }, now)).toMatchObject({ ok: false, status: 409 });
+    expect(await advanceChapter(m.store, A, { chapter_slug: "reopen-cafe", action: "complete" }, now)).toMatchObject({ ok: false, status: 404 }); // inactive since old-cleanup
     const done = await advanceChapter(m.store, A, { chapter_slug: "first-find", action: "donate_catch" }, now);
     expect(done.ok && done.data.chapters.slice(0, 3).map((c) => c.status)).toEqual(["completed", "active", "locked"]);
     expect(done.ok && done.data.objective).toMatchObject({ chapter_slug: "odiles-net", step_key: "get_net", anchor: "museum" });

@@ -16,7 +16,7 @@ import { backLinkCls, DraftBar, Field, FixList, inputCls, listToText, textToList
 
 const BACK = "/student/dashboard/admin/content/chapters";
 const REQUIREMENTS: { value: ChapterRequirement; label: string }[] = [
-  { value: "settle_in", label: "Settle in (first catch, donated to the museum's guide)" },
+  { value: "first_find", label: "Settle in (first catch, donated to the museum's guide)" },
   { value: "bug_net", label: "Odile's net (get the net, catch 3 bugs, show Odile)" },
   { value: "dig", label: "Pim's shovel (get the shovel, dig up 3 things, show Pim)" },
   { value: "rod_challenge", label: "Bram's challenge (5 kinds of fish, one at dawn or dusk)" },
@@ -32,7 +32,7 @@ export default function QuestChapterEditor({ mode, initial, goalSlugs }: { mode:
     position: initial?.position ?? 5,
     title: initial?.title ?? "",
     summary: initial?.summary ?? "",
-    requirement: (initial?.requirement ?? "settle_in") as ChapterRequirement,
+    requirement: (initial?.requirement ?? "first_find") as ChapterRequirement,
     goal_slug: initial?.goal_slug ?? "",
     step_copy: { ...(initial?.step_copy ?? {}) } as Record<string, { label: string; hint?: string }>,
     unlocks_regions: listToText(initial?.unlocks_regions),

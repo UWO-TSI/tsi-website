@@ -39,13 +39,6 @@ interface StepRule {
 const MUSEUM_GUIDE = "docent";
 
 export const STEP_RULES: Record<ChapterRequirement, readonly StepRule[]> = {
-  // The village's chapter 1 (row 101), as it has always played: claim, catch, donate at the museum, report to Alice.
-  settle_in: [
-    { key: "claim_plot", anchor: "hq", action: true },
-    { key: "first_catch", anchor: "fishing_spot", count: ["fish", 1] },
-    { key: "donate_catch", anchor: "museum", action: true },
-    { key: "report_hq", anchor: "hq", finish: true },
-  ],
   // m1, the new world's chapter 1: first catch, donated to the museum's guide, who pays and writes (no report to Alice).
   first_find: [
     { key: "claim_plot", anchor: "hq", action: true },
@@ -99,7 +92,6 @@ const FALLBACK_COPY: Record<string, StepCopy> = {
   claim_plot: { label: "Claim your plot at HQ" },
   first_catch: { label: "Make your first catch" },
   donate_catch: { label: "Donate your catch" },
-  report_hq: { label: "Report back to Alice at HQ" },
   get_net: { label: "Ask Odile at the museum for a net" },
   catch_bugs: { label: "Catch 3 bugs" },
   show_odile: { label: "Show Odile your bugs" },
@@ -122,7 +114,7 @@ const FALLBACK_COPY: Record<string, StepCopy> = {
   enter_gate: { label: "Open the ruins gate" },
 };
 
-export const ADVANCE_ACTIONS = ["claim_plot", "donate_catch", "report_hq", "twilight_catch", "complete", "skip"] as const;
+export const ADVANCE_ACTIONS = ["claim_plot", "donate_catch", "twilight_catch", "complete", "skip"] as const;
 export type AdvanceAction = (typeof ADVANCE_ACTIONS)[number];
 
 /** A catch counts for the dawn-or-dusk step when it was landed this recently and the island is at dawn or dusk now. */
@@ -237,7 +229,7 @@ export function validateAdvance(
   const at = now.toISOString();
   const steps = { ...(progress?.steps_done ?? {}) };
   const donated = progress?.donated_item_key ?? null;
-  const settle = chapter.requirement === "settle_in", first = chapter.requirement === "first_find";
+  const first = chapter.requirement === "first_find";
   const done = (next: Record<string, string>, item = donated): AdvanceResult => ({ ok: true, next: { status: "completed", steps_done: next, donated_item_key: item }, completedChapter: true });
 
   switch (action) {
@@ -245,32 +237,19 @@ export function validateAdvance(
       if (!view.can_skip) return { ok: false, status: 403, error: "This chapter can't be skipped." };
       return { ok: true, next: { status: "skipped", steps_done: steps, donated_item_key: donated }, completedChapter: true };
     case "claim_plot":
-      if (!settle && !first) return { ok: false, status: 422, error: "Not a step of this chapter." };
+      if (!first) return { ok: false, status: 422, error: "Not a step of this chapter." };
       if (chapter.hidden_steps?.includes("claim_plot")) return { ok: false, status: 422, error: "That isn't open yet." };
       if (steps.claim_plot) return { ok: false, status: 409, error: "Plot already claimed." };
       steps.claim_plot = at;
       return { ok: true, next: { status: "active", steps_done: steps, donated_item_key: donated }, completedChapter: false };
     case "donate_catch":
-      if (!settle && !first) return { ok: false, status: 422, error: "Not a step of this chapter." };
-      if (settle) {
-        // The village: the donation is a step; reporting to Alice at HQ finishes the chapter.
-        if (steps.donate_catch) return { ok: false, status: 409, error: "Already donated." };
-        if (!facts.firstCatchKey) return { ok: false, status: 409, error: "Catch a fish first." };
-        steps.first_catch = steps.first_catch ?? at;
-        steps.donate_catch = at;
-        return { ok: true, next: { status: "active", steps_done: steps, donated_item_key: facts.firstCatchKey }, completedChapter: false };
-      }
+      if (!first) return { ok: false, status: 422, error: "Not a step of this chapter." };
       // m1: handing the museum's guide your first catch finishes the chapter (her reward and letter come with it).
       if (!facts.firstCatchKey) return { ok: false, status: 409, error: "Catch a fish first." };
       if (view.status !== "ready") return { ok: false, status: 409, error: waitingOn(view) };
       steps.first_catch = steps.first_catch ?? at;
       steps.donate_catch = at;
       return done(steps, facts.firstCatchKey);
-    case "report_hq":
-      if (!settle) return { ok: false, status: 422, error: "Not a step of this chapter." };
-      if (view.status !== "ready") return { ok: false, status: 409, error: chapter.hidden_steps?.includes("claim_plot") ? "Donate a catch first." : "Claim your plot and donate a catch first." };
-      steps.report_hq = at;
-      return done(steps);
     case "twilight_catch": {
       if (chapter.requirement !== "rod_challenge") return { ok: false, status: 422, error: "Not a step of this chapter." };
       if (steps.twilight_catch) return { ok: false, status: 409, error: "Already done." };
@@ -281,7 +260,6 @@ export function validateAdvance(
       return { ok: true, next: { status: "active", steps_done: steps, donated_item_key: donated }, completedChapter: false };
     }
     case "complete":
-      if (settle) return { ok: false, status: 422, error: "Report to HQ to finish this chapter." };
       if (first) return { ok: false, status: 422, error: "Donate your catch at the museum to finish this chapter." };
       if (view.status !== "ready") {
         if (chapter.requirement === "club_goal") return { ok: false, status: 409, error: "The club goal isn't complete yet." };
@@ -337,7 +315,7 @@ export function unlockedRegions(views: ChapterView[], completedGoalSlugs: Set<st
 }
 
 export function normalizeChapter(row: Record<string, unknown>): QuestChapter {
-  const requirement: ChapterRequirement = REQUIREMENTS.includes(row.requirement as ChapterRequirement) ? (row.requirement as ChapterRequirement) : "settle_in";
+  const requirement: ChapterRequirement = REQUIREMENTS.includes(row.requirement as ChapterRequirement) ? (row.requirement as ChapterRequirement) : "first_find";
   const rawCopy = row.step_copy && typeof row.step_copy === "object" ? (row.step_copy as Record<string, unknown>) : {};
   const step_copy: Record<string, StepCopy> = {};
   for (const key of STEP_KEYS[requirement]) {

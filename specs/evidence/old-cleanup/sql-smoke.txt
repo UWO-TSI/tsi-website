@@ -1,0 +1,10 @@
+chain ok: 99 migrations after the legacy set, then ours
+--- old_chapters_inactive_smoke before 20261128200412_old_chapters_inactive.sql (must fail):
+ERROR:  none offered
+--- after 20261128200412_old_chapters_inactive.sql:
+NOTICE:  old chapters inactive ok
+--- applied twice (idempotent):
+NOTICE:  old chapters inactive ok
+--- game_security_smoke over it:
+NOTICE:  security 3 gem types ok
+NOTICE:  security 4 class server-only ok

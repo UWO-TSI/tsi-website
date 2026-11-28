@@ -495,7 +495,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
   arriving: boolean;
   /** The keys Bram's hints name (the player's own bindings, or touch wording). */
   hintKeys: HintKeys;
-  chapter: { claim: boolean; donate: boolean; report: boolean };
+  chapter: { claim: boolean };
   /** Where the main quest keeps its people (useMainQuest). */
   questPosts: Readonly<Record<string, string>>;
   peaceful: { moment: WorldMoment; member: string; glider: boolean }; fishSpot: { current: FishingSpot | null }; fishing: boolean; exitFrom: "museum" | "oracle" | "ruins" | "cafe" | "shop" | null; devAt: [number, number, number] | null; identity: WorldIdentity; level?: number;
@@ -593,7 +593,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
     // Before the café's drop Rosa sweeps out front: the café's prompt is hers.
     const sweeper: [number, number] | null = !DROPS.cafe && cafeSweeper.on ? [cafeSweeper.x, cafeSweeper.z] : null;
     // While Bram walks you round, HQ's door is only ever the way in (HQ first on the new world: Alice signs you in).
-    const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [arrivalPhase ? "enter" : chapter.claim ? "claim" : chapter.report ? "report" : "enter", doors.hq]
+    const door: [Near, [number, number] | null] = within(doors.hq, 2) ? [arrivalPhase ? "enter" : chapter.claim ? "claim" : "enter", doors.hq]
       // Not while Bram brings you in and walks you round (the arrival): the boat home waits for after.
       : DROPS.homeIsland && within(doors.boat, 1.6) && !arrivalPhase ? ["home", doors.boat]
       : within(layout.fitting, 1.5) ? ["fitting", layout.fitting]
@@ -630,7 +630,7 @@ function IslandScene({ held, identity, level, devAt, exitFrom, peaceful, fishSpo
         if (opened && l.id !== "museum") continue;
         const d = footprintDistance(l, px, pz);
         if (opened && d < best) { best = d; next = "museum_enter"; continue; }
-        if (d < best) { best = d; next = l.id === "museum" && chapter.donate ? "donate" : l.id as Near; at = [l.x, l.z]; }
+        if (d < best) { best = d; next = l.id as Near; at = [l.x, l.z]; }
       }
       if (next) nextD = best;
     }
@@ -962,8 +962,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   const { loaded: progressionLoaded } = useProgression();
   const [arrived, setArrived] = useState(false);
   const [objectiveNew, setObjectiveNew] = useState(false);
-  const chapterFlags = useMemo(() => ({ claim: chapterActions.claim, donate: chapterActions.donate, report: chapterActions.report }),
-    [chapterActions.claim, chapterActions.donate, chapterActions.report]);
+  const chapterFlags = useMemo(() => ({ claim: chapterActions.claim }), [chapterActions.claim]);
   useEffect(() => { if (inside === "museum" && !loadMuseumRef.current) { loadMuseumRef.current = true; loadMuseum(); } if (inside !== "museum") loadMuseumRef.current = false; }, [inside, loadMuseum]);
   // The glider waits for the mountain expansion (lib/game/moveUnlocks.ts); the dash is everyone's from the start.
   const unlocks = useMoveUnlocks();
@@ -1224,14 +1223,8 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       if (bed) window.dispatchEvent(new CustomEvent("tsi:sit", { detail: bed }));
       return;
     }
-    if (action === "claim" || action === "donate" || action === "report") {
-      const step = action === "claim" ? "claim_plot" : action === "donate" ? "donate_catch" : "report_hq";
-      void chapterActions.run(step).then(error => {
-        if (error) toast(error);
-        else if (action === "claim") toast("Plot claimed. Your island is waiting at the end of the pier.");
-        else if (action === "donate") toast("Donated. The museum shell has its first exhibit.");
-        else toast("Chapter complete: welcome to the island.");
-      });
+    if (action === "claim") {
+      void chapterActions.run("claim_plot").then(error => toast(error ?? "Plot claimed. Your island is waiting at the end of the pier."));
       return;
     }
     if (action === "home" || action === "village") { if (!fading) { setNear(null); startTrip(atHome ? "home" : "village", action); } return; }

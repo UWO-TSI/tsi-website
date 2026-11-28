@@ -29,7 +29,7 @@ async function demo(): Promise<LettersTransport> {
   const now = new Date();
   m.addMember(ME, { tier: 4, firstCatchKey: "fish_dace" }, 2400);
   FRIENDS.forEach((f) => m.addMember(f.id, {}, 5000));
-  await advanceChapter(m.store, ME, { chapter_slug: "settle-in", action: "claim_plot" }, now);
+  await advanceChapter(m.store, ME, { chapter_slug: "first-find", action: "claim_plot" }, now);
   for (const [i, f] of FRIENDS.entries()) await contribute(m.store, f.id, { goal_slug: "reopen-cafe", kind: "coins", amount: 900 + i * 150, item_key: null, idempotency_key: `delivery:demo-${i}` }, now);
   await contribute(m.store, ME, { goal_slug: "reopen-cafe", kind: "coins", amount: 350, item_key: null, idempotency_key: "delivery:demo-me" }, now);
   // Whichever seasonal event is open today gets some club progress too.

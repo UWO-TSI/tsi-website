@@ -40,10 +40,10 @@ describe("progression routes", () => {
     expect(m.contributions[0]).toMatchObject({ weight: 1, idempotencyKey: "delivery:abcdefgh1" });
   });
   it("rejects a chapter action the server conditions don't allow", async () => {
-    // This world's chapter 1 (the village's settle-in, the new world's first-find): nothing caught yet.
+    // Chapter 1 (first-find): nothing caught yet.
     const res = await advanceRoute(req({ chapter_slug: "first-find", action: "donate_catch" }));
     expect(res.status).toBe(409);
-    // The other world's chapter 1 isn't listed here.
+    // The retired village's chapter 1 is gone.
     expect((await advanceRoute(req({ chapter_slug: "settle-in", action: "donate_catch" }))).status).toBe(404);
   });
   it("keeps admin credit to T1/T2", async () => {

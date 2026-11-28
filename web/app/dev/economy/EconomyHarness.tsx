@@ -34,7 +34,7 @@ async function seed(): Promise<EconomyTransport> {
   m.fund(ME, 0, 0);
   const now = new Date();
   await m.store.credit(ME, "coins", 900, "study", "session", "demo-study-1");
-  await m.store.credit(ME, "coins", 100, "chapter", "settle-in", "demo-chapter-1");
+  await m.store.credit(ME, "coins", 100, "chapter", "first-find", "demo-chapter-1");
   await m.store.credit(ME, "coins", 50, "event", "workshop", "demo-event-1");
   await m.store.credit(ME, "gems", 900, "admin", "Bounty: landing page", "demo-gems-1");
   for (const [k, n] of [["fish_coelacanth", 1], ["fish_carp", 4], ["fish_dace", 6], ["bug_monarch_butterfly", 2], ["apple", 5], ["shell_whelk", 1]] as const) m.give(ME, k, n);

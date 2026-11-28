@@ -7,7 +7,7 @@ import { dropFlags, releasedChapters } from "./drops";
 import { currentStep } from "./questTracker";
 
 const facts = (counts: ChapterFacts["counts"] = {}, firstCatchKey: string | null = null): ChapterFacts => ({ tier: 4, firstCatchKey, lastFishAt: null, counts, goals: {} });
-/** The main quest is the new world's (lib/game/world/active.ts); the village keeps its settle-in and old tracker. */
+/** The main quest is the new world's (lib/game/world/active.ts). */
 const CH = DEFAULT_CHAPTERS.filter(c => c.world !== "village");
 /** Main-quest chapters 1 to upTo - 1 finished (the new world's sit at positions 5 to 10, after the club rows). */
 const finished = (upTo: number): MemberChapterProgress[] => CH.filter(c => c.world === "new" && c.position - 4 < upTo).map(c => ({ chapter_id: c.id, status: "completed", steps_done: {}, donated_item_key: null, completed_at: "2026-10-27T00:00:00Z" }));

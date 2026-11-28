@@ -59,7 +59,7 @@ export interface ClubGoal {
 }
 
 /** What finishes a chapter (lib/progression/chapters.ts STEP_RULES): the personal errands m1 to m6, a club goal, or the Oracle. */
-export type ChapterRequirement = "settle_in" | "first_find" | "bug_net" | "dig" | "rod_challenge" | "museum_collab" | "pickaxe" | "club_goal" | "oracle_trial";
+export type ChapterRequirement = "first_find" | "bug_net" | "dig" | "rod_challenge" | "museum_collab" | "pickaxe" | "club_goal" | "oracle_trial";
 
 export interface StepCopy {
   label: string;
