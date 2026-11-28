@@ -11,7 +11,7 @@ Layout: `web/` (Next.js: app, components, lib, data, scripts, supabase), `realti
 | Recruitment/apply | `/student/apply/*`, `/student/election`, `/finalround[/token]`, `/admin/recruit` | `app/student/apply/`, `components/{recruit,admin}/`, `lib/recruitment*.ts`, `app/finalround/FinalRound.tsx` |
 | Applicant island (3D) | `/student/apply/portal` | `components/recruit/{ApplicantIsland,ApplicantWorld}.tsx`, `lib/game/{applicantVillage,applicantTime}.ts` |
 | Member game (3D) | `/student/dashboard` (renders `DefaultIslandWorld`), `/student/go`, `/student/onboarding`, `/student/opening-soon` | `components/game/DefaultIslandWorld.tsx`, `lib/game/` |
-| Member portal + admin | `/student/dashboard/*` (bounty, calendar, directory, economy, jobs, kanban, leaderboard, oracle, quests, shop), `/student/dashboard/admin/*` | `app/student/dashboard/`, `components/portal/`, `lib/portal/`, `lib/content/` |
+| Member portal + admin | `/student/dashboard/*` (bounty, calendar, directory, economy, jobs, leaderboard, shop), `/student/dashboard/admin/*` | `app/student/dashboard/`, `components/portal/`, `lib/portal/`, `lib/content/` |
 | Companion/study | `/student/companion[/study]` | `components/{companion,study}/`, `lib/study/` |
 | Lab tools | `/lab/{avatar,classes,fishing,furniture,gui,hairthumbs,icon,icons,interior,island,item,look,map,move,tune,world}` | `app/lab/*/page.tsx`, `components/lab/`; map painter `app/lab/map/page.tsx` |
 | Dev pages | `/dev`, `/dev/{economy,playground,progression}` | `app/dev/` |
@@ -107,7 +107,7 @@ Dev server only (`/lab` and `/dev` 404 in production builds). Member island `/st
 | Interiors | `?hq=inside`, `?museum=inside`, `?temple=inside`, `?home=1` or `?home=inside`, `?decorate=1&place=<piece>` |
 | Combat | `?ruins=1`, `?mission=<id>` |
 | Position | `?at=x,z`, `?spawnat=x,z`, `?aerial=1&ax&az&ah&dir` |
-| Signed-out demo data | `?collections=demo`, `?progression=demo`, `?oracle=demo` |
+| Signed-out demo data | `?collections=demo`, `?progression=demo` |
 | World switch (build env) | `NEXT_PUBLIC_GAME_WORLD=new` plays the new world (`web/data/world`) on the member island and in the server's catch checks; production sets it; the village fallback is being removed by `game/village-archive` (`lib/game/world/active.ts`) |
 | Maps | `/lab/world` edits the member world; `/lab/island?fixture=v2` walks the old v2 draft, `?fixture=terrain` opens the synthetic test island, `/lab/island?draft=1` walks the painter's draft |
 
