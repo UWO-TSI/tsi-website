@@ -6,7 +6,12 @@ Read first: `specs/game-world-development-plan.md` rows 334, 341, 343, 345 to 34
 
 ## Status
 
-- Started 2026-11-28. Identify, sort (a) remove now / (b) wired into live flows / (c) unsure, remove (a), put (b) and (c) on a review page for David.
+Head: see `git log` (commits old-cleanup 1 to 3b on 5221df56a). Done, waiting on David's marks:
+- 1 dead code (-473 lines): /lab/icon, _render-icons.mjs, FishPreview buildFishStage, WharfShackInterior (+ its lab room, keeper post, backdrop tint), lib/npc/chatClient, lib/game/mobilePresence, isTreat, SHOP_FLOORS, swellFade.
+- 2 assets (163 files, 4.1 MB): acnh/river, acnh/fall, acnh/road GLBs, assets/buildings + 3 fbx converters, 8 sky_*.webp + extract-fantasy-sky.mjs, assets/nature except grass-tufts and rock_smallA, prototype and npc pngs.
+- 3 specs: the 45 INDEX "Superseded (to archive)" + development-roadmap, launch/v1-launch, terrain-v2, polish/gui-sheet moved to archive/specs/ (INDEX, CODEMAP, README, design bible, archive/README updated). Kept: v1-drop.md (cited by ~100 comments), oracle-identity.md and ux-oracle-v2.md (go with card 1).
+- Review page (b and c, 12 cards, Remove/Keep, `approvals` collection): https://claude.ai/artifact/3P5t2XtSZ6ZosGA67cD9m5 (source and spec in the session scratchpad `oc/page/`, built with ~/Developer/claudebrain-tools/review-page/mkpage.py, buttons relabelled Remove/Keep; d=approve means remove, d=redo means keep).
+- Gates: full tsc clean; full vitest 3995 passed, 3 failed (RodAura.test.ts, pre-existing on 5221df56a: expects rod-titanium to have no effect); eslint clean on changed files.
 
 ## David's decisions
 
@@ -14,9 +19,8 @@ Read first: `specs/game-world-development-plan.md` rows 334, 341, 343, 345 to 34
 
 ## Next
 
-1. Identify candidates (import graph, specs, assets, lab and dev pages).
-2. Remove (a) in small commits by area; gates tsc, eslint on changed files, vitest.
-3. Review page for (b) and (c), then stop for David's marks.
+1. Read David's marks (`approvals`: approve = remove, redo = keep, plus notes). Remove what he marks, by card. Card 3 needs a new migration setting active = false (an update); never a delete.
+2. Card 1 (Oracle quiz): archive oracle-identity.md and ux-oracle-v2.md with the code.
 
 ## Fences
 
