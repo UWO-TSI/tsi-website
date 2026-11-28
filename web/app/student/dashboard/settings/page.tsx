@@ -12,8 +12,6 @@ import {
   Globe,
   MessageCircle,
   Check,
-  Brain,
-  ChevronRight,
   User,
   Link as LinkIcon,
   TreePalm,
@@ -193,25 +191,6 @@ export default function SettingsPage() {
                   value={profile?.created_at ? new Date(profile.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Toronto" }) : "Not set"}
                 />
               </div>
-            </Section>
-
-            <Section title="NPC memories">
-              <Link
-                href="/student/dashboard/settings/npc-memories"
-                className="flex items-center justify-between gap-3 rounded-2xl transition-colors hover:bg-[var(--gui-paper-warm)]"
-                style={{ padding: "8px 10px", margin: "-8px -10px" }}
-              >
-                <div className="flex items-center gap-3">
-                  <Brain aria-hidden className="w-5 h-5 shrink-0" style={{ color: "var(--gui-bark)" }} />
-                  <div>
-                    <p className="text-sm" style={{ color: "var(--gui-ink-strong)", fontWeight: 800 }}>Manage NPC memories</p>
-                    <p className="text-sm" style={{ color: "var(--gui-muted)" }}>
-                      Wipe an NPC&apos;s memory of you. They&apos;ll greet you as a stranger.
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight aria-hidden className="w-5 h-5 shrink-0" style={{ color: "var(--gui-muted)" }} />
-              </Link>
             </Section>
 
             {/* Danger Zone: spec §7.3 + §7.4 */}

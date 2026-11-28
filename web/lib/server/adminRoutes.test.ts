@@ -34,13 +34,10 @@ const ADMIN_ROUTES = [
   "app/api/identity/moderate/route.ts",
   "app/api/progression/goals/sync/route.ts",
   "app/api/progression/goals/[slug]/credit/route.ts",
-  "app/api/npc/conversations/[id]/resolve/route.ts",
-  "app/api/npc/spend/route.ts",
 ];
-// Portal routes where only some calls are admin: deleting a bounty, and wiping another member's NPC memory.
+// Portal routes where only some calls are admin: deleting a bounty.
 const ADMIN_CALLS: [file: string, method: (typeof METHODS)[number], body: unknown][] = [
   ["app/api/bounties/[id]/route.ts", "DELETE", {}],
-  ["app/api/npc/memories/wipe/route.ts", "POST", { npc_id: "00000000-0000-4000-8000-0000000000cc", user_id: "00000000-0000-4000-8000-0000000000dd" }],
 ];
 
 const METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE"] as const;

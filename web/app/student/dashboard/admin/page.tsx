@@ -11,10 +11,8 @@ import {
   ShoppingBag,
   BarChart3,
   Vote,
-  MessageSquareWarning,
   Activity,
 } from "lucide-react";
-import NPCSpendWidget from "@/components/portal/NPCSpendWidget";
 import GameContentIndex from "@/components/portal/GameContentIndex";
 import { AdminGate } from "@/components/portal/ProgressionAdminShared";
 import { Card } from "@/components/gui";
@@ -94,13 +92,6 @@ const adminSections = [
     icon: <Vote size={22} aria-hidden />,
     href: "/student/dashboard/admin/election",
     tone: "info",
-  },
-  {
-    title: "Resident chats",
-    description: "Flagged chats with the island’s residents",
-    icon: <MessageSquareWarning size={22} aria-hidden />,
-    href: "/student/dashboard/admin/npc-conversations",
-    tone: "danger",
   },
 ];
 
@@ -190,11 +181,6 @@ function AdminHub() {
           ))}
         </div>
       )}
-
-      {/* Spend widget: T1/T2, as /api/npc/spend allows (the page is already T1/T2 only) */}
-      <div className="mb-6">
-        <NPCSpendWidget />
-      </div>
 
       <GameContentIndex />
 

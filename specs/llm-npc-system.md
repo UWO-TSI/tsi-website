@@ -1,6 +1,7 @@
 # LLM-Driven NPC System (γ tier)
 
-> **Status:** Forward-looking spec. NOT in current sprint. Lands after the world-building + admin-tooling sprints (~2026-07).
+> **Status (2026-11-28): an idea for much later, no code.** David on the old-cleanup page: "idea may be implimented much later, keep the idea not the structure". The idea: residents you can talk to freely, an LLM speaking as each one's persona, who remember each player across talks (row 232: a per-player, retrieval-backed memory), with a player able to wipe what a resident remembers of them, and chats an admin can flag and review, under a monthly cost cap. Resident talk today is authored text boxes (row 123). The first build (the chat, conversations, memories-wipe and spend routes, the admin chats page, the memories settings page) was deleted then; the tables `npc_conversations` and `npc_memories` stay in the database. The design below is the old plan, kept for reference.
+> **Was:** Forward-looking spec. NOT in current sprint. Lands after the world-building + admin-tooling sprints (~2026-07).
 > **Owner:** `build` agent (future). Reviewer: David.
 > **Decided 2026-05-25:** Skip α (scripted) and β (canned dialogue) tiers entirely. Go straight to γ — LLM-driven NPCs that remember players across conversations.
 

@@ -92,7 +92,7 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 ## Peaceful life and NPCs
 `companion.md` | Phone companion lightweight mobile shell | reference
 `crafting.md` | Workshop, recipes, materials | reference
-`llm-npc-system.md` | LLM-driven NPC design | reference
+`llm-npc-system.md` | LLM-driven NPC design: an idea for later, its code deleted 2026-11-28 | idea
 `peaceful-loop.md` | Fishing, bugs, foraging, journal, museum | reference
 `polish/fishing.md` | Fishing polish | reference
 `fish-list.md` | Every fish: water, season, odds per rod, purposes, materials, new fish, modelling | draft for David (fish-list r1)
