@@ -35,7 +35,7 @@ import { FRAMES, Portrait, ThumbBaker } from "./CreatorStage";
 import flatStyles from "./CharacterCreator.module.css";
 import { StudioContext, type ApplicantStudio } from "./creatorStudio";
 
-export interface CreatorProps {
+interface CreatorProps {
   initial: CharacterLook;
   mode?: "create" | "wardrobe";
   title?: string;

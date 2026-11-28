@@ -63,7 +63,7 @@ export function CategoryRail({ cats, cat, onOpen, className, orientation = "vert
 }
 
 /** What a change was, for the reflection creator's ripple: a tile, a colour or a slider. */
-export type CreatorChange = "tile" | "colour" | "place";
+type CreatorChange = "tile" | "colour" | "place";
 
 /**
  * One category's options. `mode="create"` offers only what is owned (the identity parts are always free); the

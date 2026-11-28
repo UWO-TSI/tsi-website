@@ -13,7 +13,6 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `design-bible.md` | The one canon for UI, art and models (UI and Models set 2026-10-28; Art in progress) | canon
 `vfx-library.md` | The VFX library: auras (energy, sun glint, pulse) and effects (water, electricity, embers, petals, gather, lightning and more) on any holder, their rules (no circle or ring glows) | live
 `design-principles.md` | Project vision and design principles, partly superseded | reference
-`v1-drop.md` | v1 Arrival (Halloween) plan, scope, lane split | stale: superseded by row 318 and v1-gameplay
 
 ## Lanes and process (stay in place)
 `lanes/coordinator.md` | Coordinator handoff state | live
@@ -171,4 +170,4 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `ux-status.md` | UX design-debt backlog | reference
 
 ## Archived
-The 45 specs this section used to list, plus `development-roadmap.md`, `launch/v1-launch.md`, `terrain-v2.md` and `polish/gui-sheet.md`, moved to `archive/specs/` on 2026-11-28 (lane old-cleanup), then `oracle-identity.md` and `ux-oracle-v2.md` with the Oracle quiz.
+The 45 specs this section used to list, plus `development-roadmap.md`, `launch/v1-launch.md`, `terrain-v2.md` and `polish/gui-sheet.md`, moved to `archive/specs/` on 2026-11-28 (lane old-cleanup), then `oracle-identity.md` and `ux-oracle-v2.md` with the Oracle quiz, and `v1-drop.md` (code comments still cite it by name).

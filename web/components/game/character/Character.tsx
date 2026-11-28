@@ -789,7 +789,7 @@ function placeLeaf(model: THREE.Object3D, hand: THREE.Object3D, open: number, sc
  * own clip plays (the cast, the swing, the dig) it eases to that clip's grip. It shows in its hold and its use, and
  * hides in a seat, a glide, a slide, a roll or a climb. A new item pops out of the hand; one put away shrinks back in.
  */
-export type HoldKind = "rod" | "net" | "shovel" | "pickaxe" | "glider" | "front" | "hammer";
+type HoldKind = "rod" | "net" | "shovel" | "pickaxe" | "glider" | "front" | "hammer";
 export interface HeldView { url: string; hold: HoldKind; /** Something held in front: fitted to this size (rig units) about its centre. */ fit?: number }
 type Grip = { clip: ClipName; rotation: [number, number, number]; offset?: [number, number, number]; scale?: number };
 const HELD_GRIPS: Record<HoldKind, Grip> = {
@@ -883,7 +883,7 @@ function poseHeld(model: THREE.Object3D, clip: ClipName | null, grip: Grip, hold
   model.quaternion.slerp(heldQ.setFromEuler(heldE.set(...(use ?? grip.rotation))), 1 - Math.exp(-delta * 20));
 }
 
-export interface CharacterProps {
+interface CharacterProps {
   look: CharacterLook;
   motion: RefObject<CharacterMotion>;
   /** Normal walking pace for this controller (Walk plays at 1x there). */

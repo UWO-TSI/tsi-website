@@ -64,7 +64,7 @@ useGLTF.preload(CRATE_URL);
  * pier's deck between the rails, so the way up the pier is over it). Its solid footprint, half extents across and
  * along, and its lid `h` up: over the step-up (0.3), under a jump (1.28).
  */
-export const CRATE = { hw: 0.97, hd: 0.3, h: 0.5 } as const;
+const CRATE = { hw: 0.97, hd: 0.3, h: 0.5 } as const;
 /** At the tiller during the crossing (the boat's frame). */
 const BRAM_ABOARD = { x: 0.08, z: -0.62 };
 

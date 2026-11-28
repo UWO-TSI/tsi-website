@@ -312,7 +312,7 @@ const _rq = new THREE.Quaternion(), _z = new THREE.Vector3(0, 0, 1);
  * The creator's framing (SET.creator) for your lean now: where the camera is (`eye`), the point on your reflection it
  * looks at (`aim`) and its up (`up`), the reflection's: your head's up mirrored in the sea, so the face reads upright.
  */
-export function creatorView(C: typeof SET.creator, out: { eye: THREE.Vector3; aim: THREE.Vector3; up: THREE.Vector3 }) {
+function creatorView(C: typeof SET.creator, out: { eye: THREE.Vector3; aim: THREE.Vector3; up: THREE.Vector3 }) {
   const lean = SET.you.lean, s = Math.sin(lean), c = Math.cos(lean), y0 = SET.you.y;
   // Your face and chest leaning out over the side (the lean turns you about your feet), mirrored in the sea.
   const face = FACE_UP, chest = FACE_UP * 0.58, h = face + (chest - face) * C.aim;
