@@ -9,7 +9,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Backpack, BookOpen, Coins, Fish, Mail, MapIcon, PackageOpen, Settings, ShoppingBasket, Sprout, Volume2 } from "lucide-react";
 import FlatPieces from "./FlatPieces";
-import { FamilyReveal } from "@/components/game/oracle/OracleSheetEmbed";
 import IncantationOverlay from "@/components/game/combat/IncantationOverlay";
 import { EmoteWheelView } from "@/components/game/emotes/EmoteWheel";
 import TourPeek from "@/components/game/hq/TourPeek";
@@ -205,7 +204,6 @@ const OVERLAYS: { id: string; title: string; render: () => ReactNode }[] = [
     lead="Your Training rod is glowing…" eyebrow="Awakened!" name="Training rod" text="It fishes like a rare rod now." onClose={done}
     thing={after => <img src="/assets/icons/rod_training.webp" alt="" style={{ objectFit: "contain", imageRendering: "pixelated", filter: after ? "hue-rotate(160deg)" : undefined }} />}
     action={<DarkButton onClick={done}>Nice!</DarkButton>} />}</Loop> },
-  { id: "oracle-reveal", title: "Oracle reveal card", render: () => <FamilyReveal family="Warden" type="INFP" onContinue={() => {}} /> },
   { id: "rune", title: "Rune overlay", render: () => <Loop ms={30000}>{done => <IncantationOverlay runeId="cross" title="Cross" effect="A warding cross" onDone={done} onCancel={done} />}</Loop> },
   { id: "emotes", title: "Emote wheel", render: () => <EmoteWheelShow /> },
   { id: "flat-rewards", title: "Flat reward pieces (hearts, reward track, prize wheel, goal meter, quiet toast)", render: () => <div style={{ position: "absolute", inset: 0, overflow: "auto", padding: 24 }}><FlatRewards /><ToastHub /></div> },

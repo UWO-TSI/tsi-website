@@ -74,12 +74,10 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 ## Arrival, onboarding, progression
 `hq-onboarding.md` | HQ onboarding after Bram's tour, row 312 | live
 `launch-routing.md` | New island becomes the member game route | reference
-`oracle-identity.md` | Oracle quiz, family, display names | superseded: the class now comes from the vision minigame (`progression.md`)
 `polish/arrival-wharf.md` | Arrival, wharf and home island polish | reference
 `polish/hud-first-login.md` | HUD frame and first login | reference
 `progression.md` | The progression road: arrival, village, mountain obby, Oracle vision and class, forest, cooking, cave, ship crossing (row 345) | live
 `progression-systems.md` | Club goals, journal, letters (its four-chapter main quest is replaced by `progression.md`) | reference
-`ux-oracle-v2.md` | Oracle quiz as card-game NPC encounter | superseded: the class now comes from the vision minigame (`progression.md`)
 
 ## Interiors and study
 `cafe-polish.md` | Cafe polish, rows 268-269 | reference
@@ -173,4 +171,4 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `ux-status.md` | UX design-debt backlog | reference
 
 ## Archived
-The 45 specs this section used to list, plus `development-roadmap.md`, `launch/v1-launch.md`, `terrain-v2.md` and `polish/gui-sheet.md`, moved to `archive/specs/` on 2026-11-28 (lane old-cleanup).
+The 45 specs this section used to list, plus `development-roadmap.md`, `launch/v1-launch.md`, `terrain-v2.md` and `polish/gui-sheet.md`, moved to `archive/specs/` on 2026-11-28 (lane old-cleanup), then `oracle-identity.md` and `ux-oracle-v2.md` with the Oracle quiz.

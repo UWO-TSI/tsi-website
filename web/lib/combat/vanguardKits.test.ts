@@ -6,7 +6,6 @@ import { classKit, kitAt, memberKit, WEAPON_SKINS, type ClassAbility } from "./c
 import { subclassByKey } from "./kits";
 import { signatureSeedSql } from "./seed";
 import { signatureGrant, WEAPONS } from "./weapons";
-import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { FX } from "@/lib/game/fx/combat";
 import { WEAPONS as ISLAND_WEAPONS } from "@/lib/game/combat/data";
 import { gripFor } from "@/lib/game/character/clips";
@@ -59,9 +58,6 @@ describe("the Vanguard kits (LOCKED sections and the build overrides)", () => {
     expect(MARTIAL_ARTIST.ult.name).toBe("Art of Eight Limbs");
     expect(MARTIAL_ARTIST.ult.effects.length + 1).toBe(8); // seven, and the finisher
     expect(ASSASSIN.ult).toMatchObject({ name: "Death Lotus", world: "ink", impacts: "first" });
-  });
-  it("the Oracle suggests each once: ISFP Guardian, ESFP Martial Artist, ESTP Juggernaut, ISTP Assassin", () => {
-    expect([SUBCLASS_FOR_TYPE.ISFP, SUBCLASS_FOR_TYPE.ESFP, SUBCLASS_FOR_TYPE.ESTP, SUBCLASS_FOR_TYPE.ISTP].map(x => x.subclass)).toEqual(["guardian", "monk", "juggernaut", "assassin"]);
   });
   it("every effect a kit names exists (cast, travel, impact, zone, and its delayed strikes'), every icon is on disk", () => {
     for (const k of VANGUARD_KITS) {

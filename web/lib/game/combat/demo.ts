@@ -67,7 +67,6 @@ export function installCombatDemo(): void {
       if (sub && q.get("mastery")) m.setMasteryXp(ME, sub, xpForMastery(Number(q.get("mastery"))));
       const token = q.get("repick");
       if (token === "oracle" || token === "launch") m.grantRepick(ME, token);
-      if (q.get("type")) m.setReading(ME, q.get("type")!.toUpperCase(), (["EI", "SN", "TF", "JP"] as const).map(d => ({ dichotomy: d, clarity: q.get("unclear") === d ? 8 : 60 })));
       if (sub && q.get("frame")) await equipCosmetic(m.store, ME, sub, "frame", `mastery:${q.get("frame")}`);
     })();
     return async (path, body) => {

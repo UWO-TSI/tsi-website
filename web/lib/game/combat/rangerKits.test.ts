@@ -7,7 +7,6 @@ import { signaturePaint } from "./primitives";
 import { combat, createRuntime } from "./runtime";
 import { setup } from "./ranger/rig";
 import { WEAPONS as SYSTEM_WEAPONS } from "@/lib/combat/weapons";
-import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { WEAPONS } from "./data";
 import { FX } from "@/lib/game/fx/combat";
 import { UNITS } from "@/lib/combat/kits";
@@ -45,7 +44,6 @@ describe("the Ranger kits: shape and invariants", () => {
       for (const w of tiers) expect(WEAPONS[w.key]?.model).toBe(`/assets/game/weapons/${w.key}.glb`);
       expect(tiers.map(w => !!WEAPONS[w.key].pulse)).toEqual([false, false, false, false, true]); // tier 5's runes breathe
       for (const w of tiers) expect(existsSync(join(__dirname, "../../../public", WEAPONS[w.key].model)), w.key).toBe(true);
-      expect(Object.values(SUBCLASS_FOR_TYPE).filter(s => s.subclass === k.key).length).toBe(1);
       expect(SYSTEM_WEAPONS.filter(w => w.type === k.signature.type).every(w => w.subclass === k.key)).toBe(true); // the type is theirs alone
     }
   });

@@ -45,7 +45,7 @@ Status: **live, canon** (ledger row 345). Set by David on 2026-11-26. It replace
 - **The wasteland minigame:** 5 to 10 minutes in a barren dystopian wasteland. It watches how you play and what you decide, and gives you one of the 16 classes. `classes/design-sheet.md` holds the 16 subclasses.
 - It foreshadows the outside world.
 - **You come back with a new power and a weapon:** your class's kit and its weapon. The design sheet's ceremony, with the weapon forming in the subclass colour, fits here.
-- **This replaces the Oracle quiz** (MBTI questions, `oracle-identity.md`, `ux-oracle-v2.md`) and the level-10 subclass choice (ledger row 22). The quiz's type-to-subclass table can seed how the minigame's readings map to classes.
+- **This replaces the Oracle quiz** (MBTI questions; removed 2026-11-28, its specs in `archive/specs/oracle-identity.md` and `ux-oracle-v2.md`) and the level-10 subclass choice (ledger row 22). The quiz's type-to-subclass table can seed how the minigame's readings map to classes.
 - **What the vision is (David, 2026-11-26):** both a possible future of the world and a fragment of your lost memory: "both 2 and 3, i want you to plan with me that ties in the story of the game better and the ending". The story spine is being planned with David.
 - **Open, needs its own planning pass with David:**
   - What the minigame measures, and how that maps to 16 classes.

@@ -124,81 +124,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .anonRow { color: var(--gui-muted); font-style: italic; }
 .cue small { display: block; font-weight: 600; font-size: var(--gui-text-xs); }
 @media (max-width: 700px) { .wardrobeBody { grid-template-columns: 1fr; } }
-/* Oracle quiz sheet: the Oracle keeps its lavender, in the kit's paper. */
-.keeperLine { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: var(--gui-r-card); background: #ebe2f5; } /* world */
-.keeperLine p { margin: 0; font-style: italic; color: #3d3250; } /* world */
-.keeperFace { flex: none; width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 50% 62%, #f1c8a2 0 36%, transparent 37%), #5a4a7e; box-shadow: inset 0 -6px 0 #43365f; } /* world */
-.oracleProgress { height: 8px; border-radius: 99px; background: #e2d8ee; overflow: hidden; } /* world */
-.oracleProgress span { display: block; height: 100%; border-radius: inherit; background: #7b5ea7; transition: width 0.2s ease; } /* world */
-.oracleCount { margin: 6px 0 0; font-size: var(--gui-text-xs); font-weight: 800; color: #5f4f78; text-align: right; font-variant-numeric: tabular-nums; } /* world */
-.oracleStatement { margin: 16px 0 18px; font-size: var(--gui-text-lg); line-height: 1.45; font-weight: 800; text-align: center; min-height: 3em; color: var(--gui-ink-strong); }
-.oracleScale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.oracleScale button { min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 6px 4px; border: 0; border-radius: 16px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #d8cce6; font: inherit; font-size: var(--gui-text-xs); font-weight: 800; color: #3d3250; cursor: pointer; } /* world */
-.oracleScale button:hover { background: #efe7f8; } /* world */
-.oracleScale kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 99px; background: #5a4a7e; color: var(--gui-paper); font: 800 var(--gui-text-xs)/1 var(--gui-font); } /* world */
-.oracleBack, .oracleBegin { margin-top: 14px; min-height: 44px; padding: 8px 20px; border-radius: 999px; font: inherit; font-weight: 800; cursor: pointer; }
-.oracleBegin { border: 0; background: #5a4a7e; color: #fbf7ff; box-shadow: 0 3px 0 #43365f; } /* world */
-.oracleBack { border: 0; background: var(--gui-paper-hi); box-shadow: inset 0 0 0 1.5px #c9b8dd; color: #4a3d6a; } /* world */
-.oracleBack:disabled, .oracleBegin:disabled { opacity: 0.45; cursor: default; }
-/* The tie-breaker (its styles were missing, so it showed raw browser buttons): two lavender choices. */
-.tieBreaker { display: grid; gap: 8px; margin: 4px 0 12px; padding: 0; border: 0; min-width: 0; }
-.tieBreaker legend { margin-bottom: 8px; padding: 0; color: var(--gui-ink-strong); font-weight: 800; }
-.tieBreaker button[aria-pressed="true"] { background: var(--gui-butter); box-shadow: inset 0 0 0 2px var(--gui-highlight); color: var(--gui-ink-strong); }
-.tieBreaker button { min-height: 52px; padding: 10px 16px; border: 0; border-radius: 18px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm), inset 0 0 0 1.5px #c9b8dd; color: #3d3250; font: inherit; font-weight: 800; text-align: left; cursor: pointer; } /* world */
-.tieBreaker button:hover { background: #efe7f8; } /* world */
-.oracleResult { margin: 0; padding: 14px; border-left: 5px solid var(--family); border-radius: 14px; background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm); }
-/* The Oracle's path sheet: subclass choice, loadout, stats (combat B) */
-.pathSheet { width: min(760px, calc(100% - 32px)); }
-.pathCards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
-.pathCards article { display: grid; align-content: start; gap: 6px; padding: 10px; border-radius: 12px; background: #fff; border-top: 4px solid var(--family); font-size: 12px; } /* world */
-.pathCards article[data-current] { box-shadow: 0 0 0 2px var(--family); }
-.pathCards header { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-.pathCards header b { font-size: 15px; }
-.pathCards header small, .pathNote { color: #6f5f86; font-size: 11px; } /* world */
-.pathCards p { margin: 0; }
-.pathCards .oracleBegin { margin-top: 4px; min-height: 36px; padding: 6px 12px; }
-.pathAbility { display: grid; gap: 1px; }
-.pathAbility small { color: #5b5068; line-height: 1.35; } /* world */
-.runeTag { justify-self: start; margin: 1px 0; padding: 0 6px; border-radius: 6px; background: #ece4f7; color: #5b4a86; font-style: normal; font-size: 10px; font-weight: 600; } /* world */
-.pathBadge { justify-self: start; padding: 4px 10px; border-radius: 999px; background: var(--family); color: #fff; font-weight: 700; } /* world */
-.pathConfirm { grid-column: 1 / -1; padding: 12px; border-radius: 12px; background: #fff6e6; border: 1px solid #e0b660; } /* world */
-.pathConfirm p { margin: 0 0 4px; }
-.pathConfirm button { margin-right: 8px; }
-.pathCards article[data-suggested] { box-shadow: 0 0 0 2px #e0b660; } /* world */
-.pathLoadout li[data-locked] { opacity: 0.5; }
-/* Classes v2: the choice ceremony (§1.11): the class emblem over the family's light, the keeper's line, the weapon forming. */
-.ceremony { display: grid; justify-items: center; gap: 6px; margin: 4px 0 12px; padding: 18px 14px; border-radius: 14px; text-align: center;
-  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--class) 45%, #fff) 0, #fff 70%); border: 2px solid var(--family); animation: bannerIn 0.4s ease-out; } /* world */
-.ceremony img { width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 0 0 6px color-mix(in srgb, var(--family) 35%, transparent), 0 0 30px var(--class); animation: ceremonyForm 1.2s ease-out both; }
-.ceremony b { font-size: 18px; }
-.ceremony small { color: #5b5068; } /* world */
-@keyframes ceremonyForm { 0% { transform: scale(0.2) rotate(-40deg); opacity: 0; filter: brightness(3); } 60% { transform: scale(1.15) rotate(6deg); opacity: 1; filter: brightness(1.6); } 100% { transform: none; filter: none; } }
-@media (prefers-reduced-motion: reduce) { .ceremony, .ceremony img { animation: none; } }
-.pathLoadout { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.pathLoadout button { width: 100%; display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #d8cce6; border-radius: 10px; background: #fffdfb; font: inherit; font-size: 12px; text-align: left; color: #2e2640; cursor: pointer; } /* world */
-.pathLoadout button[aria-pressed="true"] { border-color: #5a4a7e; background: #efe7f8; } /* world */
-.pathLoadout kbd { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: #e9e0f3; font: 700 12px "IBM Plex Mono", monospace; } /* world */
-.pathLoadout button[aria-pressed="true"] kbd { background: #5a4a7e; color: #fff; } /* world */
-.pathLoadout em { font-style: normal; font-size: 10px; color: #6f5f86; text-transform: capitalize; } /* world */
-.pathStats { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.pathStats li { display: grid; grid-template-columns: 80px 36px 40px 40px 1fr; gap: 6px; align-items: center; font-size: 13px; }
-.pathStats b { text-align: right; font: 700 14px "IBM Plex Mono", monospace; }
-.pathStats button { min-height: 36px; border: 1px solid #c9b8dd; border-radius: 8px; background: #fffdfb; font: 700 16px inherit; color: #5a4a7e; cursor: pointer; } /* world */
-.pathStats button:disabled { opacity: 0.35; cursor: default; }
-.pathStats small { color: #8a7d99; font-size: 11px; } /* world */
-.pathStatus { margin: 10px 0 0; font-weight: 600; color: #3d3250; } /* world */
-/* Reveal ceremony card: paper lit by the family's colour (it was a dark glass card). */
-.reveal { position: absolute; left: 36px; top: 250px; width: min(360px, calc(100% - 32px)); padding: 22px 24px 20px; border-radius: var(--gui-r-paper); background: var(--gui-paper); color: var(--gui-ink); box-shadow: 0 0 0 3px var(--family), 0 0 40px color-mix(in srgb, var(--family) 45%, transparent), var(--gui-shadow-lg); text-align: center; z-index: 20; animation: reveal-in 0.9s 1.4s both ease-out; zoom: var(--tsi-text-scale, 1); }
-.reveal p { margin: 4px 0; font-size: var(--gui-text-md); line-height: 1.5; }
-.reveal small { display: inline-block; margin-top: 10px; padding: 3px 14px; border-radius: var(--gui-r-tag); background: color-mix(in srgb, var(--family) 24%, var(--gui-paper)); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); font-weight: 800; }
-.reveal button { display: block; margin: 14px auto 0; min-height: 44px; padding: 6px 26px; border: 0; border-radius: var(--gui-r-pill); background: var(--gui-sage); color: var(--gui-paper); font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 3px 0 var(--gui-sage-deep); }
-.revealFamily { font-size: 28px !important; font-weight: 900; letter-spacing: 0.01em; color: color-mix(in srgb, var(--family) 55%, var(--gui-ink-strong)); }
-@keyframes reveal-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-/* Continue: the card fades down instead of vanishing (audit-2026-10-ui item 4; FamilyReveal keeps it for this). */
-.reveal[data-state="closing"] { animation: reveal-out 260ms ease-in forwards; pointer-events: none; }
-@keyframes reveal-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(0.97); } }
-@media (prefers-reduced-motion: reduce) { .reveal[data-state="closing"] { animation: none; } }
-@media (max-width: 700px) { .reveal { left: 16px; top: auto; bottom: 120px; } }
 /* Settings sheet: sections under dashed rules, the kit's segmented choice and keycaps. */
 .settingsSheet fieldset { border: 0; border-top: 2px dashed var(--gui-paper-edge); padding: 14px 0 6px; margin: 0; min-width: 0; }
 .settingsSheet fieldset:first-of-type { border-top: 0; padding-top: 0; }
@@ -222,13 +147,11 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 :global(html[data-contrast="high"]) .world .interact kbd { background: var(--ui-contrast-key); color: var(--ui-contrast-ink); }
 :global(html[data-contrast="high"]) .world kbd { background: var(--ui-on-scrim); color: var(--ui-contrast-ink); box-shadow: inset 0 0 0 1px var(--ui-contrast-ink); }
 :global(html[data-contrast="high"]) .world .hint, :global(html[data-contrast="high"]) .world small { color: var(--ui-contrast-ink); }
-:global(html[data-contrast="high"]) .world .keeperLine { background: var(--ui-on-scrim); border: 2px solid var(--ui-contrast-ink); }
-:global(html[data-contrast="high"]) .world .oracleScale button, :global(html[data-contrast="high"]) .world .segmented button, :global(html[data-contrast="high"]) .world .keyList button, :global(html[data-contrast="high"]) .world .return { background: var(--ui-on-scrim); color: var(--ui-contrast-ink); box-shadow: inset 0 0 0 2px var(--ui-contrast-ink); }
+:global(html[data-contrast="high"]) .world .segmented button, :global(html[data-contrast="high"]) .world .keyList button, :global(html[data-contrast="high"]) .world .return { background: var(--ui-on-scrim); color: var(--ui-contrast-ink); box-shadow: inset 0 0 0 2px var(--ui-contrast-ink); }
 :global(html[data-contrast="high"]) .world .segmented button[aria-pressed="true"] { background: var(--ui-contrast-ink); color: var(--ui-on-scrim); }
 :global(html[data-contrast="high"]) .world .heading { text-shadow: 0 0 4px var(--ui-on-scrim), 0 0 8px var(--ui-on-scrim); color: var(--ui-contrast-ink); }
 :global(html[data-contrast="high"]) .world :focus-visible { outline: 3px solid var(--ui-contrast-focus) !important; outline-offset: 2px; }
 :global(html[data-contrast="high"]) .world .keyList kbd { border: 0; background: transparent; }
-.oracleEmbedded, .revealEmbedded { position: static; transform: none; margin: 24px auto; animation: none; }
 /* Text size reaches the collection book too (coordinator 2026-09-26). */
 .world :global(.collection-book) { zoom: var(--tsi-text-scale, 1); max-height: calc(82vh / var(--tsi-text-scale, 1)); }
 :global(html[data-contrast="high"]) .world :global(.collection-book) { background: var(--ui-on-scrim) !important; color: var(--ui-contrast-ink) !important; border: 2px solid var(--ui-contrast-ink) !important; }
@@ -392,11 +315,11 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 /* ── The GUI sheet over the ruins and the Oracle's path sheet (row 285) ─────────────────────────────────────────────
    Appended rather than edited in place, so the classes v2 kits can keep editing the rules above. Paper, the kit's
    keycaps and one rounded face; the rune overlay leaves its dark glass for parchment. */
-.combatHud, .bossBar, .banner, .defeat, .missionTracker, .floater, .incantation, .pathSheet { font-family: var(--gui-font); }
+.combatHud, .bossBar, .banner, .defeat, .missionTracker, .floater, .incantation { font-family: var(--gui-font); }
 .combatHud, .bossBar, .defeat, .banner, .missionTracker { background: rgb(255 251 231 / 0.96); color: var(--gui-ink); border-color: transparent; box-shadow: var(--gui-shadow-md); } /* world */
 .combatHud { border-radius: var(--gui-r-card); }
 .hpBar { background: var(--gui-paper-deep); }
-.hpBar b, .sweep kbd, .ultSlot kbd, .dodgePip kbd, .abilityBar li small, .abilityBar small, .runeReadout, .pathLoadout kbd, .pathStats b { font-family: var(--gui-font); font-weight: 800; }
+.hpBar b, .sweep kbd, .ultSlot kbd, .dodgePip kbd, .abilityBar li small, .abilityBar small, .runeReadout { font-family: var(--gui-font); font-weight: 800; }
 .hpBar b { font-size: var(--gui-text-xs); color: var(--gui-ink-strong); }
 .energyBar b { font-size: var(--gui-text-xs); }
 .sweep kbd { background: var(--gui-paper-hi); color: var(--gui-ink-strong); font-size: var(--gui-text-xs); }
@@ -424,12 +347,6 @@ p.interact[data-closed="true"] { margin: 0; cursor: default; color: var(--gui-wa
 .incantation[data-outcome="enhanced"] .runeReadout { color: var(--gui-warn); }
 .runeTimer { height: 6px; background: var(--gui-paper-deep); }
 .runeTimer span { background: var(--gui-wood-light); }
-.pathCards article { border-radius: var(--gui-r-card); background: var(--gui-paper-hi); box-shadow: var(--gui-shadow-sm); }
-.pathCards header small, .pathNote { font-size: var(--gui-text-xs); color: #5f4f78; } /* world */
-.pathAbility small { font-size: var(--gui-text-xs); }
-.runeTag { font-size: var(--gui-text-xs); }
-.pathLoadout em { font-size: var(--gui-text-xs); color: #5f4f78; } /* world */
-.pathStats small { font-size: var(--gui-text-xs); color: #6b5f7a; } /* world */
 /* A channelled ult's mash (classes v2 Arcane): the HUD's paper and face; the keycaps keep their element colours. */
 .mash { border: 0; border-radius: var(--gui-r-card); background: rgb(255 251 231 / 0.96); color: var(--gui-ink); box-shadow: var(--gui-shadow-md); font-family: var(--gui-font); } /* world */
 .mash b { font-weight: 800; color: var(--gui-ink-strong); }

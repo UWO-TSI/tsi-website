@@ -17,21 +17,3 @@ export const FAMILIES: Record<Family, FamilyMeta> = {
     keeperLine: "Green, like new leaves. The island feels warmer with you on it. Welcome, Warden." },
 };
 export const isFamily = (v: unknown): v is Family => typeof v === "string" && v in FAMILIES;
-
-/** What the keeper says at each beat (the answer route returns beat 1, 2, … every ten answers). */
-const REACTIONS = [
-  "Take your time. There are no wrong answers in here.",
-  "Hm. The crystal is warming up.",
-  "Halfway. Stretch if you need to.",
-  "The colours are starting to settle.",
-  "Nearly there. I can almost see it.",
-  "Last few. Answer the way you really are, not the way you'd like to be.",
-];
-export function keeperReaction(beat: number | null): string | null {
-  return beat && beat > 0 ? REACTIONS[Math.min(REACTIONS.length - 1, beat - 1)] : null;
-}
-
-export const SCALE: { value: -2 | -1 | 0 | 1 | 2; label: string }[] = [
-  { value: -2, label: "Not me" }, { value: -1, label: "Not really" }, { value: 0, label: "Unsure" },
-  { value: 1, label: "Somewhat" }, { value: 2, label: "That's me" },
-];

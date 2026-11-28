@@ -3,8 +3,7 @@ import { notFound } from "next/navigation";
 // Dev-only index of the harnesses and the in-world demo flags (in-memory services, no sign-in).
 const LINKS: [string, string][] = [
   ["/lab/island", "Member island (?time=, ?weather=, ?season=, ?home=1, ?ruins=1, ...)"],
-  ["/lab/island?collections=demo&progression=demo&oracle=demo", "Island with demo journal, museum, monument and temple"],
-  ["/student/dashboard/oracle?oracle=demo&family=INTJ&name=Maya", "Oracle reading, finished as INTJ"],
+  ["/lab/island?collections=demo&progression=demo", "Island with demo journal, museum, monument and temple"],
   ["/dev/progression?demo=1&sheet=contribute", "Progression sheets: journal, goals, letters, contribute, notice"],
   ["/dev/economy?view=shop&tab=specials", "Economy sheets: shop, sell, inventory, wallet, merch admin"],
   ["/student/apply/portal?preview=1", "Applicant island"],

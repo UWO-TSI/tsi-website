@@ -15,7 +15,6 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
   const v2 = () => settings.get("classes_v2") === 1;
   const masteryRows = new Map<string, { xp: number; cosmetics: MasteryRow["cosmetics"] }>(); // `${m}:${subclass}`
   const shopOwned = new Map<string, { kind: CosmeticKind; subclass?: string; skin?: string }>(); // `${m}:${item}`: owned cosmetic items (member_inventory)
-  const readings = new Map<string, { type: string; scores: { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] }>(); // member_identity.mbti_type + the latest scores
   const xpKeys = new Set<string>();
   const kills = new Map<string, number>(); // `${m}:${event}` → xp
   const killEnemy = new Map<string, string>(); // `${m}:${event}` → enemy key
@@ -193,9 +192,6 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
       give(m, def.rewards.materials);
       return { xp_awarded: def.rewards.xp, coins_awarded: def.rewards.coins, materials_awarded: def.rewards.materials, replayed: false };
     },
-    async oracleReading(m) {
-      return readings.get(m) ?? null;
-    },
     async setting(k) {
       return settings.get(k) ?? null;
     },
@@ -269,8 +265,6 @@ export function memoryCombatStore(clock: () => Date = () => new Date()) {
     grantRepick: (m: string, source: "oracle" | "launch") => { const p = ensure(m); if (p.subclass) p.repick = source; },
     /** A cosmetic bought in the shop (member_inventory). */
     own: (m: string, item: string, kind: CosmeticKind, subclass?: string, skin?: string) => shopOwned.set(`${m}:${item}`, { kind, subclass, skin }),
-    /** The member's Oracle reading (type and clarities). */
-    setReading: (m: string, type: string, scores: { dichotomy: "EI" | "SN" | "TF" | "JP"; clarity: number }[] = []) => readings.set(m, { type, scores }),
     /** A weapon handed over (the dev kit's signature type before any wave seeds signature rows). */
     giveWeapon: (m: string, key: string) => { const list = weapons.get(m) ?? []; if (!list.some((w) => w.weapon_key === key)) list.push({ weapon_key: key, durability: WEAPONS.find((w) => w.key === key)!.max_durability, equipped: false }); },
     /** Beasts already tamed (the Summoner's demo: `?tamed=owl,toad`). */

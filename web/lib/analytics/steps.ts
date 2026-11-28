@@ -67,7 +67,6 @@ const FEATURE_ROUTES = [
   ["volleyball", "Volleyball", "/api/volleyball"],
   ["campfire", "Campfire", "/api/world/campfire"],
   ["residents", "Talking to residents", "/api/npc"],
-  ["oracle", "Oracle", "/api/oracle"],
   ["home", "Home", "/api/homes"],
   ["friends", "Friends", "/api/world/friends"],
   ["quests", "Quest chapters", "/api/progression/chapters"],

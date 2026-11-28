@@ -11,7 +11,6 @@ import {
 } from "./weatherSystem";
 import { dailySpecials, seedItems } from "@/lib/wallet/rules";
 import { pickupCode } from "@/lib/wallet/service";
-import { itemOrder } from "@/lib/oracle/engine";
 import { rollNode } from "./peaceful";
 
 /**
@@ -193,7 +192,7 @@ describe("weatherSystem", () => {
 });
 
 describe("seeded hashes stay identical across callers", () => {
-  it("specials, Oracle item order, pickup codes and node rolls", () => {
+  it("specials, pickup codes and node rolls", () => {
     // the pool lost the wardrobe cut's four retired rows and gained the visor (2026-10-14), then wardrobe batch 2's coin
     // rows (2026-10-16; #12 deleted 2026-10-17, and main retired the tier-1 net and shovel; round 2 added #07 in silver; the hair shelf, 2026-10-27: four more
     // coin hairstyles; wardrobe batch 3 priced, 2026-10-27: three coin hairs, two coin faces, one coin accessory; rod-gear: home things out of the pool until homes open), so the day's shuffle moved
@@ -202,18 +201,6 @@ describe("seeded hashes stay identical across callers", () => {
         "wear-acc-backpack",
         "wear-acc-cap",
         "wear-onepiece-sundress",
-      ]
-    `);
-    expect(itemOrder("x").slice(0, 8)).toMatchInlineSnapshot(`
-      [
-        "sn07",
-        "tf12",
-        "ei09",
-        "jp16",
-        "sn04",
-        "tf03",
-        "ei11",
-        "jp10",
       ]
     `);
     expect(pickupCode("m", "k")).toMatchInlineSnapshot(`"FDX68"`);

@@ -9,7 +9,6 @@ import { useSyncExternalStore } from "react";
 import { applySettings, DEFAULT_SETTINGS, mergeSettings, readSettings, type AccountSettings } from "@/lib/identity/settings";
 import type { Family } from "@/lib/oracle/engine";
 import { isFamily } from "./oracle/family";
-import { installOracleDemo } from "./oracle/demo";
 
 export interface WorldIdentity { display_name: string; member: boolean; family: Family | null; settings: AccountSettings; signedIn: boolean; /** Family aura shown on the player (this device; default on). */ aura: boolean }
 const LOCAL_SETTINGS = "tsi.settings.v1";
@@ -62,7 +61,6 @@ export async function saveSettings(patch: Partial<AccountSettings>): Promise<str
   return null;
 }
 
-export function setFamily(family: Family): void { publish({ ...snapshot, family }); }
 export function setAuraVisible(on: boolean): void {
   try { localStorage.setItem(AURA_KEY, on ? "on" : "off"); } catch { /* session only */ }
   publish({ ...snapshot, aura: on });
@@ -70,7 +68,7 @@ export function setAuraVisible(on: boolean): void {
 
 function subscribe(l: () => void) {
   listeners.add(l);
-  if (!loaded) { loaded = true; installOracleDemo(); void refreshIdentity(); }
+  if (!loaded) { loaded = true; void refreshIdentity(); }
   return () => { listeners.delete(l); };
 }
 /** This account's menu keys right now (the device key maps refuse them). */

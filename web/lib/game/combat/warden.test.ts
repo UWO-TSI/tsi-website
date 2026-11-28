@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { classKit, classMods, kitAt, MAX_KEYS, upgraded, withMods, type ClassKit } from "@/lib/combat/classes";
 import { DRUID, PRIEST, SHAMAN, SUMMONER, WARDEN_KITS } from "@/lib/combat/wardenKits";
 import { UNITS, CAPS } from "@/lib/combat/kits";
-import { SUBCLASS_FOR_TYPE } from "@/lib/oracle/subclass";
 import { WEAPONS as SYSTEM_WEAPONS, signatureGrant } from "@/lib/combat/weapons";
 import { ULT } from "@/lib/combat/ult";
 import { gripFor, verbInfo } from "@/lib/game/character/clips";
@@ -59,7 +58,6 @@ describe("the Warden kits (data)", () => {
       expect(new Set(k.keys.map(a => a.key)).size).toBe(5);
       expect(k.keys.filter(a => a.heavy).length).toBeLessThanOrEqual(2); // §3: at most 2 heavy
       expect(k.keys.filter(a => a.effects.some(e => e.kind === "dash" && e.iframes)).length).toBeLessThanOrEqual(1);
-      expect(Object.values(SUBCLASS_FOR_TYPE).filter(s => s.subclass === k.key).length).toBe(1);
       expect(k.ult.anticipation_ms).toBeGreaterThanOrEqual(250); expect(k.ult.anticipation_ms).toBeLessThanOrEqual(600);
       expect(k.ult.charge).toBeGreaterThanOrEqual(0.8); expect(k.ult.charge).toBeLessThanOrEqual(1.25);
       for (const a of [...k.keys, k.ult]) if (a.energy) { expect(a.energy).toBeGreaterThanOrEqual(15); expect(a.energy).toBeLessThanOrEqual(45); }

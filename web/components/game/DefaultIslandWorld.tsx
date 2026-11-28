@@ -97,18 +97,13 @@ import { equipClassKit } from "@/lib/game/combat/classRuntime";
 import { beastKit, setTamed } from "@/lib/game/combat/beasts";
 import { classKit } from "@/lib/combat/classes";
 import { subclassByKey } from "@/lib/combat/kits";
-import PathSheet from "./oracle/PathSheet";
 import { MISSIONS, WEAPONS } from "@/lib/game/combat/data";
 import { startMission } from "@/lib/game/combat/missions";
-import OracleQuizSheet from "./oracle/OracleQuizSheet";
-import { FamilyReveal } from "./oracle/OracleSheetEmbed";
 import SettingsSheet from "./oracle/SettingsSheet";
 import FamilyAura from "./oracle/FamilyAura";
 import SubclassAura from "./oracle/SubclassAura";
 import { FAMILIES } from "@/lib/game/oracle/family";
-import type { Family } from "@/lib/oracle/engine";
-import type { ResultView } from "@/lib/oracle/service";
-import { setFamily, useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
+import { useWorldIdentity, type WorldIdentity } from "@/lib/game/identity";
 import { actionForKey } from "@/lib/identity/settings";
 import { keyName, useAbilityKeys, useMoveKeys } from "@/lib/game/movement/keys";
 import { useCoarsePointer } from "@/lib/game/useMediaQuery";
@@ -257,9 +252,9 @@ import styles from "./DefaultIslandWorld.module.css";
 const BIOME_REACH = 8;
 type Biome = { water: WaterType | null; place: Place | null };
 type Near = "knock" | "shop_enter" | "counter" | "enter" | "exit" | "board" | "desk" | "shelf" | "clock" | "notice" | "catch" | "cafe" | "museum" | "ruins" | "mailbox" | "monument" | "home" | "house" | "village" | "buy" | "claim" | "donate" | "report" | "fish" | "forage" | "net" | "dig" | "mine" | "museum_enter" | "cafe_enter" | "curator" | "closet" | "fitting" | "oracle_enter" | "altar" | "missions" | "ruins_exit" | "lantern" | "bench" | "stool" | "bed" | "trophy" | "posters" | "cocoa" | "picnic" | "owner" | "chest" | "talk" | "bram" | "founder" | "coffee" | "aquarium" | "admin" | "sell" | "volley" | "leaderboard" | "catchboard" | "tasks" | "tackle" | "chef" | null;
-type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "closet" | "fitting" | "oracle" | "path" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | "tank" | "rodseller" | null;
+type Sheet = "counter" | "shopkeeper" | "notice" | "letters" | "journal" | "closet" | "fitting" | "settings" | "missions" | "tourney" | "posters" | "cafe" | "bag" | "wallet" | "chest" | "plaque" | "sell" | "monument" | "vboard" | "rods" | "outnow" | "tasks" | "tackle" | "chef" | "sushi" | "tank" | "rodseller" | null;
 const DEV = process.env.NODE_ENV !== "production";
-const DEV_SHEETS: readonly Sheet[] = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "closet", "fitting", "oracle", "path", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
+const DEV_SHEETS: readonly Sheet[] = ["vboard", "counter", "shopkeeper", "notice", "letters", "journal", "closet", "fitting", "settings", "missions", "tourney", "posters", "cafe", "wallet", "chest"];
 /** Sheets opened at a station with E: E closes them again (the dialog system's opening key). */
 const STATION_KEY = "e";
 const PHASE_NAMES: Record<IslandPhase, string> = { dawn: "Dawn", day: "Daylight", evening: "Evening", night: "Night" };
@@ -1040,8 +1035,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
   // The clean HUD (row 283): the full one while its key is held, in the pause view, on touch, or always by the setting.
   const alwaysFullHud = useAlwaysFullHud();
   const [hudKey, setHudKey] = useState(false);
-  const [reveal, setReveal] = useState<{ family: Family; type: string; startedAt: number } | null>(null);
-  // Bumped by the Oracle's path sheet after a subclass, loadout or stat change so the encounter re-reads them.
+  // Bumped by the playtest controls after a subclass, loadout or stat change so the encounter re-reads them.
   const [pathTick, setPathTick] = useState(0);
   const [pathView, setPathView] = useState<ProgressionView | null>(null);
   // Classes v2 (§1.9): the subclass aura (its kit at its mastery, the equipped colour).
@@ -1094,10 +1088,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     setDefaultWeapon(g.weapons.find(w => w.equipped)?.weapon_key ?? null);
     publishCombat();
   }); return () => { alive = false; }; }, [identity.family, pathTick]);
-  const onOracleResult = useCallback((result: ResultView) => {
-    setFamily(result.family); setSheet(null);
-    setReveal({ family: result.family, type: result.type, startedAt: performance.now() });
-  }, []);
   const fishSpot = useRef<FishingSpot | null>(null);
   const { data: residentRows } = useNPCPersonas({ permanentOnly: true });
   useCheer(ceremony, residentRows.map(r => r.id));
@@ -1200,7 +1190,6 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     // Stepping into the fitting room: its curtain sweeps across (FittingRoom), then the wardrobe opens.
     if (action === "fitting") { window.dispatchEvent(new CustomEvent("tsi:fitting")); window.setTimeout(() => setSheet("fitting"), FITTING_STEP_MS); return; }
     if (action === "closet" || action === "chest") { setSheet(action); return; }
-    if (action === "altar") { setReveal(null); setSheet("oracle"); return; }
     if (action === "missions") { setSheet("missions"); return; }
     if (action === "trophy" || action === "posters") { setSheet(action === "trophy" ? "tourney" : "posters"); return; }
     // Winter lights and the spring picnic: a moment, not a reward (principle 3: no rewards for online activity).
@@ -1509,7 +1498,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       // The Esc that ended mouse-look is the browser's (it opened the UI view); a later one closes what's open, then
       // steps through the Esc layers, indoors too (playtest round 1: a room is left by its door; lib/game/sceneGate.ts).
       if (event.key === "Escape") {
-        const open = !!sheet || bagOpen || phoneUp || donateOpen || decor.decorating || !!(reveal && inside === "oracle") || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
+        const open = !!sheet || bagOpen || phoneUp || donateOpen || decor.decorating || studyHoldsPrompt() || !!document.querySelector('[role="dialog"]');
         const locked = capture.state === "captured" && !!document.pointerLockElement;
         const esc = escapeAction({ captureEnded: escapeEndedCapture(), locked, fading, open });
         if (esc === "close") { if (!sheet && !bagOpen) setPhoneUp(false); setSheet(null); if (decor.selected) decor.cancel(); }
@@ -1522,7 +1511,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [act, near, inside, atHome, decor, identity.settings, welcoming, site, abilityKeys, sheet, bagOpen, donateOpen, reveal, fading, mapOpenable, layer, phoneUp]);
+  }, [act, near, inside, atHome, decor, identity.settings, welcoming, site, abilityKeys, sheet, bagOpen, donateOpen, fading, mapOpenable, layer, phoneUp]);
   // Development only (the old wrench panel, hud-first-login §4): Settings' Dev tab shows or hides it; it stays mounted
   // (the class playtest's harness and slow motion run from it) and stands on the left, clear of the minimap.
   const devTools = DEV ? <>
@@ -1540,7 +1529,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         <Suspense fallback={null}>
           {site === "ruins" ? <RuinsScene key={`ruins-${ruinsRun}`} level={level} phase={phase} light={light} look={look} weather={weather} liteMode={liteMode} castShadows={castShadows} zoom={camZoom} player={player}
               onNear={n => setNear(n === "exit" ? "ruins_exit" : n)} onDefeat={onRuinsDefeat} start={ruinsRun <= 1 ? devAt : null} glider={peaceful.glider} />
-            : inside === "oracle" ? <OracleTemple frozen={fading || sheet === "oracle"} talking={sheet === "oracle"} light={light} player={player} onNear={n => setNear(n)} ceremony={reveal} />
+            : inside === "oracle" ? <OracleTemple frozen={fading} light={light} player={player} onNear={n => setNear(n)} />
             : inside === "cafe" ? <CafeInterior phase={phase} player={player} frozen={fading || !!sheet} identity={identity} level={level} onNear={setNear} />
             : inside === "shop" ? <ShopInterior frozen={fading || sheet === "counter" || sheet === "shopkeeper" || sheet === "fitting"} talking={sheet === "counter" || sheet === "shopkeeper"} light={light} playerPosRef={player}
               onNearestStation={s => setNear(s?.id === "counter" ? "counter" : s?.id === "exit" ? "exit" : s?.id.startsWith("fitting") ? "fitting" : null)} />
@@ -1622,7 +1611,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
         </details>
         <button className={styles.return} onClick={() => setDevPanel(false)}>Close the dev panel</button>
       </section>}
-      {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(reveal && inside === "oracle") && !(barSeated && near === "stool") && (CLOSED.includes(near)
+      {near && !toolNear && !sheet && !hq.card && !cinematic && !talking && !(barSeated && near === "stool") && (CLOSED.includes(near)
         ? <p className={styles.interact} data-closed="true" role="status">{NEAR_LABELS[near]}</p>
         : fishing ? null : <button className={styles.interact} onClick={() => act(near)}><kbd>{touch ? "Tap" : "E"}</kbd>{near === "forage" ? targetLabel ?? NEAR_LABELS[near] : near === "talk" && talkNow.nearName ? `Talk to ${talkNow.nearName}` : near === "bram" ? bramPrompt() : near === "desk" && hq.waiting === "wren" ? `Talk to ${WREN.name}` : near === "tackle" && rodQuest ? `Talk to ${ROD_SELLER}` : near === "bench" || near === "stool" || near === "bed" ? seatPrompt(NEAR_LABELS[near], seated) : NEAR_LABELS[near]}</button>)}
       {/* Seated at the bar (tasting-book round 4, David: "remove menu and leave bar button, have menu be on the table, and character
@@ -1708,10 +1697,7 @@ function DefaultIslandWorldContent({ preset, children }: { preset?: LookPreset; 
       <WardrobeSheet open={sheet === "closet" || sheet === "fitting"} place={sheet === "closet" ? "closet" : "fitting"} onClose={() => { if (sheet === "fitting") window.dispatchEvent(new CustomEvent("tsi:fitting")); setSheet(null); }} onShop={() => { setSheet(null); toShop("More clothes"); }} />
       <PlayerCharacterUI creator={step === "creator"} />
       <JournalSheet open={sheet === "journal"} onClose={() => setSheet(null)} keys="j" />
-      <OracleQuizSheet open={sheet === "oracle"} onClose={() => setSheet(null)} onResult={onOracleResult} onPath={pathView?.family ? () => { setPathTick(n => n + 1); setSheet("path"); } : undefined} />
-      {pathView && DROPS.classes && <PathSheet open={sheet === "path"} view={pathView} onClose={() => setSheet(null)} onChanged={() => setPathTick(n => n + 1)} />}
       <SettingsSheet open={sheet === "settings"} onClose={() => setSheet(null)} detectedTier={detectedTier} dev={devTools} />
-      <FamilyReveal open={!!reveal && inside === "oracle"} family={reveal?.family ?? null} type={reveal?.type ?? ""} onContinue={() => setReveal(null)} />
       <MissionBoardSheet open={sheet === "missions"} onClose={() => setSheet(null)} gateNote={gate.open ? null : gate.reason} />
       <TourneySheet open={sheet === "tourney"} onClose={() => setSheet(null)} />
       <PostersSheet open={sheet === "posters"} onClose={() => setSheet(null)} event={islandEvent} />

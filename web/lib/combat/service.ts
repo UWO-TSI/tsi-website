@@ -13,7 +13,6 @@ import { CombatError, type CombatStore } from "./store";
 import { repairCost, WEAPONS } from "./weapons";
 import { CLASS_KITS, CLASS_RENAMES, classKit, memberKit, nextUnlock } from "./classes";
 import { masteryProgress, masteryTitle } from "./mastery";
-import { suggestSubclass } from "@/lib/oracle/subclass";
 import type { CosmeticKind } from "./store";
 import { isBeast } from "./wardenData";
 
@@ -56,8 +55,6 @@ async function classesV2(store: CombatStore, m: string) {
   const on = (await store.setting("classes_v2")) === 1;
   return { on, rows: on ? await store.mastery(m) : [] };
 }
-/** The Oracle's suggestion for this member's reading (§1.11): the type's subclass, the keeper's line, the runner-up when unclear. */
-const suggestion = async (store: CombatStore, m: string) => { const r = await store.oracleReading(m); return r ? suggestSubclass(r.type, r.scores) : null; };
 
 export const getProgression = (store: CombatStore, m: string) =>
   run(async () => {
@@ -90,7 +87,6 @@ export const getProgression = (store: CombatStore, m: string) =>
         kit: kit?.key ?? null, mastery, title: kit ? masteryTitle(kit.name, mastery.mastery) : null, cosmetics: row?.cosmetics ?? {}, skin,
         next: kit ? nextUnlock(kit, mastery.mastery) : null, rows: v2.rows, repick: p.repick_source,
         kits: family ? CLASS_KITS.filter((k) => k.family === family && memberKit(k.key)).map((k) => k.key) : [],
-        suggestion: family && p.level >= SUBCLASS_LEVEL ? await suggestion(store, m) : null,
         /** The Summoner's tamed beasts (the ritual circle; the wolves are known from the start). */
         tamed: p.subclass === "summoner" ? await store.tamed(m) : [],
         /** The profile's class fields (§1.9: portal profile and phone companion, no 3D): icon, subclass, mastery and title, frame, and the other subclasses past mastery 1. */
