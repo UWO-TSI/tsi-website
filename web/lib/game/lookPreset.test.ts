@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Color, ShaderChunk, ShaderLib, Vector3 } from "three";
 import { ISLAND_LIGHTING, islandLight, withSeason, withWeather, type IslandLight } from "./islandLighting";
-import { BACKLIT_FILL, backlitShare, fillForHeading, CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles } from "./lookPreset";
+import { type LookPreset, BACKLIT_FILL, backlitShare, fillForHeading, CURRENT, LOOK_LIGHTS_CHUNK, LOOK_PRESETS, LOOK_REFLECT_EDITS, MATERIAL_CLASSES, MIN_SUN_ELEVATION, PHASE_LOOK, keyFill, shadowHalfHeight, kelvinHex, lookFx, lookRoughness, parseLook, sunAngles, sunFromAngles } from "./lookPreset";
 import { solarPosition } from "./sunPath";
 import { seasonLook } from "./seasonalLook";
 import { parseSeasonOverride } from "./season";
@@ -22,6 +22,37 @@ const ratio = (l: IslandLight) => {
 };
 const summer = seasonLook(parseSeasonOverride("?season=summer")!, {});
 
+
+/** A second look to test the plumbing with (the old Toy diorama preset, cut from the lab 2026-11-28). */
+/* Miniature photography: tilt-shift, glossy plastic, saturated, soft AO, a 3/4 key from screen-left. */
+const MATTE = { saturation: 1, value: 1, roughness: 1, gloss: 0 };
+const TOY: LookPreset = {
+  id: "toy", name: "Toy diorama",
+  light: {
+    sunColor: "#fff1d6", sunIntensity: 3.1, sunPosition: [18, 24, -10],
+    fillSky: "#b9d8f2", fillGround: "#b8b48a", hemisphere: 0.5, ambient: 0.08, envIntensity: 0.3,
+    rimColor: "#fff6e8", rimIntensity: 0.35,
+  },
+  shadows: { radius: 4, intensity: 0.9, tint: "#1a2440" },
+  ao: { enabled: true, radius: 1.4, intensity: 2 },
+  materials: {
+    terrain: { saturation: 1, value: 0.97, roughness: 1, gloss: 0 },
+    props: { saturation: 1.12, value: 1, roughness: 0.8, gloss: 0.5 },
+    foliage: { saturation: 1.08, value: 1, roughness: 1, gloss: 0 },
+    water: { saturation: 1.2, value: 1, roughness: 1, gloss: 0.3 },
+    characters: { saturation: 1.1, value: 1, roughness: 1, gloss: 0.6 },
+    glass: MATTE, metal: MATTE,
+  },
+  grass: { detail: 0.38, hue: 0 },
+  grade: { exposure: 1, contrast: 1.06, vibrance: 0.12, desat: -0.04, warmth: 0.22, lift: 0.1, vignette: 0.28 },
+  post: {
+    toneMapping: "neutral",
+    bloom: { enabled: true, threshold: 0.9, intensity: 0.3 },
+    tiltShift: { enabled: true, blur: 0.08, taper: 0.3, offset: 0 },
+  },
+  sky: { top: "#6fb6ec", horizon: "#cfe8f4", fog: "#cfe8f4", fogNear: 26, fogFar: 80, gradient: true },
+};
+
 describe("look presets: serialisation", () => {
   it("round-trips every preset through JSON unchanged", () => {
     for (const p of LOOK_PRESETS) expect(parseLook(JSON.parse(JSON.stringify(p)))).toEqual(p);
@@ -39,29 +70,11 @@ describe("look presets: serialisation", () => {
     expect(parseLook(null)).toEqual(CURRENT);
   });
   it("gives each preset a unique id", () => {
-    expect(LOOK_PRESETS.map(p => p.id)).toEqual(["current", "toy", "open-air", "painterly"]);
+    expect(LOOK_PRESETS.map(p => p.id)).toEqual(["current"]);
   });
 });
 
 describe("the game look (row 236, §5)", () => {
-  it("is Open-air sun: the picked preset's sun side, blue fill, cool shadows, sky, AO and bloom", () => {
-    const picked = LOOK_PRESETS.find(p => p.id === "open-air")!;
-    expect(sunFromCamera(CURRENT.light.sunPosition)).toBeCloseTo(sunFromCamera(picked.light.sunPosition), 0);
-    expect(CURRENT.shadows).toEqual(picked.shadows);
-    expect(CURRENT.sky.top).toBe(picked.sky.top);
-    expect(CURRENT.ao.enabled).toBe(true);
-    expect(CURRENT.post.bloom.enabled && !CURRENT.post.tiltShift.enabled).toBe(true);
-    expect(CURRENT.sky.fogNear).toBeGreaterThan(picked.sky.fogNear);
-  });
-  it("v1 land pass (§8c item 4): a warmer key and a cooler fill than the picked look, AO tighter into the crevices", () => {
-    const picked = LOOK_PRESETS.find(p => p.id === "open-air")!;
-    const rgb = (hex: string) => new Color(hex);
-    const warmth = (hex: string) => rgb(hex).r / rgb(hex).b;
-    expect(warmth(CURRENT.light.sunColor)).toBeGreaterThan(warmth(picked.light.sunColor) * 1.08);
-    expect(warmth(CURRENT.light.fillSky)).toBeLessThan(warmth(picked.light.fillSky) * 0.95);
-    expect(CURRENT.ao.radius).toBeLessThan(picked.ao.radius);
-    expect(CURRENT.ao.intensity).toBeGreaterThan(picked.ao.intensity);
-  });
   it("holds key:fill near 4:1 and lit:shadow well above the shipped 2:1", () => {
     const r = keyFill(CURRENT);
     expect(r.keyFill).toBeGreaterThan(3.7);
@@ -89,7 +102,7 @@ describe("preset → renderer mapping", () => {
     expect(lookFx(CURRENT, true)).toEqual({ toneMapping: CURRENT.post.toneMapping, bloom: CURRENT.post.bloom, tiltShift: null, ao: CURRENT.ao });
   });
   it("writes another preset's light, sky, rim, grade and water into the renderer's fields", () => {
-    const toy = LOOK_PRESETS[1], light = islandLight(toy, "day");
+    const toy = TOY, light = islandLight(toy, "day");
     expect(light.sunPosition).toEqual(toy.light.sunPosition);
     expect(light.environment).toMatchObject({ skyTop: toy.sky.top, skyBottom: toy.sky.horizon, intensity: toy.light.envIntensity });
     expect(light.rim).toEqual({ color: toy.light.rimColor, intensity: toy.light.rimIntensity });
@@ -183,7 +196,7 @@ describe("the real sun (row 239, §8)", () => {
     expect(shadowHalfHeight(ISLAND_LIGHTING.evening.sunPosition, 26)).toBeLessThan(12);
   });
   it("keeps the preset's own key without a sun (/lab/look's sliders)", () => {
-    for (const phase of ["dawn", "day", "evening"] as const) expect(islandLight(LOOK_PRESETS[1], phase).sunPosition).toEqual(LOOK_PRESETS[1].light.sunPosition);
+    for (const phase of ["dawn", "day", "evening"] as const) expect(islandLight(TOY, phase).sunPosition).toEqual(TOY.light.sunPosition);
   });
 });
 
@@ -244,11 +257,10 @@ describe("weather and season on top of the look (§5.5)", () => {
 });
 
 describe("light budget helpers", () => {
-  it("measures the pre-236 day at about 1.4:1 key:fill (D3) and the picked preset at about 3.5:1", () => {
+  it("measures the pre-236 day at about 1.4:1 key:fill (D3)", () => {
     const shipped = parseLook({ ...CURRENT, light: { sunColor: "#fff5df", sunIntensity: 2.8, sunPosition: [-12, 24, -14], fillSky: "#c4deef", fillGround: "#a7b68a", hemisphere: 0.72, ambient: 0.22, envIntensity: 0.38, rimColor: "#ffffff", rimIntensity: 0 }, shadows: { radius: 3, intensity: 0.85, tint: "#000000" }, sky: { ...CURRENT.sky, top: "#a3d3e7", horizon: "#c7e0df" } });
     expect(keyFill(shipped).keyFill).toBeGreaterThan(1.3);
     expect(keyFill(shipped).keyFill).toBeLessThan(1.55);
-    expect(keyFill(LOOK_PRESETS[2]).keyFill).toBeCloseTo(3.45, 1);
   });
   it("converts sun angles both ways and colour temperature to warm/cool hex", () => {
     const { elevation, azimuth } = sunAngles([-12, 24, -14]);
@@ -268,7 +280,6 @@ describe("glints and reflections (row 237, §6)", () => {
     expect(CURRENT.materials.terrain.gloss).toBe(0);
     expect(CURRENT.materials.foliage.gloss).toBe(0);
     expect(CURRENT.post.toneMapping).toBe("neutral");
-    for (const p of LOOK_PRESETS.slice(1)) expect([p.materials.glass.gloss, p.materials.metal.gloss], p.id).toEqual([0, 0]);
     expect(MATERIAL_CLASSES).toContain("glass");
   });
   it("keeps glass and metal roughness where the look sets it, without the toy-gloss pull", () => {

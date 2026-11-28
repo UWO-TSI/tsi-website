@@ -55,9 +55,6 @@ export interface LookPreset {
 /** Rim/back light comes from the far side of the scene (the camera looks +z). */
 export const RIM_POSITION: [number, number, number] = [0, 10, 24];
 const GLOSS_ROUGHNESS = 0.3;
-const SHIPPED_GRASS = { detail: 0.38, hue: 0 };
-/** Glass and metal as they were before row 237: matte props. */
-const MATTE: ClassLook = { saturation: 1, value: 1, roughness: 1, gloss: 0 };
 
 /**
  * The game's look: hard warm sun 3/4 from screen-left and a little toward the
@@ -101,91 +98,7 @@ export const CURRENT: LookPreset = {
   sky: { top: "#4a9de0", horizon: "#bfe0f2", fog: "#cde6f2", fogNear: 34, fogFar: 96, gradient: true },
 };
 
-/** Miniature photography: tilt-shift, glossy plastic, saturated, soft AO, a 3/4 key from screen-left. */
-const TOY: LookPreset = {
-  id: "toy", name: "Toy diorama",
-  light: {
-    sunColor: "#fff1d6", sunIntensity: 3.1, sunPosition: [18, 24, -10],
-    fillSky: "#b9d8f2", fillGround: "#b8b48a", hemisphere: 0.5, ambient: 0.08, envIntensity: 0.3,
-    rimColor: "#fff6e8", rimIntensity: 0.35,
-  },
-  shadows: { radius: 4, intensity: 0.9, tint: "#1a2440" },
-  ao: { enabled: true, radius: 1.4, intensity: 2 },
-  materials: {
-    terrain: { saturation: 1, value: 0.97, roughness: 1, gloss: 0 },
-    props: { saturation: 1.12, value: 1, roughness: 0.8, gloss: 0.5 },
-    foliage: { saturation: 1.08, value: 1, roughness: 1, gloss: 0 },
-    water: { saturation: 1.2, value: 1, roughness: 1, gloss: 0.3 },
-    characters: { saturation: 1.1, value: 1, roughness: 1, gloss: 0.6 },
-    glass: MATTE, metal: MATTE,
-  },
-  grass: SHIPPED_GRASS,
-  grade: { exposure: 1, contrast: 1.06, vibrance: 0.12, desat: -0.04, warmth: 0.22, lift: 0.1, vignette: 0.28 },
-  post: {
-    toneMapping: "neutral",
-    bloom: { enabled: true, threshold: 0.9, intensity: 0.3 },
-    tiltShift: { enabled: true, blur: 0.08, taper: 0.3, offset: 0 },
-  },
-  sky: { top: "#6fb6ec", horizon: "#cfe8f4", fog: "#cfe8f4", fogNear: 26, fogFar: 80, gradient: true },
-};
-
-/** The direction as David picked it (row 236), before §5's tuning. */
-const OPEN_AIR: LookPreset = {
-  id: "open-air", name: "Open-air sun (as picked)",
-  light: {
-    sunColor: "#ffe9c4", sunIntensity: 3.5, sunPosition: [18, 24, -10],
-    fillSky: "#9cc8f0", fillGround: "#b5a77a", hemisphere: 0.6, ambient: 0.05, envIntensity: 0.18,
-    rimColor: "#ffffff", rimIntensity: 0,
-  },
-  shadows: { radius: 1.5, intensity: 0.92, tint: "#2a4078" },
-  ao: { enabled: true, radius: 1, intensity: 1.2 },
-  materials: {
-    terrain: { saturation: 1.05, value: 1, roughness: 1, gloss: 0 },
-    props: { saturation: 1.08, value: 1, roughness: 1, gloss: 0.15 },
-    foliage: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
-    water: { saturation: 1.25, value: 1, roughness: 1, gloss: 0.5 },
-    characters: { saturation: 1.05, value: 1, roughness: 1, gloss: 0.15 },
-    glass: MATTE, metal: MATTE,
-  },
-  grass: SHIPPED_GRASS,
-  grade: { exposure: 0.9, contrast: 1, vibrance: 0.12, desat: -0.04, warmth: 0.15, lift: 0.2, vignette: 0.12 },
-  post: {
-    toneMapping: "aces",
-    bloom: { enabled: true, threshold: 0.85, intensity: 0.35 },
-    tiltShift: { enabled: false, blur: 0.15, taper: 0.25, offset: 0 },
-  },
-  sky: { top: "#4a9de0", horizon: "#bfe0f2", fog: "#cde6f2", fogNear: 30, fogFar: 90, gradient: true },
-};
-
-/** Lower contrast but saturated: big soft coloured shadows, heavy aerial perspective, soft glow. */
-const PAINTERLY: LookPreset = {
-  id: "painterly", name: "Soft painterly",
-  light: {
-    sunColor: "#fff0d0", sunIntensity: 3, sunPosition: [16, 22, -12],
-    fillSky: "#bcd6f0", fillGround: "#c8b890", hemisphere: 0.55, ambient: 0.08, envIntensity: 0.25,
-    rimColor: "#ffe8c8", rimIntensity: 0.25,
-  },
-  shadows: { radius: 6, intensity: 0.85, tint: "#34508a" },
-  ao: { enabled: true, radius: 2, intensity: 1 },
-  materials: {
-    terrain: { saturation: 1.05, value: 1, roughness: 1, gloss: 0 },
-    props: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
-    foliage: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
-    water: { saturation: 1.15, value: 1.02, roughness: 1, gloss: 0 },
-    characters: { saturation: 1.1, value: 1.02, roughness: 1, gloss: 0 },
-    glass: MATTE, metal: MATTE,
-  },
-  grass: SHIPPED_GRASS,
-  grade: { exposure: 1, contrast: 0.97, vibrance: 0.25, desat: -0.05, warmth: 0.3, lift: 0.25, vignette: 0.08 },
-  post: {
-    toneMapping: "neutral",
-    bloom: { enabled: true, threshold: 0.7, intensity: 0.25 },
-    tiltShift: { enabled: false, blur: 0.15, taper: 0.25, offset: 0 },
-  },
-  sky: { top: "#8ec3ea", horizon: "#e6ecef", fog: "#dfe8ee", fogNear: 12, fogFar: 55, gradient: true },
-};
-
-export const LOOK_PRESETS: readonly LookPreset[] = [CURRENT, TOY, OPEN_AIR, PAINTERLY];
+export const LOOK_PRESETS: readonly LookPreset[] = [CURRENT];
 
 /** Linear-light RGB multiplier: the day colour times this is the phase's colour. */
 type Tint = readonly [number, number, number];
@@ -397,7 +310,7 @@ const SKY_RADIANCE = `#include <lights_fragment_maps>
 
 /**
  * Glass and metal shader edits (row 237, LookMaterials): [three chunk, replacement], with `uLookReflect` =
- * the class's gloss. Every edit is inert at 0, so a preset whose glass and metal are MATTE renders them as
+ * the class's gloss. Every edit is inert at 0, so a preset whose glass and metal are matte renders them as
  * the matte props they were.
  */
 export const LOOK_REFLECT_EDITS: Record<"glass" | "metal", [string, string][]> = {
