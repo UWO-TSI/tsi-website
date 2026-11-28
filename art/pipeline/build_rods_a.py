@@ -8,9 +8,10 @@ concept including details".
 
 Uses build_rods.py's helpers and conventions (rig units, the grip's hand at the origin, Z up the rod, the reel toward
 -Y, the camera side -X) without running its build. Each rod is measured off its turnaround's top row (the side view,
-grip left, reel below): `at(x, y)` turns a point of that row (pixels) into the rod's space. Writes the rod to
-web/public/assets/game/tools/rod-<name>.glb (the Tidewarden is rod-5) and its effect to
-web/public/assets/game/props/rodfx-<name>.glb. Review renders: compare_a.py (and compare_sheet.py).
+grip left, reel below): `at(x, y)` turns a point of that row (pixels) into the rod's space. Writes only the effect,
+web/public/assets/game/props/rodfx-<name>.glb: the rods themselves are the Meshy models now (rod-meshy, rod-touchup),
+fitted to these rods' frames, so their GLBs are never written here. Riptide's effect was since edited by
+meshy_rods/fxedit.py: don't rebuild it. Review renders: compare_a.py (and compare_sheet.py).
 """
 import math, os, sys
 
@@ -532,8 +533,8 @@ def tempest():
                 pts.append(at(x0 + 70 * i / 6) + V((math.cos(a) * P(r), math.sin(a) * P(r), 0)))
             pc.tube(pts, [P(1), P(3), P(4.5), P(4.5), P(3.5), P(2), P(0.4)], sides=3, tip=False, cap=True)
     axis_ = [at(290)] + [at(330 + 90 * j) for j in range(9)] + [at(1150)]
-    fx = [glow("Bolts", "#62D8FF", bolts, flicker=1.0),
-          glow("Eye", "#BFF3FF", eye, pivot=tuple(rc), pulse=0.18),
+    # the eye crackles with the bolts that run into it: one draw, so the effect stays at five a holder with the trail
+    fx = [glow("Bolts", "#62D8FF", lambda pc: (bolts(pc), eye(pc)), flicker=1.0),
           glow("Spark", "#D8FAFF", spark, pivot=tuple(tip), pulse=0.16),
           light("Gust", "#B4DDFF", gust, pivot=tuple(at(600)), spin=1.6, **trail(P(6), (0, P(80), 0))),
           aura_hug("Aura", "#3C8CF0", axis_, [P(30)] * len(axis_), inflate=1.6)]
@@ -829,7 +830,6 @@ BUILDERS = {"riptide": riptide, "tempest": tempest, "tidewarden": tidewarden, "t
 BUDGET_A = 2500                                   # the rebuild's triangle budget per rod (the coordinator, 2026-11-20, raised from 1500)
 for name in (ARGS[ARGS.index("only") + 1].split(",") if "only" in ARGS else list(BUILDERS)):
     rod, fx, rod_extras, fx_extras = BUILDERS[name]()
-    export([rod], os.path.join(TOOLS, f"{FILES[name]}.glb"), rod_extras)
     mats = len(rod.data.materials)
     print(f"MODEL tools/{FILES[name]} tris={tris(rod)} materials={mats}")
     if fx:
