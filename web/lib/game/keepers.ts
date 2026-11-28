@@ -11,7 +11,7 @@ import type { OwnerStation } from "./cafe";
 import type { ResidentPost } from "@/lib/content/residents";
 import { HQ_WREN } from "./hqLayout";
 
-export type KeeperRoom = "hq" | "memberHq" | "shop" | "oracle" | "museum" | "wharf";
+export type KeeperRoom = "hq" | "memberHq" | "shop" | "oracle" | "museum";
 export interface KeeperPost {
   post: ResidentPost;
   /** The proposed roster's resident for the post (residentRoster.ts PROPOSED_RESIDENTS and RESIDENT_LOOKS). */
@@ -51,11 +51,6 @@ export const KEEPER_POSTS: Record<KeeperRoom, KeeperPost> = {
     { at: [-2.2, -0.58], yaw: ROOM, stay: 7, clip: "Idle" },
     { at: [-2.8, -0.58], yaw: ROOM, stay: 6.5, clip: "Trace" },   // labelling
     { at: [-1.6, -0.6], yaw: ROOM, stay: 1.3, clip: "Forage" },   // a specimen drawer
-  ] },
-  // The wharf shack (lab bench): behind its counter (0, 2.6).
-  wharf: { post: "wharf_keeper", slug: "wharf-keeper", title: "Wharf keeper", stations: [
-    { at: [0, 3.4], yaw: ROOM, stay: 7, clip: "Idle" },
-    { at: [-0.6, 3.4], yaw: ROOM, stay: 1.3, clip: "Forage" },
   ] },
 };
 

@@ -531,8 +531,6 @@ export const swellUniformsOf = (u: Record<string, THREE.IUniform>) => ({
   uSwellHeight: u.uSwellHeight, uSwellLength: u.uSwellLength, uSwellSpeed: u.uSwellSpeed, uShoreMap: u.uShoreMap, uShoreRect: u.uShoreRect,
 });
 
-/** The share of the swell's height that reaches water `depth` deep (it dies away over the shallows). */
-export const swellFade = (depth: number) => smooth01(SWELL.fade[0], SWELL.fade[1], depth);
 
 const SWELL_VERTEX_DECLS = /* glsl */ `
 varying vec3 vWaterWorld;

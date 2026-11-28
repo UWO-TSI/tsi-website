@@ -16,7 +16,6 @@ export const TREATS: Species[] = [
   treat("treat_lollipop", "Swirl lollipop", "common", "A spiral of every colour the shop had. Lasts a whole walk home.", 202),
   treat("treat_candy_corn", "Candy corn", "uncommon", "Somebody on this island loves it. Nobody will say who.", 203),
 ];
-export const isTreat = (key: string) => TREATS.some(t => t.key === key);
 
 const hash = (s: string) => {
   let h = 2166136261;

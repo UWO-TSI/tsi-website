@@ -9,56 +9,13 @@
  * icons share, then turned nose left as the icons are (fish-models round 4, David: "wh yare all the fish upside down":
  * this pane used its own turns, written for the village's frames, and showed every fish in the game's frame, head +y
  * and back -z, belly up).
- *
- * buildFishStage stays for /lab/icon (the old head-up icon stage): SkeletonUtils clone, the raw calibration,
- * skinning-aware bounds, centred.
  */
 
 import { Suspense, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { clone as cloneSkeleton } from "three/examples/jsm/utils/SkeletonUtils.js";
 import { levelFish } from "@/components/game/peaceful/TankFish";
-
-export function buildFishStage(scene: THREE.Object3D, raw: boolean, fit: number): THREE.Group {
-  const clone = cloneSkeleton(scene);
-  const holder = new THREE.Group();
-  const inner = new THREE.Group();
-  inner.add(clone);
-  if (raw) {
-    inner.scale.setScalar(0.1);
-    inner.rotation.x = Math.PI / 2;
-  }
-  holder.add(inner);
-  // Skinning-aware bounds: rendered size comes from the BONES, not the
-  // bind-pose geometry — Box3.setFromObject reads the wrong extents.
-  const measure = (root: THREE.Group): THREE.Box3 => {
-    root.updateMatrixWorld(true);
-    const box = new THREE.Box3();
-    root.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      const skinned = mesh as THREE.SkinnedMesh;
-      if (skinned.isSkinnedMesh) {
-        skinned.computeBoundingBox();
-        box.union(skinned.boundingBox!.clone().applyMatrix4(skinned.matrixWorld));
-      } else {
-        box.union(new THREE.Box3().setFromObject(mesh));
-      }
-    });
-    return box;
-  };
-  const size = new THREE.Vector3();
-  measure(holder).getSize(size);
-  const s = fit / Math.max(size.x, size.y, size.z, 0.001);
-  holder.scale.setScalar(s);
-  const c = new THREE.Vector3();
-  measure(holder).getCenter(c);
-  holder.position.sub(c);
-  holder.rotation.y = Math.PI / 2; // side profile toward the camera
-  return holder;
-}
 
 /** A species laid level (head first, back up), `length` long, centred, turned nose left: the bench's side profile. */
 export function previewFish(scene: THREE.Object3D, url: string, raw: boolean, length = 2.3): THREE.Group {

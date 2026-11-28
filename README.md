@@ -118,7 +118,7 @@ substrate, `web/data/island-map.json` is the map itself, and
 | `/lab/map`       | **The terrain drafting tool.** Draw islands, plan layouts.    |
 | `/lab/world`     | The game world on its own, without the dashboard around it    |
 | `/lab/item`      | Inspect a single GLB: scale, orientation, material count      |
-| `/lab/interior`, `/lab/furniture`, `/lab/fishing`, `/lab/icon` | Feature-specific harnesses |
+| `/lab/interior`, `/lab/furniture`, `/lab/fishing` | Feature-specific harnesses |
 | `/lab/tune`      | One asset at a time on a plain stage, every value on a slider |
 
 **Terrain is drawn, not coded.** `/lab/map` is where the layout of every island

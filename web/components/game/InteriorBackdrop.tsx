@@ -9,13 +9,12 @@
 import type { CSSProperties } from "react";
 import s from "./InteriorBackdrop.module.css";
 
-export type BackdropRoom = "shop" | "hq" | "museum" | "wharf" | "cafe";
+export type BackdropRoom = "shop" | "hq" | "museum" | "cafe";
 /** Each building's slight tint in the dark: sage for the shop, navy for the museum, warm brown for HQ. */
 export const BACKDROP_TINT: Record<BackdropRoom, string> = {
   shop: "#3d5a4a",
   museum: "#26345a",
   hq: "#4f3826",
-  wharf: "#24404f",
   cafe: "#553623",
 };
 

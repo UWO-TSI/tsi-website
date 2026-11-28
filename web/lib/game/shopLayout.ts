@@ -268,11 +268,6 @@ export const SHOP_STRIPS: LightStrip[] = [
 /** The linear pendant over the counter (ref 2): a bar from x0 to x1 at height y, hung on two wires from the ceiling. */
 export const SHOP_PENDANT = { x0: -1.5, x1: 1.5, y: 2.6, z: 3.3, wires: [-1.3, 1.3] } as const;
 
-/** The floors: herringbone oak downstairs, polished concrete on the mezzanine. */
-export const SHOP_FLOORS = [
-  { level: 0, id: "oak", label: "Herringbone oak" },
-  { level: 1, id: "concrete", label: "Polished concrete" },
-] as const;
 /** The windows in the +x wall, one over the other in the double-height front, behind the seasonal plinths: z0..z1 along it, sill to head above each floor. */
 export const SHOP_WINDOWS = [
   { level: 0, x: 6, z0: -4.0, z1: -1.8, y0: 0.9, y1: 2.8 },
