@@ -89,7 +89,7 @@ Run in `web/`.
 |---|---|
 | Dev server | `npm run dev` |
 | Build | `npm run build` |
-| Lint | `npm run lint` (known baseline of old errors in `specs/qa.md`: don't raise it) |
+| Lint | `npm run lint` (there is a known baseline of old errors: don't raise it) |
 | Tests | `npm test` (script `test` = `vitest run`); one file `npx vitest run lib/game/grid.test.ts`; `npm run test:watch` |
 | Typecheck | no script; `npx tsc --noEmit` |
 | Perf check | `npm run perf:check` (once per rendering lane) |
@@ -143,4 +143,4 @@ Dev server only (`/lab` and `/dev` 404 in production builds). Member island `/st
 
 ## 7. Specs
 
-Specs live in `specs/`; `specs/INDEX.md` lists them by area. Ledger `specs/game-world-development-plan.md`, order `specs/development-roadmap.md`, rules `specs/lane-rules.md`.
+Specs live in `specs/`; `specs/INDEX.md` lists them by area. Ledger `specs/game-world-development-plan.md`, plan `specs/launch/v1-gameplay.md`, rules `specs/lane-rules.md`.

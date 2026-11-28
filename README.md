@@ -166,7 +166,7 @@ numbers off a screenshot.
 4. Open a PR with screenshots/GIFs for UI changes
 
 Lint has a known baseline of pre-existing errors; the bar is not increasing it,
-not reaching zero. `specs/qa.md` records the current numbers.
+not reaching zero.
 
 Agents use the `[build]` / `[qa]` / `[review]` commit prefixes (see `CLAUDE.md`). Human contributors use conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`).
 

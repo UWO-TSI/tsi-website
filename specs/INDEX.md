@@ -6,7 +6,6 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `game-world-development-plan.md` | Decision ledger; overrides every other spec | live
 `launch/v1-gameplay.md` | The current plan: gameplay items, David's answers, lanes (no launch date) | live
 `launch/terrain-v3.md` | The new world's zones, review rounds and post-launch list | live
-`development-roadmap.md` | Old build order (status board from 09-29) | stale
 `known-defects-2026-07.md` | Measured foundational defects, re-measure before acting | reference
 `david-decisions.md` | Open decisions waiting on David (Oct 3) | reference
 `lane-rules.md` | Rules for every coordinator lane | live
@@ -14,7 +13,6 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `design-bible.md` | The one canon for UI, art and models (UI and Models set 2026-10-28; Art in progress) | canon
 `vfx-library.md` | The VFX library: auras (energy, sun glint, pulse) and effects (water, electricity, embers, petals, gather, lightning and more) on any holder, their rules (no circle or ring glows) | live
 `design-principles.md` | Project vision and design principles, partly superseded | reference
-`launch/v1-launch.md` | v1 launch run sheet: freeze Oct 24, launch Oct 31 (row 317) | stale: no launch date (2026-10-27)
 `v1-drop.md` | v1 Arrival (Halloween) plan, scope, lane split | stale: superseded by row 318 and v1-gameplay
 
 ## Lanes and process (stay in place)
@@ -32,7 +30,6 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `seasonal-events.md` | Four repeating club-goal seasonal events | reference
 `seasonal-palettes.md` | Monthly palette and content cadence | reference
 `terrain-blending.md` | Natural terrain blending inside the grid | reference
-`terrain-v2.md` | World island terrain v2 | stale: superseded by rows 308 and 318
 `world-editor.md` | 3D smooth terrain editor | live
 
 ## Look and rendering
@@ -112,7 +109,6 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `game-ui.md` | Tool wheel, held items, backpack, rows 279-281 | live
 `polish/flat-ui.md` | Flat UI: shop style across menus | history; the design bible's UI chapter wins
 `polish/ui-themes.md` | UI themes: one colour sheet per theme, how to add one | reference for theme files; the design bible's UI chapter wins
-`polish/gui-sheet.md` | Own GUI sheet from AC UI kit, row 285 | superseded by the design bible (row 320)
 `polish/menus.md` | Menus and sheets polish | reference
 `polish/README.md` | Polish plan index, rows 268, 273 | reference
 `polish/world-refinement.md` | Birds, trees, flowers, HUD stack, row 284 | reference
@@ -176,5 +172,5 @@ Paths are relative to `specs/` (current locations; a folder regroup is proposed,
 `ux-shop.md` | Shop catalog | reference
 `ux-status.md` | UX design-debt backlog | reference
 
-## Superseded (to archive)
-ac-research.md, applicant-surfaces-and-lounge-2026-09-17.md, asset-flags.md, asset-research-prompt.md, clubhouse-refinement-2026-09-17.md, collab-design-track.md, cozy-lighting-and-adaptive-ui-2026-09-17.md, director-developer-round.md, economy-v2-currencies.md, game-default-island-checkpoint.md, geo-master-plan-v2.md, hq-interior-polish-2026-09-17.md, interiors-program-v1.md, investigation-2026-07-26-foundations.md, investigation-2026-07-26-systems.md, lighting-research.md, migration-status.md, park-bench-asset.md, park-clock-asset.md, phase0-plan.md, polish/audit-activities.md, polish/audit-spaces-life.md, polish/audit-ui-flows.md, ponytail-audit-2026-09-30.md, ponytail-audit.md, proxy-migration-plan.md, qa.md, recruitment-deployment-readiness-2026-09-17.md, research-ac-style-threejs.md, roadmap-game-world.md, rulings-2026-07-24-launch.md, shop-sign-asset.md, sprint-2026-05-game-look-feel.md, sprint-2026-06-admin-tooling.md, sprint-2026-06-llm-npc.md, sprint-2026-06-tier-1-followups.md, sprint-2026-07-community-loops.md, sprint-2026-07-refinement.md, sprint-2026-08-action-controls.md, sprint-2026-08-launch-track.md, sprint-2026-08-visual-overhaul.md, streetlamp-asset.md, ux-recruitment-plan.md, ux.md, wood-bench-asset.md
+## Archived
+The 45 specs this section used to list, plus `development-roadmap.md`, `launch/v1-launch.md`, `terrain-v2.md` and `polish/gui-sheet.md`, moved to `archive/specs/` on 2026-11-28 (lane old-cleanup).
