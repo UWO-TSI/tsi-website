@@ -91,6 +91,6 @@ webp(join(art, "colour_atlas.png"), join(out, "colour_atlas.png"));
 // clothing-v2: the garment designs, one atlas cell each (art/characters/outfits/build_outfits.py)
 webp(join(art, catalog.designs.atlas), join(out, catalog.designs.atlas));
 copy(resolve(web, "../specs/wardrobe/batch2-pricing.json"), join(data, "batch2-pricing.json"));
-for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json", "skull/skull.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
+for (const name of ["character_catalog.json", "palette.json", "v7/face/face_v7.json"]) copy(join(art, name), join(data, name.replace(/^.*\//, "")));
 
 console.log(`synced ${parts.length} parts (${hairGlbs.length} hairstyles meshopt-compressed in 3 tiers, ${accGlbs.length} Roblox accessories in 2), base, ${Object.keys(lod).length} LOD 1 and ${Object.keys(lod2).length} LOD 2 GLBs, 4 face atlases (2 pages; the world's as WebP), the hair, colour and design atlases, 5 JSON files; ${packed} more GLBs packed`);

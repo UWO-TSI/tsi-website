@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Inspect a character GLB: triangles, materials, bones, sockets, clips, bounds, flat normals.
-// Usage: node web/scripts/character-inspect.mjs art/characters/base/base_body.glb [--json]
+// Usage: node web/scripts/character-inspect.mjs art/characters/base/v6.glb [--json]
 import { NodeIO } from '@gltf-transform/core';
 import { statSync } from 'node:fs';
 
